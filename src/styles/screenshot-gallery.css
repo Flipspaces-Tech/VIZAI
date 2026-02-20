@@ -2,23 +2,31 @@
 
 .sg-page{
   min-height: 100vh;
-  background: #ffffff; /* ✅ figma is white */
+  background: #ffffff;
   color: #111;
   font-family: "Maven Pro", ui-sans-serif, system-ui, sans-serif;
+
   --font-sans: "Poppins", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
 }
 
+/* =========================
+   Layout Wrapper
+========================= */
+
 .sg-container{
   width: 1410px;
-  margin: 28px auto 60px;      /* ✅ space around box */
-  padding: 26px 32px 60px;     /* ✅ add left/right padding */
-  background: #FDFDFD;         /* ✅ box fill */
+  margin: 28px auto 60px;
+  padding: 26px 32px 60px;
+  background: #FDFDFD;
   border: 2px solid #F1F1F1;
   box-sizing: border-box;
   margin-top: 100px;
 }
 
+/* =========================
+   Back Button
+========================= */
 
 .sg-back{
   border: none;
@@ -34,7 +42,19 @@
   margin-left: 30px;
   font-size: 14px;
 }
+
 .sg-back span{ font-weight: 600; }
+
+.sg-backIcon{
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  display: inline-block;
+}
+
+/* =========================
+   Top Grid
+========================= */
 
 .sg-topGrid{
   display: grid;
@@ -45,7 +65,6 @@
   margin-bottom: 50px;
   width: 1270px;
 
-  /* ✅ FIX #1: CENTER THE WHOLE GRID */
   margin-left: auto;
   margin-right: auto;
 }
@@ -62,7 +81,10 @@
   font-weight: 600;
 }
 
-/* Title row with button on right */
+/* =========================
+   Title Row + Vizdom
+========================= */
+
 .sg-titleRow{
   display: flex;
   align-items: center;
@@ -72,9 +94,9 @@
 
 .sg-title{
   margin: 0;
-  font-size: 48px;            /* ✅ figma big */
+  font-size: 48px;
   letter-spacing: -0.02em;
-  font-weight: 300;           /* ✅ figma thin title */
+  font-weight: 300;
   line-height: 1.05;
 }
 
@@ -92,13 +114,32 @@
   gap: 8px;
   white-space: nowrap;
 }
-.sg-ext{ font-size: 14px; opacity: 0.85; }
 
-/* Chips */
+.sg-vizdomIcon{
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  display: inline-block;
+  margin-left: 6px;
+  opacity: 0.9;
+}
+
+/* =========================
+   Chips Row
+========================= */
+
 .sg-chips{
   margin-top: 14px;
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sg-chips-figma{
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
   flex-wrap: wrap;
 }
 
@@ -115,21 +156,56 @@
   font-weight: 600;
   color: #111;
 }
+
 .sg-chip-yellow{
   background: #fff2b8;
   border-color: #f5dd6b;
 }
-.sg-flag{ font-size: 14px; }
 
-/* 3 stacked actions */
+.sg-subText{
+  font-size: 18px;
+  color: rgba(0,0,0,0.70);
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sg-subSep{ opacity: 0.45; }
+
+.sg-serverPill{
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 2px;
+  background: #EAEAE8;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #111;
+  width: 110px;
+}
+
+.sg-flagImg{
+  width: 18px;
+  height: 12px;
+  object-fit: cover;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+/* =========================
+   Actions
+========================= */
+
 .sg-actions{
   margin-top: 18px;
   display: grid;
   gap: 16px;
   width: 622px;
-  height: auto;     /* ✅ was 212px */
+  height: auto;
 }
-
 
 .sg-action{
   width: 100%;
@@ -138,7 +214,7 @@
   gap: 14px;
   align-items: center;
 
-  padding: 14px 16px;
+  padding: 8px 16px;
   border-radius: 8px;
   border: 1px solid rgba(0,0,0,0.10);
   background: #ffffff;
@@ -146,6 +222,7 @@
   text-align: left;
   height: 60px;
 }
+
 .sg-action:disabled{
   opacity: 0.55;
   cursor: not-allowed;
@@ -159,6 +236,7 @@
   display: grid;
   place-items: center;
 }
+
 .sg-actionIcon{
   width: 22px;
   height: 22px;
@@ -166,19 +244,29 @@
 }
 
 .sg-actionText{ display: grid; gap: 1px; }
+
 .sg-actionTitle{
   font-weight: 700;
   font-size: 16px;
   color: #111;
   letter-spacing: 1px;
+  line-height: 1.1;
+  margin: 0;
 }
+
 .sg-actionSub{
   font-size: 12px;
   color: rgba(0,0,0,0.60);
   font-weight: 500;
+  line-height: 1.1;
+  margin: 0;
+  font-family: var(--font-sans);
 }
 
-/* Hero */
+/* =========================
+   Hero Image
+========================= */
+
 .sg-hero{
   width: 583px;
   height: 328px;
@@ -188,7 +276,6 @@
   background: #fff;
 }
 
-/* ✅ FIX #2: MAKE IMAGE MATCH CONTAINER */
 .sg-heroImg{
   width: 100%;
   height: 100%;
@@ -196,7 +283,10 @@
   display: block;
 }
 
-/* Panel */
+/* =========================
+   Panel
+========================= */
+
 .sg-panel{
   margin-top: 26px;
   border: 1px solid rgba(0,0,0,0.10);
@@ -205,7 +295,6 @@
   background: #fff;
   width: 1270px;
 
-  /* ✅ FIX #1 (again): CENTER THE PANEL */
   margin-left: auto;
   margin-right: auto;
 }
@@ -221,7 +310,6 @@
 .sg-tabs{
   display: inline-flex;
   border-radius: 6px;
-  /* border: 1px solid rgba(0,0,0,0.10); */
   overflow: hidden;
 }
 
@@ -234,14 +322,15 @@
   font-size: 16px;
   color: rgba(0,0,0,0.65);
 }
-/* .sg-tab.isActive{
-  background: #F8EE86;
-  color: #111;
-} */
+
 .sg-tab:disabled{
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* =========================
+   Refresh Button (underline default + rotating icon)
+========================= */
 
 .sg-refresh{
   height: 34px;
@@ -252,19 +341,65 @@
   color: rgba(0,0,0,0.65);
   font-weight: 500;
   cursor: pointer;
+
+  text-decoration: underline;
+  text-underline-offset: 4px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
+
+.sg-refresh:disabled{
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Optional: slightly larger underline offset while refreshing */
+.sg-refresh.isRefreshing{
+  text-underline-offset: 6px;
+}
+
+.sg-refreshIcon{
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  display: inline-block;
+}
+
+.sg-refreshIcon.spin{
+  animation: sgSpin 0.9s linear infinite;
+  transform-origin: 50% 50%;
+}
+
+@keyframes sgSpin{
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* =========================
+   Panel Body + Empty State
+========================= */
 
 .sg-panelBody{
   padding: 14px;
-
-  /* ✅ FIX #3: FIGMA-LIKE CENTERED EMPTY STATE */
   min-height: 280px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-/* Groups */
+.sg-empty{
+  padding: 0;
+  color: rgba(0,0,0,0.55);
+  font-weight: 600;
+  text-align: center;
+}
+
+/* =========================
+   Groups
+========================= */
+
 .sg-groups{ display: grid; gap: 14px; width: 100%; }
 
 .sg-group{
@@ -290,7 +425,17 @@
   gap: 10px;
   flex-wrap: wrap;
 }
+
 .sg-cal{ opacity: 0.7; }
+
+.sg-calIcon{
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  opacity: 0.75;
+  display: inline-block;
+}
+
 .sg-date{
   font-weight: 500;
   font-size: 14px;
@@ -321,7 +466,17 @@
   gap: 8px;
 }
 
-/* Screens grid */
+.sg-downloadAllIcon{
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  opacity: 0.9;
+}
+
+/* =========================
+   Screens Grid
+========================= */
+
 .sg-grid{
   padding: 12px;
   display: grid;
@@ -347,126 +502,6 @@
   display: block;
 }
 
-/* Download circle */
-.sg-shotDl{
-  position: absolute;
-  right: 10px;
-  top: 10px;
-  width: 30px;
-  height: 30px;
-  border-radius: 999px;
-  border: 1px solid rgba(0,0,0,0.12);
-  background: rgba(255,255,255,0.95);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-}
-.sg-shotDl img{
-  width: 14px;
-  height: 14px;
-  display: block;
-  opacity: 0.9;
-}
-
-/* Empty */
-.sg-empty{
-  /* ✅ since panelBody is flex-centered now, keep this clean */
-  padding: 0;
-  color: rgba(0,0,0,0.55);
-  font-weight: 600;
-  text-align: center;
-}
-
-/* Responsive */
-@media (max-width: 980px){
-  .sg-topGrid{
-    grid-template-columns: 1fr;
-    width: 100%;              /* ✅ mobile */
-  }
-  .sg-panel{
-    width: 100%;              /* ✅ mobile */
-  }
-  .sg-hero{
-    width: 100%;
-  }
-}
-
-/* ✅ Figma-like chips row */
-.sg-chips-figma{
-  margin-top: 14px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
-/* left text: "Corporate Offices | 35,000 Sqft" */
-.sg-subText{
-  font-size: 18px;
-  color: rgba(0,0,0,0.70);
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
-.sg-subSep{ opacity: 0.45; }
-
-/* right yellow pill: "🇮🇳 India Server" */
-.sg-serverPill{
-  height: 24px;
-  padding: 0 6px;
-  border-radius: 2px;
-  /* border: 1px solid #f5dd6b; */
-  background: #EAEAE8;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #111;
-  width: 110px;
-}
-
-/* optional: slightly nicer flag size */
-.sg-serverPill .sg-flag{ font-size: 12px; }
-
-.sg-action{
-  height: 60px;
-  padding: 8px 16px;     /* reduce padding */
-  align-items: center;
-}
-
-.sg-actionTitle{
-  font-size: 16px;       /* reduce */
-  line-height: 1.1;
-  margin: 0;
-}
-
-.sg-actionSub{
-  font-size: 12px;       /* reduce */
-  line-height: 1.1;
-  margin: 0;
-  font-family: var(--font-sans);
-}
-/* icon inside Go to Vizdom button */
-.sg-vizdomIcon{
-  width: 14px;
-  height: 14px;
-  object-fit: contain;
-  display: inline-block;
-  margin-left: 6px;
-  opacity: 0.9;
-}
-
-/* flag img inside India/US pill */
-.sg-flagImg{
-  width: 18px;
-  height: 12px;
-  object-fit: cover;
-  border-radius: 2px;
-  display: inline-block;
-}
-/* top-right overlay actions (maximize + download) */
 .sg-shotActions{
   position: absolute;
   right: 10px;
@@ -476,7 +511,6 @@
   z-index: 2;
 }
 
-/* each icon button */
 .sg-shotBtn{
   width: 30px;
   height: 30px;
@@ -498,24 +532,20 @@
   display: block;
   opacity: 0.9;
 }
-.sg-back{
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 600;
-  color: #111;
-  opacity: 0.85;
-  margin-bottom: 18px;
-  margin-left: 30px;
-  font-size: 14px;
-}
 
-.sg-backIcon{
-  width: 14px;      /* tweak if needed */
-  height: 14px;
-  object-fit: contain;
-  display: inline-block;
+/* =========================
+   Responsive
+========================= */
+
+@media (max-width: 980px){
+  .sg-topGrid{
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+  .sg-panel{
+    width: 100%;
+  }
+  .sg-hero{
+    width: 100%;
+  }
 }

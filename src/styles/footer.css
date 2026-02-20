@@ -4,7 +4,7 @@
 .vwFooter{
   width: 100%;
   background: #EAEAE8;
-  padding: 98px 0 18px;     /* your final spacing */
+  padding: 98px 0 18px;
   box-sizing: border-box;
   height: 369px;
 }
@@ -21,14 +21,13 @@
 .vwFooterTop{
   position: relative;
   display: grid;
-  grid-template-columns: 1fr 1fr;   /* ✅ exact 50/50 split */
+  grid-template-columns: 1fr 1fr;
   height: 369px;
   align-items: start;
   box-sizing: border-box;
   background-color: #EAEAE8;
 }
 
-/* Divider always center */
 .vwFooterDivider{
   position: absolute;
   top: 0;
@@ -41,12 +40,20 @@
 
 /* Left brand */
 .vwFooterBrand{
-  margin-left: 100px;       /* your chosen left positioning */
+  margin-left: 100px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 10px;
   margin-top: 85px;
+}
+
+.vwFooterLogoLink{
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  text-decoration: none;
+  cursor: pointer;
 }
 
 .vwFooterVizLogo{
@@ -67,19 +74,18 @@
 }
 
 /* =========================================================
-   RIGHT BLOCK (Product + Resources as one unit)
+   RIGHT BLOCK (Product + Resources)
 ========================================================= */
 .vwFooterRightBlock{
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 40px;                /* spacing between PRODUCT and RESOURCES */
-  justify-self: end;        /* pushes block to right edge of right half */
-  padding-right: 200px;     /* controls “move right” */
-  font-family: var(--font-heading);;
+  gap: 40px;
+  justify-self: end;
+  padding-right: 200px;
+  font-family: var(--font-heading);
   margin-top: 85px;
 }
 
-/* Column titles & links */
 .vwFooterColTitle{
   font-weight: 900;
   font-size: 22px;
@@ -119,6 +125,7 @@
   height: 72px;
 }
 
+/* Center text */
 .vwFooterCopy{
   text-align: center;
   font-size: 16px;
@@ -126,16 +133,32 @@
   font-weight: 200;
 }
 
+/* ✅ Bottom-right logo zone */
 .vwFooterRightBrand{
   display: flex;
   justify-content: flex-end;
   align-items: center;
+  padding-right: 60px; /* tweak if you want it closer/farther from edge */
 }
 
+/* clickable link wrapper */
+.vwFooterFlipLink{
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+/* flipspaces logo image */
 .vwFooterFlipLogo{
-  height: 22px;
-  width: auto;
+  width: 302px;
+  height: 55px;
   object-fit: contain;
   display: block;
   opacity: 0.95;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.vwFooterFlipLink:hover .vwFooterFlipLogo{
+  opacity: 1;
+  transform: translateY(-1px);
 }

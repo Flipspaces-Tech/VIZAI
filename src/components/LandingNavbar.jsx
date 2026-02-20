@@ -1,3 +1,4 @@
+// src/components/LandingNavbar.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import vizIcon from "../assets/vw1.png";
@@ -7,6 +8,33 @@ import "../styles/navbar-v2.css";
 import indiaFlag from "../assets/india.png";
 import usFlag from "../assets/usa.png";
 
+const TOPBAR_KEY = "vwTopBarClosed";
+
+// ✅ Detect if this page load is a browser refresh/reload
+function isReloadNavigation() {
+  try {
+    const navEntries = performance.getEntriesByType?.("navigation");
+    if (navEntries && navEntries.length) {
+      return navEntries[0].type === "reload";
+    }
+    // Fallback (older browsers)
+    return performance.navigation?.type === 1;
+  } catch {
+    return false;
+  }
+}
+
+function getInitialShowTopBar() {
+  // ✅ If user refreshed, show bar again (clear flag)
+  if (isReloadNavigation()) {
+    sessionStorage.removeItem(TOPBAR_KEY);
+    return true;
+  }
+
+  // ✅ Otherwise (normal SPA navigation / initial entry), respect closed flag
+  return sessionStorage.getItem(TOPBAR_KEY) !== "1";
+}
+
 export default function LandingNavbar({
   user,
   signOut,
@@ -14,7 +42,10 @@ export default function LandingNavbar({
   setSelectedServer,
 }) {
   const [dd, setDd] = useState(false);
-  const [showTopBar, setShowTopBar] = useState(true);
+
+  // ✅ stays closed on route changes, reappears on refresh
+  const [showTopBar, setShowTopBar] = useState(getInitialShowTopBar);
+
   const ddRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -42,7 +73,6 @@ export default function LandingNavbar({
   const isLearnActive = pathname.startsWith("/learn");
   const isDemoActive = pathname.startsWith("/demo-videos");
 
-  // ✅ helper: go home (same tab)
   const goHome = () => {
     setDd(false);
     navigate("/");
@@ -59,10 +89,15 @@ export default function LandingNavbar({
                 Make Sure Choose the region closest to you for a seamless
                 experience
               </div>
+
               <button
                 type="button"
                 className="vwTopBarClose"
-                onClick={() => setShowTopBar(false)}
+                onClick={() => {
+                  sessionStorage.setItem(TOPBAR_KEY, "1"); // ✅ persist across SPA route changes
+                  setShowTopBar(false);
+                }}
+                aria-label="Close"
               >
                 <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
                   <path
@@ -80,7 +115,7 @@ export default function LandingNavbar({
         {/* Dark navbar */}
         <div className="vwNav">
           <div className="vwContainer vwNavInner">
-            {/* Left: Logo Area (same tab) */}
+            {/* Left: Logo Area */}
             <a
               className="vwLogoGroup"
               href="/"
@@ -90,7 +125,7 @@ export default function LandingNavbar({
               }}
             >
               <img className="vwLogoIcon" src={vizIcon} alt="Vizwalk Logo" />
-              <div className="vwLogoDivider"></div>
+              <div className="vwLogoDivider" />
               <img className="vwIcon" src={vIcon} alt="Vizwalk Logo" />
             </a>
 
@@ -168,12 +203,9 @@ export default function LandingNavbar({
                     selectedServer === "india" ? "active" : ""
                   }`}
                   onClick={() => setSelectedServer?.("india")}
+                  type="button"
                 >
-                  <img
-                    src={indiaFlag}
-                    alt="IN"
-                    className="vwFlagIcon"
-                  />
+                  <img src={indiaFlag} alt="IN" className="vwFlagIcon" />
                   IN
                 </button>
 
@@ -182,12 +214,9 @@ export default function LandingNavbar({
                     selectedServer === "us" ? "active" : ""
                   }`}
                   onClick={() => setSelectedServer?.("us")}
+                  type="button"
                 >
-                  <img
-                    src={usFlag}
-                    alt="US"
-                    className="vwFlagIcon"
-                  />
+                  <img src={usFlag} alt="US" className="vwFlagIcon" />
                   US
                 </button>
               </div>
@@ -196,6 +225,7 @@ export default function LandingNavbar({
                 className="vwIconBtn"
                 title={user?.email || "Logout"}
                 onClick={signOut}
+                type="button"
               >
                 <svg
                   width="18"
@@ -207,9 +237,9 @@ export default function LandingNavbar({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 >
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                  <polyline points="16 17 21 12 16 7"></polyline>
-                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
                 </svg>
               </button>
             </div>

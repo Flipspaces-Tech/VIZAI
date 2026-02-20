@@ -1,12 +1,13 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import "../styles/footer.css";
 
 import vizIcon from "../assets/L1.png";
-import flipspacesLogo from "../assets/logo.png";
+import flipspacesLogo from "../assets/FL LOGO.png";
 
 export default function Footer() {
   return (
-    <footer >
+    <footer className="vwFooter">
       <div className="vwFooterContainer">
         {/* Top */}
         <div className="vwFooterTop">
@@ -15,15 +16,18 @@ export default function Footer() {
 
           {/* Left brand */}
           <div className="vwFooterBrand">
-            <img className="vwFooterVizLogo" src={vizIcon} alt="Vizwalk" />
+            {/* Logo redirects to home */}
+            <Link to="/" className="vwFooterLogoLink" aria-label="Go to Home">
+              <img className="vwFooterVizLogo" src={vizIcon} alt="Vizwalk" />
+            </Link>
 
             <div className="vwFooterDesc">
-              Next-generation architectural visualization platform. Brings your designs to life with
-              stunning realism.
+              Next-generation architectural visualization platform. Brings your
+              designs to life with stunning realism.
             </div>
           </div>
 
-          {/* ✅ RIGHT SIDE AS ONE BLOCK */}
+          {/* Right */}
           <div className="vwFooterRightBlock">
             <div className="vwFooterCol">
               <div className="vwFooterColTitle">PRODUCT</div>
@@ -43,11 +47,28 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="vwFooterBottom">
           <div className="vwFooterBottomLeft" />
-          <div className="vwFooterCopy">©2026 Flipspaces. All Rights Reserved.</div>
 
-          {/* <div className="vwFooterRightBrand">
-            <img className="vwFooterFlipLogo" src={flipspacesLogo} alt="Flipspaces" />
-          </div> */}
+          <div className="vwFooterCopy">
+            ©2026 Flipspaces. All Rights Reserved.
+          </div>
+
+          {/* ✅ Bottom-right Flipspaces logo link */}
+          <div className="vwFooterRightBrand">
+            <a
+              className="vwFooterFlipLink"
+              href="https://www.flipspaces.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Visit Flipspaces website"
+              title="Visit Flipspaces"
+            >
+              <img
+                className="vwFooterFlipLogo"
+                src={flipspacesLogo}
+                alt="Flipspaces"
+              />
+            </a>
+          </div>
         </div>
       </div>
     </footer>

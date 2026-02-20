@@ -312,7 +312,7 @@ function TestimonialsOnly() {
     },
     {
       name: "Vishal Soni",
-      role: "Tacza",
+      role: "Taaza",
       quote:
         "Flipspaces delivered our project on time with professionalism and excellence. Grateful for their hard work and eager to collaborate again!",
     },

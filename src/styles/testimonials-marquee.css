@@ -76,7 +76,7 @@
   gap: 44px;
   width: max-content;
   will-change: transform;
-  animation: tsMarquee var(--ts-duration, 38s) linear infinite;
+  animation: tsMarquee var(--ts-duration, 54s) linear infinite;
 }
 
 /* Cards */

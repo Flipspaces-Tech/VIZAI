@@ -21,6 +21,10 @@ import maximizeIcon from "../assets/full-screen.png";
 import indiaIcon from "../assets/india.png";
 import usIcon from "../assets/usa.png";
 
+import downloadAllIcon from "../assets/download.png"; // ✅ change to your local icon file
+import calendarIcon from "../assets/calendar.png"; // ✅ change filename to your actual icon
+import refreshIcon from "../assets/refresh.png";
+
 const GDRIVE_API_URL =
   "https://script.google.com/macros/s/AKfycbxcVqr7exlAGvAVSh672rB_oG7FdL0W0ymkRb_6L7A8awu7gqYDInR_6FLczLNkpr0B/exec";
 const SHEET_ID = "180yy7lM0CCtiAtSr87uEm3lewU-pIdvLMGl6RXBvf8o";
@@ -613,17 +617,19 @@ export default function ScreenshotGallery() {
             </div>
 
             <div className="sg-refreshWrap">
-              {isRefreshingShots && hasAnyScreenshots ? (
-                <span className="sg-refreshingText">Refreshing…</span>
-              ) : null}
-
               <button
-                className="sg-refresh"
+                className={`sg-refresh ${isRefreshingShots ? "isRefreshing" : ""}`}
                 type="button"
                 onClick={handleRefresh}
                 disabled={isRefreshingShots}
               >
-                ⟳ Refresh
+                <img
+                  src={refreshIcon}
+                  alt=""
+                  className={`sg-refreshIcon ${isRefreshingShots ? "spin" : ""}`}
+                  aria-hidden="true"
+                />
+                <span>{isRefreshingShots ? "Refreshing" : "Refresh"}</span>
               </button>
             </div>
           </div>
@@ -643,7 +649,7 @@ export default function ScreenshotGallery() {
                     <div className="sg-group" key={group.group || idx}>
                       <div className="sg-groupHeader">
                         <div className="sg-groupLeft">
-                          <span className="sg-cal">🗓</span>
+                          <img className="sg-calIcon" src={calendarIcon} alt="" aria-hidden="true" />
                           <span className="sg-date">
                             {prettyDate(group.ts || group.group)}
                           </span>
@@ -657,7 +663,8 @@ export default function ScreenshotGallery() {
                           className="sg-downloadAll"
                           onClick={() => items.forEach((img) => dl(img.url))}
                         >
-                          ⭳ Download All
+                          <img className="sg-downloadAllIcon" src={downloadAllIcon} alt="" />
+                          Download All
                         </button>
                       </div>
 
