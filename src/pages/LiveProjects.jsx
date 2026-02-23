@@ -191,19 +191,19 @@ function FeaturedCard({ item, onOpenScreenshotGallery, onOpenVizdom }) {
   const hasDemo = Boolean(String(item.demoLink || "").trim());
 
   // ✅ SAME TAB
-  const openDemo = (e) => {
-    e.stopPropagation();
-    const url = String(item.demoLink || "").trim();
-    if (!url) return;
-    window.location.assign(url);
-  };
+const openDemo = (e) => {
+  e.stopPropagation();
+  const url = String(item.demoLink || "").trim();
+  if (!url) return;
+  window.open(url, "_blank", "noopener,noreferrer");
+};
 
-  const openYoutube = (e) => {
-    e.stopPropagation();
-    const url = String(item.youtube || "").trim();
-    if (!url) return;
-    window.location.assign(url);
-  };
+const openYoutube = (e) => {
+  e.stopPropagation();
+  const url = String(item.youtube || "").trim();
+  if (!url) return;
+  window.open(url, "_blank", "noopener,noreferrer");
+};
 
   return (
     <article className="fpProjectCard">
@@ -405,12 +405,12 @@ export default function LiveProjects() {
   };
 
   // ✅ SAME TAB vizdom
-  const handleOpenVizdom = (item) => {
-    const id = String(item?.vizdomId || "").trim();
-    if (!id) return;
-    const url = `https://vizdom.flipspaces.app/user/project/${encodeURIComponent(id)}`;
-    window.location.assign(url);
-  };
+const handleOpenVizdom = (item) => {
+  const id = String(item?.vizdomId || "").trim();
+  if (!id) return;
+  const url = `https://vizdom.flipspaces.app/user/project/${encodeURIComponent(id)}`;
+  window.open(url, "_blank", "noopener,noreferrer");
+};
 
   return (
     <div style={sx.page}>

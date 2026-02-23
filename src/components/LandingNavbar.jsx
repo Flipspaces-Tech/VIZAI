@@ -178,7 +178,7 @@ export default function LandingNavbar({
                 className={`vwNavLink ${isLearnActive ? "isActive" : ""}`}
                 onClick={() => {
                   setDd(false);
-                  navigate("/learn");
+                  window.open("/learn", "_blank", "noopener,noreferrer");
                 }}
               >
                 LEARN

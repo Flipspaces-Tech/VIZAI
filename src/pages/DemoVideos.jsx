@@ -226,7 +226,7 @@ export default function DemoVideos() {
                         className="dvPlayBtn"
                         onClick={(e) => {
                           e.stopPropagation();
-                          window.location.assign(ytUrl);
+                          window.open(ytUrl, "_blank", "noopener,noreferrer");
                         }}
                         type="button"
                       >
@@ -252,7 +252,7 @@ export default function DemoVideos() {
                         {ytUrl && (
                           <button
                             className="dv-footerSquare"
-                            onClick={() => window.location.assign(ytUrl)}
+                            onClick={() => window.open(ytUrl, "_blank", "noopener,noreferrer")}
                             type="button"
                           >
                             <img
@@ -267,7 +267,7 @@ export default function DemoVideos() {
                         {demoUrl && (
                           <button
                             className="dv-footerSquare"
-                            onClick={() => window.location.assign(demoUrl)}
+                            onClick={() => window.open(demoUrl, "_blank", "noopener,noreferrer")}
                             type="button"
                           >
                             <img
@@ -282,7 +282,7 @@ export default function DemoVideos() {
                         {demoUrl && (
                           <button
                             className="dv-footerDemoBtn"
-                            onClick={() => window.location.assign(demoUrl)}
+                            onClick={() => window.open(demoUrl, "_blank", "noopener,noreferrer")}
                             type="button"
                           >
                             <img src={demoIcon} alt="" className="dv-demoIcon" />

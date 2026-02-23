@@ -211,16 +211,18 @@ function FeaturedCard({ item, onOpenScreenshotGallery, onOpenVizdom }) {
   // };
 
     const openDemo = (e) => {
-    e.stopPropagation();
-    const url = String(item.demoLink || "").trim();
-    if (!url) return;
-    window.location.href = url; // ✅ same tab
-  };
+  e.stopPropagation();
+  const url = String(item.demoLink || "").trim();
+  if (!url) return;
+  window.open(url, "_blank", "noopener,noreferrer"); // ✅ new tab
+};
 
-  const openYoutube = (e) => {
-    e.stopPropagation();
-    window.location.href = item.youtube; // ✅ same tab
-  };
+const openYoutube = (e) => {
+  e.stopPropagation();
+  const url = String(item.youtube || "").trim();
+  if (!url) return;
+  window.open(url, "_blank", "noopener,noreferrer"); // ✅ new tab
+};
 
   return (
     <article className="fpProjectCard">
@@ -479,12 +481,12 @@ export default function Landing() {
   //   window.open(url, "_blank", "noopener,noreferrer");
   // };
 
-    const handleOpenVizdom = (item) => {
-    const id = String(item?.vizdomId || "").trim();
-    if (!id) return;
-    const url = `https://vizdom.flipspaces.app/user/project/${encodeURIComponent(id)}`;
-    window.location.href = url; // ✅ same tab
-  };
+ const handleOpenVizdom = (item) => {
+  const id = String(item?.vizdomId || "").trim();
+  if (!id) return;
+  const url = `https://vizdom.flipspaces.app/user/project/${encodeURIComponent(id)}`;
+  window.open(url, "_blank", "noopener,noreferrer"); // ✅ new tab
+};
 
 
   if (loading) return <div style={{ ...sx.page, padding: 24 }}>Loading…</div>;
@@ -526,9 +528,12 @@ export default function Landing() {
             type="button"
             className="hero2Btn hero2BtnPrimary"
             onClick={() => {
-              window.location.href =
-                "https://s3-vizwalk-dev.flipspaces.app/uploads/VW-Platform-Pres.mp4";
-            }}
+  window.open(
+    "https://s3-vizwalk-dev.flipspaces.app/uploads/VW-Platform-Pres.mp4",
+    "_blank",
+    "noopener,noreferrer"
+  );
+}}
           >
             <span className="hero2YT" aria-hidden="true" />
             Watch Demo

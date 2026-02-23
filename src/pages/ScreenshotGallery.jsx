@@ -403,9 +403,9 @@ export default function ScreenshotGallery() {
 
   /** ====== ACTIONS ====== */
   const openImage = (url) => {
-    if (!url) return;
-    window.location.assign(url); // ✅ same tab
-  };
+  if (!url) return;
+  window.open(url, "_blank", "noopener,noreferrer"); // ✅ new tab
+};
 
   const dl = (url) => {
     if (!url) return;
@@ -418,12 +418,12 @@ export default function ScreenshotGallery() {
   };
 
   // ✅ Vizdom (external) same tab
-  const handleOpenVizdom = () => {
-    const id = String(headerItem?.vizdomId || "").trim();
-    if (!id) return;
-    const url = `https://vizdom.flipspaces.app/user/project/${encodeURIComponent(id)}`;
-    window.location.assign(url);
-  };
+const handleOpenVizdom = () => {
+  const id = String(headerItem?.vizdomId || "").trim();
+  if (!id) return;
+  const url = `https://vizdom.flipspaces.app/user/project/${encodeURIComponent(id)}`;
+  window.open(url, "_blank", "noopener,noreferrer");
+};
 
   const openVizwalk = () => {
     if (!headerItem) return;
@@ -543,9 +543,11 @@ export default function ScreenshotGallery() {
                     type="button"
                     className="sg-action"
                     disabled={!headerItem?.youtube}
-                    onClick={() =>
-                      headerItem?.youtube && window.location.assign(headerItem.youtube)
-                    }
+                    onClick={() => {
+                      const url = String(headerItem?.youtube || "").trim();
+                      if (!url) return;
+                      window.open(url, "_blank", "noopener,noreferrer");
+                    }}
                   >
                     <span className="sg-actionIconWrap">
                       <img className="sg-actionIcon" src={ytIcon} alt="" />
@@ -562,7 +564,11 @@ export default function ScreenshotGallery() {
                     <button
                       type="button"
                       className="sg-action"
-                      onClick={() => window.location.assign(headerItem.demo)}
+                      onClick={() => {
+  const url = String(headerItem?.demo || "").trim();
+  if (!url) return;
+  window.open(url, "_blank", "noopener,noreferrer");
+}}
                     >
                       <span className="sg-actionIconWrap">
                         <img className="sg-actionIcon" src={demoIcon} alt="" />
