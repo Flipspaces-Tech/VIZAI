@@ -318,8 +318,12 @@ export function ProTipsSection() {
 }
 
 function LearnHero() {
-  const handleDownloadPDF = () => window.print();
+  const PDF_URL =
+    "https://drive.google.com/file/d/1AT_Y3v2IQytEn2MOCFH9hnT6nFHdMUmC/view";
 
+  const handleDownloadPDF = () => {
+    window.open(PDF_URL, "_blank", "noopener,noreferrer");
+  };
   return (
     <section className="learnHero">
       <div className="learnHeroInner">

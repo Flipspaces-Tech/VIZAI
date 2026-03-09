@@ -267,3 +267,12 @@
   opacity: 1;
   transform: translateY(-1px);
 }
+
+.vwFooterShortcutBtn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}

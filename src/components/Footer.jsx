@@ -56,9 +56,19 @@ export default function Footer() {
                 FAQs
               </a>
 
-              <a className="vwFooterLink" href="/shortcuts">
+              <button
+                type="button"
+                className="vwFooterLink vwFooterShortcutBtn"
+                onClick={() =>
+                  window.open(
+                    "https://drive.google.com/file/d/1AT_Y3v2IQytEn2MOCFH9hnT6nFHdMUmC/view",
+                    "_blank",
+                    "noopener,noreferrer"
+                  )
+                }
+              >
                 Shortcut Guide
-              </a>
+              </button>
 
               <div className="vwFooterSupportWrap">
                 <button type="button" className="vwFooterSupportBtn">
