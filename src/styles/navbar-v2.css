@@ -4,15 +4,14 @@
   --vwTopBarH: 34px;
   --vwNavH: 52px;
 
-  /* Colors derived from Figma screenshot */
   --vwYellow: #F3C21A;
-  --vwDark: #3C3B37; /* The exact warm dark grey from the image */
+  --vwDark: #3C3B37;
   --vwWhite: #FFFFFF;
-  --vwBorder: rgba(255, 255, 255, 0.35); /* Subtle border color */
+  --vwBorder: rgba(255, 255, 255, 0.35);
 }
 
-/* Base Reset for this component */
-.vwNavWrap, .vwNavWrap * {
+.vwNavWrap,
+.vwNavWrap * {
   box-sizing: border-box;
 }
 
@@ -22,11 +21,11 @@
   left: 0;
   right: 0;
   z-index: 9999;
-  font-family: 'Inter', 'Segoe UI', sans-serif;
+  font-family: "Inter", "Segoe UI", sans-serif;
 }
 
 .vwContainer {
-  width: 96%; /* Matches the wide layout in the screenshot */
+  width: 96%;
   max-width: 1800px;
   margin: 0 auto;
 }
@@ -45,12 +44,33 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
+}
+
+.vwTopBarTextWrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
 }
 
 .vwTopBarText {
   font-size: 16px;
   color: #111;
   letter-spacing: 0.02em;
+  flex: 1;
+}
+
+.vwTopBarAlertIcon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.vwTopBarAlert .vwTopBarText {
+  /* font-weight: 600; */
 }
 
 .vwTopBarClose {
@@ -63,6 +83,7 @@
   color: #111;
   width: 24px;
   height: 24px;
+  flex: 0 0 auto;
 }
 
 /* --- Navbar Main --- */
@@ -71,7 +92,7 @@
   background: #3F3932;
   display: flex;
   align-items: center;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
   height: 76px;
 }
 
@@ -90,7 +111,7 @@
 }
 
 .vwLogoIcon {
-  height: 38px; /* Adjusted to match scale */
+  height: 38px;
   width: auto;
   display: block;
 }
@@ -98,17 +119,15 @@
 .vwLogoDivider {
   width: 1px;
   height: 20px;
-  background-color: rgba(255,255,255,0.4);
-  margin: 0 16px; /* Precise gap from image */
+  background-color: rgba(255, 255, 255, 0.4);
+  margin: 0 16px;
 }
 
-
-.vwIcon{
-height: 28px; /* Adjusted to match scale */
+.vwIcon {
+  height: 28px;
   width: auto;
   display: block;
 }
-
 
 .vwLogoText {
   font-size: 20px;
@@ -121,9 +140,7 @@ height: 28px; /* Adjusted to match scale */
 .vwNavLinks {
   display: flex;
   align-items: center;
-  gap: 60px; /* Generous spacing like in Figma */
-  
-  /* This pushes the nav links to be centered but biases them based on free space */
+  gap: 60px;
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
@@ -136,7 +153,7 @@ height: 28px; /* Adjusted to match scale */
   font-size: 18px;
   font-weight: 300;
   letter-spacing: 0.06em;
-  color: rgba(255, 255, 255, 0.8); /* Slightly dimmed inactive state */
+  color: rgba(255, 255, 255, 0.8);
   text-transform: uppercase;
   padding: 5px 0;
   transition: all 0.2s;
@@ -148,114 +165,113 @@ height: 28px; /* Adjusted to match scale */
 
 .vwNavLink.isActive {
   color: #fff;
-  font-weight: 600; /* Bold "HOME" */
+  font-weight: 600;
   opacity: 1;
 }
 
 /* Dropdown styling */
-.vwDd { position: relative; }
+.vwDd {
+  position: relative;
+}
+
 .vwDdMenu {
   position: absolute;
-  top: calc(100% + 12px);
+  top: calc(100% + 10px);
   left: 50%;
   transform: translateX(-50%);
-  background: #fff;
-  border-radius: 4px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-  min-width: 160px;
-  padding: 5px 0;
+
+  width: 200px;
+  padding: 8px;
+  border-radius: 8px;
+
+  background: #3F3932;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
   display: flex;
   flex-direction: column;
+  gap: 6px;
+
+  z-index: 99999;
 }
+
 .vwDdItem {
-  background: transparent;
+  position: relative;
+  width: 100%;
   border: none;
+  background: transparent;
+
   text-align: left;
-  padding: 10px 16px;
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
   cursor: pointer;
-  white-space: nowrap;
+
+  padding: 10px 10px 10px 12px;
+  border-radius: 6px;
+
+  font-size: 16px;
+  font-weight: 300;
+  letter-spacing: 0.01em;
+
+  color: rgba(255, 255, 255, 0.85);
 }
-.vwDdItem:hover { background: #f7f7f7; }
+
+.vwDdItem + .vwDdItem {
+  margin-top: 2px;
+  padding-top: 12px;
+}
+
+.vwDdItem + .vwDdItem::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 2px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.vwDdItem:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.vwDdItem:hover::after,
+.vwDdItem.isActive::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 7px;
+  bottom: 7px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--vwYellow);
+  margin-left: -5px;
+}
+
+.vwDdItem.isActive {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
 
 /* 3. Right Controls */
 .vwNavRight {
   display: flex;
   align-items: center;
   gap: 12px;
-  
 }
 
-/* Region Toggle (IN/US) */
 .vwRegionGroup {
-
   display: flex;
   border: 1px solid var(--vwBorder);
   border-radius: 3px;
   height: 28px;
-  
 }
 
-.vwRegionBtn {
-  width: 80px;
-  background: transparent;
-  border: none;
-  color: #fff;
-  font-size: 15px;
-  font-weight: 700;
-  padding: 0 14px;
-  cursor: pointer;
-  height: 100%;
-  align-items: center;
-}
-
-.vwRegionBtn.active {
-  background: var(--vwYellow);
-  color: #111;
-}
-
-/* Icon Buttons (Sun/Exit) */
-.vwIconBtn {
-  background: transparent;
-  border: 1px solid var(--vwBorder);
-  border-radius: 3px;
-  height: 28px;
-  width: 32px;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  cursor: pointer;
-  transition: border-color 0.2s;
-}
-
-.vwIconBtn:hover {
-  border-color: #fff;
-}
-
-/* Responsive Handling */
-@media (max-width: 1024px) {
-  .vwNavLinks {
-    position: static;
-    transform: none;
-    margin-left: auto;
-    margin-right: 20px;
-    gap: 20px;
-  }
-}
-
-@media (max-width: 768px) {
-  .vwNavLinks { display: none; }
-}
-
-/* SERVER TOGGLE CONTAINER - THE PILL SHAPE */
 .vwRegionContainer {
   display: flex;
   align-items: center;
-  background: #2D2C28; /* Dark inner background */
-  border: 1px solid rgba(255, 255, 255, 0.4); /* The thin outer white ring from Image 2 */
-  border-radius: 4px; /* Fully rounded pill shape */
+  background: #2D2C28;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
   padding: 2px;
   height: 38px;
   overflow: hidden;
@@ -274,17 +290,15 @@ height: 28px; /* Adjusted to match scale */
   padding: 0 16px;
   height: 100%;
   cursor: pointer;
-  border-radius: 4px; /* Inner pill rounding */
+  border-radius: 4px;
   transition: all 0.3s ease;
 }
 
-/* ACTIVE STATE - THE YELLOW HIGHLIGHT */
 .vwRegionBtn.active {
-  background: #F3C21A; /* Figma Yellow */
-  color: #000000;      /* Black text when active */
+  background: #F3C21A;
+  color: #000000;
 }
 
-/* FLAG ICON STYLING */
 .vwFlagIcon {
   width: 20px;
   height: 14px;
@@ -292,11 +306,10 @@ height: 28px; /* Adjusted to match scale */
   border-radius: 2px;
 }
 
-/* ICON BUTTONS (Sun/Exit) */
 .vwIconBtn {
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 6px; /* Slightly rounded squares */
+  border-radius: 6px;
   height: 34px;
   width: 34px;
   display: grid;
@@ -304,6 +317,7 @@ height: 28px; /* Adjusted to match scale */
   color: #fff;
   cursor: pointer;
   margin-left: 8px;
+  transition: border-color 0.2s, background 0.2s;
 }
 
 .vwIconBtn:hover {
@@ -311,89 +325,28 @@ height: 28px; /* Adjusted to match scale */
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* ===== Projects Dropdown (match Figma compact) ===== */
-.vwDd { position: relative; }
-
-/* panel */
-.vwDdMenu{
-  position: absolute;
-  top: calc(100% + 10px);
-  left: 50%;
-  transform: translateX(-50%);
-
-  width: 200px;                 /* ✅ Figma-like small */
-  padding: 8px;                 /* ✅ tight */
-  border-radius: 8px;           /* ✅ smaller radius */
-
-  background: #3F3932;   /* darker, like figma */
-  box-shadow: 0 10px 22px rgba(0,0,0,0.35);
-  border: 1px solid rgba(255,255,255,0.08);
-
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-
-  z-index: 99999;
+/* Responsive Handling */
+@media (max-width: 1024px) {
+  .vwNavLinks {
+    position: static;
+    transform: none;
+    margin-left: auto;
+    margin-right: 20px;
+    gap: 20px;
+  }
 }
 
-/* item row */
-.vwDdItem{
-  position: relative;
-  width: 100%;
-  border: none;
-  background: transparent;
+@media (max-width: 768px) {
+  .vwNavLinks {
+    display: none;
+  }
 
-  text-align: left;
-  cursor: pointer;
+  .vwTopBarText {
+    font-size: 14px;
+  }
 
-  padding: 10px 10px 10px 12px; /* ✅ compact */
-  border-radius: 6px;
-
-  font-size: 16px;              /* ✅ matches figma small */
-  font-weight: 300;
-  letter-spacing: 0.01em;
-
-  color: rgba(255,255,255,0.85);
-}
-
-/* divider like figma */
-.vwDdItem + .vwDdItem{
-  margin-top: 2px;
-  padding-top: 12px;
-}
-.vwDdItem + .vwDdItem::before{
-  content: "";
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  top: 2px;
-  height: 1px;
-  background: rgba(255,255,255,0.10);
-}
-
-/* hover subtle (not huge highlight) */
-.vwDdItem:hover{
-  color: #fff;
-  background: rgba(255,255,255,0.06);
-  
-}
-
-/* yellow left accent bar ONLY on hover/active */
-.vwDdItem:hover::after,
-.vwDdItem.isActive::after{
-  content: "";
-  position: absolute;
-  left: 8px;
-  top: 7px;
-  bottom: 7px;
-  width: 3px;
-  border-radius: 3px;
-  background: var(--vwYellow);
-  margin-left: -5px;
-}
-
-/* active row slightly stronger */
-.vwDdItem.isActive{
-  color: #fff;
-  background: rgba(255,255,255,0.08);
+  .vwTopBarAlertIcon {
+    width: 16px;
+    height: 16px;
+  }
 }

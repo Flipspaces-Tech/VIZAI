@@ -1,23 +1,28 @@
 // src/components/LandingNavbar.jsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import vizIcon from "../assets/vw1.png";
 import vIcon from "../assets/Viz logo_01_w.png";
-import "../styles/navbar-v2.css";
-
 import indiaFlag from "../assets/india.png";
 import usFlag from "../assets/usa.png";
+import alertIcon from "../assets/warning.png"; // <-- keep your local alert icon here
+import "../styles/navbar-v2.css";
 
 const TOPBAR_KEY = "vwTopBarClosed";
 
-// ✅ Detect if this page load is a browser refresh/reload
+const SHEET_ID = "180yy7lM0CCtiAtSr87uEm3lewU-pIdvLMGl6RXBvf8o";
+const WARNING_GID = "738570445";
+
+const DEFAULT_TOPBAR_TEXT =
+  "Make Sure Choose the region closest to you for a seamless experience";
+
+// Detect if page load is refresh/reload
 function isReloadNavigation() {
   try {
     const navEntries = performance.getEntriesByType?.("navigation");
     if (navEntries && navEntries.length) {
       return navEntries[0].type === "reload";
     }
-    // Fallback (older browsers)
     return performance.navigation?.type === 1;
   } catch {
     return false;
@@ -25,15 +30,86 @@ function isReloadNavigation() {
 }
 
 function getInitialShowTopBar() {
-  // ✅ If user refreshed, show bar again (clear flag)
   if (isReloadNavigation()) {
     sessionStorage.removeItem(TOPBAR_KEY);
     return true;
   }
-
-  // ✅ Otherwise (normal SPA navigation / initial entry), respect closed flag
   return sessionStorage.getItem(TOPBAR_KEY) !== "1";
 }
+
+function parseCSV(text) {
+  if (!text) return [];
+  if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
+
+  const rows = [];
+  let row = [];
+  let field = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+
+    if (inQuotes) {
+      if (c === '"') {
+        const next = text[i + 1];
+        if (next === '"') {
+          field += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        field += c;
+      }
+    } else {
+      if (c === '"') {
+        inQuotes = true;
+      } else if (c === ",") {
+        row.push(field.trim());
+        field = "";
+      } else if (c === "\n") {
+        row.push(field.trim());
+        rows.push(row);
+        row = [];
+        field = "";
+      } else if (c !== "\r") {
+        field += c;
+      }
+    }
+  }
+
+  if (field.length > 0 || inQuotes || row.length) {
+    row.push(field.trim());
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+const norm = (s = "") =>
+  String(s).toLowerCase().replace(/_/g, " ").replace(/\s+/g, " ").trim();
+
+const headerMap = (headers) => {
+  const m = {};
+  headers.forEach((h, i) => {
+    m[norm(h)] = i;
+  });
+  return m;
+};
+
+const idxOf = (headers, keys) => {
+  const map = headerMap(headers);
+  for (const k of keys) {
+    const i = map[norm(k)];
+    if (i != null) return i;
+  }
+  return null;
+};
+
+const safeGet = (row, idx, fallback = "") =>
+  idx != null && idx < row.length && row[idx] != null
+    ? String(row[idx]).trim()
+    : fallback;
 
 export default function LandingNavbar({
   user,
@@ -42,9 +118,11 @@ export default function LandingNavbar({
   setSelectedServer,
 }) {
   const [dd, setDd] = useState(false);
-
-  // ✅ stays closed on route changes, reappears on refresh
   const [showTopBar, setShowTopBar] = useState(getInitialShowTopBar);
+  const [warningData, setWarningData] = useState({
+    warningStatus: "",
+    warningText: "",
+  });
 
   const ddRef = useRef(null);
   const navigate = useNavigate();
@@ -58,7 +136,48 @@ export default function LandingNavbar({
     return () => document.removeEventListener("mousedown", onDown);
   }, []);
 
-  // ✅ active link logic
+  // Universal warning fetch from sheet
+  useEffect(() => {
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&id=${SHEET_ID}&gid=${WARNING_GID}`;
+
+    (async () => {
+      try {
+        const res = await fetch(url, { cache: "no-store" });
+        const csv = await res.text();
+        const rows = parseCSV(csv);
+
+        if (!rows.length) {
+          setWarningData({ warningStatus: "", warningText: "" });
+          return;
+        }
+
+        const headers = rows[0];
+        const body = rows
+          .slice(1)
+          .filter((r) => r.some((c) => String(c || "").trim() !== ""));
+
+        const iWarning = idxOf(headers, ["warning"]);
+        const iWarningText = idxOf(headers, ["warning text", "warning_text"]);
+
+        const warningRow =
+          body.find((r) => {
+            const status = String(safeGet(r, iWarning, ""))
+              .trim()
+              .toLowerCase();
+            return status === "active";
+          }) || null;
+
+        setWarningData({
+          warningStatus: warningRow ? safeGet(warningRow, iWarning) : "",
+          warningText: warningRow ? safeGet(warningRow, iWarningText) : "",
+        });
+      } catch (err) {
+        console.error("Navbar warning load error:", err);
+        setWarningData({ warningStatus: "", warningText: "" });
+      }
+    })();
+  }, []);
+
   const pathname = location.pathname || "/";
   const hash = location.hash || "";
 
@@ -78,23 +197,37 @@ export default function LandingNavbar({
     navigate("/");
   };
 
+  const isWarningActive =
+    String(warningData.warningStatus || "").trim().toLowerCase() === "active" &&
+    String(warningData.warningText || "").trim() !== "";
+
+  const topBarText = useMemo(() => {
+    if (isWarningActive) return String(warningData.warningText || "").trim();
+    return DEFAULT_TOPBAR_TEXT;
+  }, [isWarningActive, warningData.warningText]);
+
   return (
     <>
       <div className="vwNavWrap">
-        {/* Yellow info bar */}
         {showTopBar && (
-          <div className="vwTopBar">
+          <div className={`vwTopBar ${isWarningActive ? "vwTopBarAlert" : ""}`}>
             <div className="vwContainer vwTopBarInner">
-              <div className="vwTopBarText">
-                Make Sure Choose the region closest to you for a seamless
-                experience
+              <div className="vwTopBarTextWrap">
+                {isWarningActive && (
+                  <img
+                    src={alertIcon}
+                    alt="Alert"
+                    className="vwTopBarAlertIcon"
+                  />
+                )}
+                <div className="vwTopBarText">{topBarText}</div>
               </div>
 
               <button
                 type="button"
                 className="vwTopBarClose"
                 onClick={() => {
-                  sessionStorage.setItem(TOPBAR_KEY, "1"); // ✅ persist across SPA route changes
+                  sessionStorage.setItem(TOPBAR_KEY, "1");
                   setShowTopBar(false);
                 }}
                 aria-label="Close"
@@ -112,10 +245,8 @@ export default function LandingNavbar({
           </div>
         )}
 
-        {/* Dark navbar */}
         <div className="vwNav">
           <div className="vwContainer vwNavInner">
-            {/* Left: Logo Area */}
             <a
               className="vwLogoGroup"
               href="/"
@@ -129,7 +260,6 @@ export default function LandingNavbar({
               <img className="vwIcon" src={vIcon} alt="Vizwalk Logo" />
             </a>
 
-            {/* Center: Links */}
             <div className="vwNavLinks">
               <button
                 className={`vwNavLink ${isHomeActive ? "isActive" : ""}`}
@@ -195,7 +325,6 @@ export default function LandingNavbar({
               </button>
             </div>
 
-            {/* Right: Controls */}
             <div className="vwNavRight">
               <div className="vwRegionContainer">
                 <button
