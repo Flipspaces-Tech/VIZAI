@@ -3,16 +3,15 @@
 /* =========================================================
    GLOBAL BASE
 ========================================================= */
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   margin: 0;
   padding: 0;
   overflow: auto;
-  /* font-family: var(--font-heading); */
   font-family: var(--font-sans);
 }
-
-
 
 /* =========================================================
    LOADER
@@ -34,17 +33,11 @@ html, body, #root {
 }
 
 /* =========================================================
-   HERO (VIDEO BACKGROUND) ✅ CLEAN (no duplicates)
-   - Use with:
-     <section className="hero2">
-       <video className="hero2Video" ... />
-       <div className="hero2Overlay" />
-       <div className="hero2Inner">...</div>
-     </section>
+   HERO
 ========================================================= */
-.hero2{
+.hero2 {
   width: 100%;
-  height: 840px; /* adjust if needed */
+  height: 840px;
   position: relative;
   overflow: hidden;
   display: grid;
@@ -52,8 +45,7 @@ html, body, #root {
   background: #000;
 }
 
-/* Full-bleed background video */
-.hero2Video{
+.hero2Video {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -63,84 +55,71 @@ html, body, #root {
   filter: saturate(0.95) contrast(1) brightness(1.01);
 }
 
-/* Dark overlay for readability */
-.hero2Overlay{
+.hero2Overlay {
   position: absolute;
   inset: 0;
-  /* background:
-    radial-gradient(1000px 600px at 50% 50%, rgba(0,0,0,0.15), rgba(0,0,0,0.55)),
-    linear-gradient(90deg, rgba(0,0,0,0.55), rgba(0,0,0,0.25), rgba(0,0,0,0.55)); */
 }
 
-/* Center content */
-.hero2Inner{
+.hero2Inner {
   position: relative;
   z-index: 2;
   width: min(1348px, 92vw);
   text-align: center;
-  color: rgba(255,255,255,0.92);
+  color: rgba(255, 255, 255, 0.92);
   padding: 0 16px;
 }
 
-.hero2Kicker{
+.hero2Kicker {
+  margin-bottom: 5px;
   font-size: 22px;
   letter-spacing: 0.1em;
-  color: #3F3932;
-  margin-bottom: 5px;
+  color: #3f3932;
   font-weight: 200;
 }
 
-.hero2Title{
-  font-family: var(--font-heading);;
+.hero2Title {
+  margin-bottom: 12px;
+  font-family: var(--font-heading);
   font-size: 64px;
   line-height: 1.05;
   letter-spacing: 0.005em;
-  margin-bottom: 12px;
   font-weight: 100;
-  color: #3F3932;
+  color: #3f3932;
 }
 
-.hero2Desc{
-  font-size: 30px;
-  line-height: 1.6;
-  color: #3F3932;
-
-  /* ✅ make it a real centered block */
-  width: 1348px;
+.hero2Desc {
+  max-width: 1348px;
+  width: min(1348px, 92vw);
   margin: 0 auto;
   text-align: center;
-
-  /* ✅ lighter */
-  font-weight: 300;
-
-  /* ✅ improve wrapping so it looks centered */
   text-wrap: balance;
-  font-family: var(--font-sans);;
+  font-family: var(--font-sans);
+  font-size: 30px;
+  line-height: 1.6;
+  font-weight: 300;
+  color: #3f3932;
 }
 
 .hero2Desc b,
-.hero2Desc strong{
+.hero2Desc strong {
   font-weight: 300;
 }
 
-
-
-/* Buttons */
-.hero2Btns{
+.hero2Btns {
   margin-top: 18px;
   display: inline-flex;
   align-items: center;
   gap: 12px;
 }
 
-.hero2Btn{
+.hero2Btn {
   height: 52px;
   width: 224px;
   padding: 0 14px;
   border-radius: 4px;
-  border: 1px solid #3F3932;
-  background: rgba(255,255,255,0.10);
-  color: #3F3932;
+  border: 1px solid #3f3932;
+  background: rgba(255, 255, 255, 0.1);
+  color: #3f3932;
   font-size: 24px;
   font-weight: 300;
   cursor: pointer;
@@ -150,21 +129,20 @@ html, body, #root {
   backdrop-filter: blur(2px);
 }
 
-.hero2Btn:hover{
-  background: #3F393208;
-  border-color: #3F3932;
+.hero2Btn:hover {
+  background: #3f393208;
+  border-color: #3f3932;
 }
 
-.hero2BtnPrimary{
-  background: rgba(255,255,255,0.10);
+.hero2BtnPrimary {
+  background: rgba(255, 255, 255, 0.1);
 }
 
-.hero2BtnSecondary{
-  background: rgba(255,255,255,0.06);
+.hero2BtnSecondary {
+  background: rgba(255, 255, 255, 0.06);
 }
 
-/* Small YouTube icon */
-.hero2YT{
+.hero2YT {
   width: 14px;
   height: 10px;
   border-radius: 2px;
@@ -176,7 +154,7 @@ html, body, #root {
   scale: 2;
 }
 
-.hero2YT::after{
+.hero2YT::after {
   content: "";
   position: absolute;
   left: 5px;
@@ -189,7 +167,7 @@ html, body, #root {
 }
 
 /* =========================================================
-   FEATURED PROJECTS (IMAGE1 STYLE)
+   FEATURED PROJECTS
 ========================================================= */
 .fpSection {
   width: 100%;
@@ -198,17 +176,16 @@ html, body, #root {
 }
 
 .fpContainer {
-  width: 1520px;
+  width: min(1520px, calc(100vw - 48px));
   margin: 0 auto;
 }
 
-/* Header */
 .fpHeader {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 18px;
-  height: 92px;
+  min-height: 92px;
   margin-bottom: 50px;
 }
 
@@ -220,6 +197,7 @@ html, body, #root {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .fpTitle {
@@ -227,56 +205,46 @@ html, body, #root {
   font-size: 48px;
   font-weight: 200;
   letter-spacing: -0.2px;
-  font-family: var(--font-heading);;
+  font-family: var(--font-heading);
 }
 
 .fpSub {
   margin-top: 6px;
   font-size: 18px;
-  color: rgba(0,0,0,0.55);
-  
+  color: rgba(0, 0, 0, 0.55);
 }
 
-/* Make fpServerBadge look like sg-serverPill */
-.fpServerBadge{
+.fpServerBadge {
   height: 28px;
+  min-width: 126px;
   padding: 0 6px;
   border-radius: 2px;
-  /* border: 1px solid #d6d6d6; */
-  background: #EAEAEA;
-
+  background: #eaeaea;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
-
+  width: auto;
+  white-space: nowrap;
   font-size: 14px;
   font-weight: 600;
   color: #111;
-
-  /* important: remove “boxy” behaviour */
-  width: auto;
-  min-width: 126px;   /* optional: keeps a similar size */
-  justify-content: center;
-  white-space: nowrap;
 }
 
-.fpServerBadgeIcon{
+.fpServerBadgeIcon {
   width: 18px;
   height: 18px;
   object-fit: contain;
   display: block;
 }
 
-.fpServerBadgeText{
-  /* remove fixed sizes */
+.fpServerBadgeText {
   width: auto;
   height: auto;
   font-size: 14px;
   line-height: 1;
 }
 
-
-/* Controls row */
 .fpControls {
   margin-top: 18px;
   display: flex;
@@ -285,7 +253,6 @@ html, body, #root {
   gap: 18px;
 }
 
-/* Chips */
 .fpChips {
   display: flex;
   gap: 10px;
@@ -296,30 +263,29 @@ html, body, #root {
   border-radius: 3px !important;
   padding: 6px 16px !important;
   font-size: 14px !important;
-  border: 1px solid rgba(0,0,0,0.25) !important;
+  border: 1px solid rgba(0, 0, 0, 0.25) !important;
   background: #fff !important;
-  color: rgba(0,0,0,0.65) !important;
+  color: rgba(0, 0, 0, 0.65) !important;
 }
 
 .fpChips .dv-chip--active {
   background: #efefef !important;
   color: #111 !important;
   font-weight: 900;
-  border-color: rgba(0,0,0,0.35) !important;
+  border-color: rgba(0, 0, 0, 0.35) !important;
 }
 
-/* Search */
 .fpSearchWrap {
   height: 36px;
+  width: 210px;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 8px;
   background: #fff;
-  border: 1px solid rgba(0,0,0,0.35);
+  border: 1px solid rgba(0, 0, 0, 0.35);
   border-radius: 3px;
   padding: 0 10px;
-  width: 210px;
-  flex: 0 0 auto;
 }
 
 .fpSearchIconImg {
@@ -330,11 +296,11 @@ html, body, #root {
 }
 
 .fpSearchInput {
+  width: 100%;
   border: none;
   outline: none;
   background: transparent;
   font-size: 12px;
-  width: 100%;
 }
 
 .fpSearchInput::placeholder {
@@ -342,120 +308,16 @@ html, body, #root {
   opacity: 1;
 }
 
-/* Grid */
+/* =========================================================
+   GRID
+========================================================= */
 .fpGrid {
   margin-top: 36px;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 28px;
 }
 
-/* Card */
-.fpCard {
-  width: 488px;
-  height: 456px;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  overflow: visible;
-  transform: none !important;
-}
-
-/* Image area */
-.fpMedia {
-  position: relative;
-  border-radius: 6px;
-  overflow: hidden;
-  background: #eeeeee;
-}
-
-.fpImg {
-  width: 488px;
-  height: 326px;
-  object-fit: cover;
-  display: block;
-}
-
-/* Arrow overlay */
-.fpArrowBtn {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  border: 1px solid rgba(0,0,0,0.15);
-  background: rgba(255,255,255,0.95);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-}
-
-.fpArrowIcon {
-  font-size: 16px;
-  line-height: 1;
-  transform: translateX(1px);
-}
-
-/* Text below image */
-.fpBody {
-  height: 106px;
-  margin-top: 10px;
-  padding: 0;
-  background: transparent;
-}
-
-.fpName {
-  margin: 0;
-  font-size: 28px;
-  font-family: var(--font-heading);
-  font-weight: 100;
-}
-
-.fpMetaLine {
-  margin-top: 2px;
-  font-size: 18px;
-  color: rgba(0,0,0,0.65);
-}
-
-/* Actions row */
-.fpActions {
-  margin-top: 8px;
-  margin-left: 2px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  height: 32px;
-}
-
-.fpMiniIconBtn {
-  width: 18px;
-  height: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.fpMiniIconBtn img {
-  width: 20px;
-  height: 20px;
-  display: block;
-}
-
-.fpViewDemo {
-  height: 20px;
-  padding: 0 8px;
-  border-radius: 3px;
-  border: 1px solid rgba(0,0,0,0.25);
-  background: #fff;
-  font-size: 10px;
-  cursor: pointer;
-  color: rgba(0,0,0,0.75);
-}
-
-/* Empty */
 .fpEmpty {
   text-align: center;
   padding: 24px 0;
@@ -463,7 +325,6 @@ html, body, #root {
   font-weight: 600;
 }
 
-/* Bottom link */
 .fpBottom {
   display: flex;
   justify-content: center;
@@ -480,7 +341,7 @@ html, body, #root {
   gap: 18px;
   font-size: 22px;
   font-weight: 300;
-  letter-spacing: 3%;
+  letter-spacing: 0.03em;
   color: #111;
   padding: 0 0 8px;
   line-height: 1;
@@ -494,7 +355,7 @@ html, body, #root {
   bottom: 0;
   width: 209px;
   height: 2px;
-  background: rgba(0,0,0,0.35);
+  background: rgba(0, 0, 0, 0.35);
 }
 
 .fpViewAllLink span {
@@ -505,189 +366,26 @@ html, body, #root {
   transform: translateY(2px);
 }
 
-/* Neutralize any global hover transforms */
-.fpCard:hover {
-  box-shadow: none !important;
-  border-color: transparent !important;
-  transform: none !important;
-}
-
-/* ===== Featured Projects card = DemoVideos style (fixed image 488x326) ===== */
-
-.fpProjectCard{
-  width: 488px;
-  /* total height becomes natural; no forced 456px */
-  background: transparent;
-}
-
-.fpCardMedia{
-  position: relative;
-  width: 488px;
-  height: 326px;              /* ✅ fixed size as requested */
-  border-radius: 8px;
-  overflow: hidden;
-  background: #f5f5f5;
-  margin-bottom: 16px;        /* ✅ like demo-videos */
-}
-
-.fpCardImg{
-  width: 488px;
-  height: 326px;              /* ✅ fixed size as requested */
-  object-fit: cover;
-  display: block;
-}
-
-/* View Project pill (same vibe as demo-videos) */
-.fpViewPill{
-  position: absolute;
-  right: 18px;
-  bottom: 18px;
-
-  height: 40px;
-  padding: 0 14px;
-  border-radius: 6px;
-
-  background: #fff;
-  border: 1px solid rgba(0,0,0,0.18);
-  box-shadow: 0 6px 18px rgba(0,0,0,0.14);
-
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-
-  font-size: 14px;
-  font-weight: 600;
-  color: #111;
-  cursor: pointer;
-}
-
-.fpViewPillIco{
-  font-size: 18px;
-  line-height: 1;
-}
-
-/* Details */
-.fpCardDetails{
-  display: flex;
-  flex-direction: column;
-}
-
-.fpProjectName{
-  font-size: 30px;
-  font-weight: 300;
-  color: #111;
-  margin: 0 0 6px 0;
-  font-family: var(--font-heading);
-}
-
-.fpProjectMeta{
-  font-size: 18px;
-  color: rgba(0,0,0,0.65);
-  margin: 0 0 10px 0;
-}
-
-/* Footer row (like demo-videos) */
-.fpCardFooter{
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 1px;
-}
-
-.fpFooterSquare{
-  width: 32px;
-  height: 32px;
-  border-radius: 3px;
-  border: 0.5px solid rgba(0,0,0,0.35);
-  background: #fff;
-
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  padding: 0;
-}
-
-.fpFooterSquareImg{
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
-}
-
-.fpYtImg{
-  width: 20px;
-  height: 20px;
-}
-
-.fpFooterDemoBtn{
-  height: 32px;
-  padding: 8px 20px;
-  border-radius: 3px;
-  border: 0.5px solid rgba(0,0,0,0.35);
-  background: #fff;
-
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-
-  font-size: 16px;
-  font-weight: 600;
-  color: #222;
-
-  cursor: pointer;
-  white-space: nowrap;
-  line-height: 1;
-}
-
-.fpFooterDemoIco{
-  font-size: 18px;
-  line-height: 1;
-}
-/* View Demo pill (with icon) */
-.fpFooterDemoBtn{
-  height: 32px;
-  padding: 8px 10px;
-  border-radius: 3px;
-  border: 0.5px solid rgba(0, 0, 0, 0.35);
-  background: #fff;
-
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-
-  font-size: 16px;
-  font-weight: 600;
-  color: #222;
-
-  cursor: pointer;
-  white-space: nowrap;
-  line-height: 1;
-}
-
-.fpDemoIcon{
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
-}
-/* 1. Base Card Shadow & Transition */
+/* =========================================================
+   FEATURED CARD
+========================================================= */
 .fpProjectCard {
-  width: 488px;
+  width: 100%;
+  min-width: 0;
   background: transparent;
-  transition: box-shadow 0.4s ease;
-  /* padding: 10px; */
   border-radius: 6px;
   padding-bottom: 15px;
+  transition: box-shadow 0.35s ease, transform 0.35s ease;
 }
 
 .fpProjectCard:hover {
-  /* Right circle annotates shadow */
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
 }
 
-/* 2. Darken Image on Hover */
 .fpCardMedia {
   position: relative;
-  width: 488px;
-  height: 326px;
+  width: 100%;
+  aspect-ratio: 488 / 326;
   border-radius: 4px;
   overflow: hidden;
   background: #f5f5f5;
@@ -698,18 +396,24 @@ html, body, #root {
   content: "";
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4); /* Dark overlay */
+  background: rgba(0, 0, 0, 0.42);
   opacity: 0;
-  transition: opacity 0.4s ease;
+  transition: opacity 0.35s ease;
   pointer-events: none;
 }
 
 .fpProjectCard:hover .fpCardMedia::after {
-  /* Upper circle annotates image getting dark */
   opacity: 1;
 }
 
-/* 3. Button turning Yellow */
+.fpCardImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* View Project button */
 .fpViewPill {
   position: absolute;
   right: 18px;
@@ -719,89 +423,203 @@ html, body, #root {
   padding: 0 14px;
   border-radius: 2px;
   background: #fff;
-  border: 1px solid rgba(0,0,0,0.18);
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   font-size: 14px;
   font-weight: 600;
   color: #111;
   cursor: pointer;
-  transition: background-color 0.4s ease, transform 0.4s ease;
-}
-
-.fpProjectCard:hover .fpViewPill {
-  /* Center circle annotates button turning yellow */
-  background: #FFD700; /* Yellow */
-  border-color: #FFD700;
-}
-
-/* 4. Text sliding to the right */
-.fpCardDetails {
-  display: flex;
-  flex-direction: column;
-  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
-}
-
-.fpProjectCard:hover .fpCardDetails {
-  /* Middle arrow annotates text sliding right */
-  transform: translateX(15px);
-}
-
-.fpViewPillArrow{
-  width: 16px;     /* tweak */
-  height: 16px;    /* tweak */
-  object-fit: contain;
-  display: block;
-  font-weight: 900;
-}
-/* ===========================
-   FEATURED CARD – HOVER STATE
-   (paste at END of file)
-=========================== */
-
-/* Card hover shadow */
-.fpProjectCard{
-  border-radius: 6px;
-  transition: box-shadow 0.35s ease, transform 0.35s ease;
-}
-
-.fpProjectCard:hover{
-  box-shadow: 0 20px 40px rgba(0,0,0,0.10);
-}
-
-/* Darken image on hover */
-.fpCardMedia{
-  position: relative;
-  overflow: hidden;
-}
-
-.fpCardMedia::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  background: rgba(0,0,0,0.42);
-  opacity: 0;
-  transition: opacity 0.35s ease;
-  pointer-events:none;
-}
-
-.fpProjectCard:hover .fpCardMedia::after{
-  opacity: 1;
-}
-
-/* View Project pill hover */
-.fpViewPill{
   transition: background-color 0.35s ease, border-color 0.35s ease;
 }
 
-.fpProjectCard:hover .fpViewPill{
-  background: #F3C21A;     /* your yellow */
-  border-color: #F3C21A;
+.fpProjectCard:hover .fpViewPill {
+  background: #f3c21a;
+  border-color: #f3c21a;
 }
 
-/* Slide text + icons right */
-.fpCardDetails{
+.fpViewPillArrow {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  display: block;
+}
+
+/* Details below image */
+.fpCardDetails {
+  display: flex;
+  flex-direction: column;
   transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
-.fpProjectCard:hover .fpCardDetails{
+.fpProjectCard:hover .fpCardDetails {
   transform: translateX(14px);
+}
+
+.fpProjectName {
+  font-size: 30px;
+  font-weight: 300;
+  color: #111;
+  margin: 0 0 6px 0;
+  font-family: var(--font-heading);
+}
+
+.fpProjectMeta {
+  font-size: 18px;
+  color: rgba(0, 0, 0, 0.65);
+  margin: 0 0 10px 0;
+}
+
+.fpCardFooter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 1px;
+  flex-wrap: wrap;
+}
+
+.fpFooterSquare {
+  width: 32px;
+  height: 32px;
+  border-radius: 3px;
+  border: 0.5px solid rgba(0, 0, 0, 0.35);
+  background: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.fpFooterSquareImg {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.fpYtImg {
+  width: 20px;
+  height: 20px;
+}
+
+.fpFooterDemoBtn {
+  height: 32px;
+  padding: 8px 10px;
+  border-radius: 3px;
+  border: 0.5px solid rgba(0, 0, 0, 0.35);
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #222;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.fpDemoIcon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+@media (max-width: 1600px) {
+  .fpContainer,
+  .tsInner {
+    width: min(1520px, calc(100vw - 40px));
+  }
+}
+
+@media (max-width: 1200px) {
+  .fpGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fpTitle {
+    font-size: 42px;
+  }
+
+  .hero2Title {
+    font-size: 56px;
+  }
+
+  .hero2Desc {
+    font-size: 26px;
+  }
+
+  .tsTitle {
+    font-size: 34px;
+  }
+}
+
+@media (max-width: 768px) {
+  .fpContainer,
+  .tsInner {
+    width: min(1520px, calc(100vw - 24px));
+  }
+
+  .fpGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .fpControls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .fpSearchWrap {
+    width: 100%;
+  }
+
+  .fpChips {
+    flex-wrap: wrap;
+  }
+
+  .hero2 {
+    height: 720px;
+  }
+
+  .hero2Title {
+    font-size: 42px;
+  }
+
+  .hero2Desc {
+    font-size: 20px;
+    width: min(92vw, 900px);
+  }
+
+  .hero2Btns {
+    flex-direction: column;
+  }
+
+  .fpTitleRow {
+    flex-wrap: wrap;
+  }
+
+  .fpTitle {
+    font-size: 36px;
+  }
+
+  .fpProjectName {
+    font-size: 26px;
+  }
+
+  .fpProjectMeta {
+    font-size: 16px;
+  }
+
+  .tsTitle {
+    font-size: 28px;
+  }
+
+  .tsCard {
+    width: 320px;
+  }
 }
