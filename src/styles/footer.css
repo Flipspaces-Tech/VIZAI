@@ -15,6 +15,15 @@
   box-sizing: border-box;
 }
 
+.vwFooterupdate:hover{
+  color: rgba(0,0,0,0.62);
+  text-decoration: none;
+  text-underline-offset: 3px;
+}
+.vwFooterLinkNoUnderline:hover{
+  text-decoration: none;
+}
+
 /* =========================================================
    TOP AREA (2 halves + centered divider)
 ========================================================= */
@@ -102,6 +111,14 @@
   margin-bottom: 26px;
 }
 
+.vwFooterupdate{
+  display: block;
+  font-size: 20px;
+  color: rgba(0,0,0,0.62);
+  text-decoration: none;
+  margin-bottom: 26px;
+}
+
 .vwFooterLink:hover{
   color: rgba(0,0,0,0.85);
   text-decoration: underline;
@@ -162,3 +179,71 @@
   opacity: 1;
   transform: translateY(-1px);
 }
+
+.vwFooterLinkNoUnderline:hover{
+  text-decoration: none;
+}
+
+.vwFooterSupportBtn{
+  background: transparent;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.vwFooterSupportBtn:hover{
+  color: rgba(0,0,0,0.85);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.vwFooterSupportWrap{
+  position: relative;
+  width: fit-content;
+}
+
+.vwFooterSupportTooltip{
+  position: absolute;
+  top: -20px;
+  left: 0;
+  min-width: 265px;
+  background: #ffffff;
+  color: rgba(0,0,0,0.62);
+  border: 1px solid rgba(0,0,0,0.12);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.10);
+  padding: 12px 14px;
+  font-size: 16px;
+  line-height: 1.45;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
+  pointer-events: none;
+  z-index: 20;
+  white-space: nowrap;
+  border-radius: 8px;
+}
+
+.vwFooterCol:has(.vwFooterSupportBtn:hover) .vwFooterSupportTooltip,
+.vwFooterCol:has(.vwFooterSupportBtn:focus-visible) .vwFooterSupportTooltip{
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.vwFooterCopiedToast{
+  position: absolute;
+  top: -65px;
+  left: 150;
+  background: #1f1f1f;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  padding: 10px 14px;
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  z-index: 25;
+}
+

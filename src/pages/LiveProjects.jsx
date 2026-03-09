@@ -1,5 +1,6 @@
-// LiveProjects.jsx ✅ SAME TAB everywhere + Back works (SG_BACK_URL)
+// LiveProjects.jsx
 import React, { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 
 import LandingNavbar from "../components/LandingNavbar.jsx";
 import Footer from "../components/Footer.jsx";
@@ -19,6 +20,12 @@ import "../pages/Landing.css";
 /** ====== SHEET (CSV) ====== */
 const SHEET_ID = "180yy7lM0CCtiAtSr87uEm3lewU-pIdvLMGl6RXBvf8o";
 const GID = "738570445";
+
+function getRegionFromPath(pathname = "") {
+  const parts = pathname.split("/").filter(Boolean);
+  const first = (parts[0] || "").toLowerCase();
+  return first === "us" ? "us" : "in";
+}
 
 /** ====== CSV PARSER ====== */
 function parseCSV(text) {
@@ -190,20 +197,19 @@ function FeaturedCard({ item, onOpenScreenshotGallery, onOpenVizdom }) {
   const hasVizdom = Boolean(String(item.vizdomId || "").trim());
   const hasDemo = Boolean(String(item.demoLink || "").trim());
 
-  // ✅ SAME TAB
-const openDemo = (e) => {
-  e.stopPropagation();
-  const url = String(item.demoLink || "").trim();
-  if (!url) return;
-  window.open(url, "_blank", "noopener,noreferrer");
-};
+  const openDemo = (e) => {
+    e.stopPropagation();
+    const url = String(item.demoLink || "").trim();
+    if (!url) return;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
-const openYoutube = (e) => {
-  e.stopPropagation();
-  const url = String(item.youtube || "").trim();
-  if (!url) return;
-  window.open(url, "_blank", "noopener,noreferrer");
-};
+  const openYoutube = (e) => {
+    e.stopPropagation();
+    const url = String(item.youtube || "").trim();
+    if (!url) return;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <article className="fpProjectCard">
@@ -214,7 +220,6 @@ const openYoutube = (e) => {
           alt={item.buildName}
         />
 
-        {/* ✅ SAME TAB gallery */}
         <button
           className="fpViewPill"
           onClick={(e) => {
@@ -282,13 +287,21 @@ const openYoutube = (e) => {
 /** ====== LIVE PROJECTS PAGE ====== */
 export default function LiveProjects() {
   const { user, signOut } = useAuth();
+  const location = useLocation();
+  const currentRegion = getRegionFromPath(location.pathname);
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [selectedServer, setSelectedServer] = useState("india");
+  const [selectedServer, setSelectedServer] = useState(
+    currentRegion === "us" ? "us" : "india"
+  );
   const [activeCategory2, setActiveCategory2] = useState("All");
   const [searchQuery2, setSearchQuery2] = useState("");
+
+  useEffect(() => {
+    setSelectedServer(currentRegion === "us" ? "us" : "india");
+  }, [currentRegion]);
 
   useEffect(() => {
     setActiveCategory2("All");
@@ -388,11 +401,10 @@ export default function LiveProjects() {
     });
   }, [items, selectedServer, activeCategory2, searchQuery2]);
 
-  // ✅ SAME TAB gallery + store back url + pass gid
   const handleOpenScreenshotGallery = (item) => {
     sessionStorage.setItem(
       "SG_BACK_URL",
-      window.location.pathname + window.location.search
+      `${window.location.pathname}${window.location.search}${window.location.hash}`
     );
 
     const params = new URLSearchParams({
@@ -401,16 +413,15 @@ export default function LiveProjects() {
       gid: String(GID),
     });
 
-    window.location.assign(`/gallery?${params.toString()}`);
+    window.location.assign(`/${currentRegion}/gallery?${params.toString()}`);
   };
 
-  // ✅ SAME TAB vizdom
-const handleOpenVizdom = (item) => {
-  const id = String(item?.vizdomId || "").trim();
-  if (!id) return;
-  const url = `https://vizdom.flipspaces.app/user/project/${encodeURIComponent(id)}`;
-  window.open(url, "_blank", "noopener,noreferrer");
-};
+  const handleOpenVizdom = (item) => {
+    const id = String(item?.vizdomId || "").trim();
+    if (!id) return;
+    const url = `https://vizdom.flipspaces.app/user/project/${encodeURIComponent(id)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <div style={sx.page}>

@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 
 import { AuthProvider } from "./auth/AuthProvider";
 import RequireAuth from "./auth/RequireAuth";
@@ -10,9 +10,20 @@ import Login from "./pages/Login";
 import DemoVideos from "./pages/DemoVideos.jsx";
 import Learn from "./pages/Learn.jsx";
 import Showcase from "./pages/Showcase.jsx";
-import LiveProjects from "./pages/LiveProjects.jsx"; // ✅ ADD THIS
+import LiveProjects from "./pages/LiveProjects.jsx";
 
 const Experience = lazy(() => import("./pages/Experience"));
+
+function RegionGuard({ children }) {
+  const { region } = useParams();
+  const normalized = String(region || "").toLowerCase();
+
+  if (normalized !== "in" && normalized !== "us") {
+    return <Navigate to="/in" replace />;
+  }
+
+  return children;
+}
 
 export default function App() {
   return (
@@ -21,59 +32,93 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
 
-          <Route
-            path="/"
-            element={
-              <RequireAuth>
-                <Landing />
-              </RequireAuth>
-            }
-          />
+          {/* default root */}
+          <Route path="/" element={<Navigate to="/in" replace />} />
 
-          {/* ✅ Showcase page */}
-          <Route
-            path="/showcase"
-            element={
-              <RequireAuth>
-                <Showcase />
-              </RequireAuth>
-            }
-          />
+          {/* old URLs -> redirect to India by default */}
+          <Route path="/showcase" element={<Navigate to="/in/showcase" replace />} />
+          <Route path="/live-projects" element={<Navigate to="/in/live-projects" replace />} />
+          <Route path="/experience" element={<Navigate to="/in/experience" replace />} />
+          <Route path="/gallery" element={<Navigate to="/in/gallery" replace />} />
+          <Route path="/demo-videos" element={<Navigate to="/in/demo-videos" replace />} />
+          <Route path="/learn" element={<Navigate to="/in/learn" replace />} />
 
-          {/* ✅ Live Projects page */}
+          {/* region routes */}
           <Route
-            path="/live-projects"
+            path="/:region"
             element={
-              <RequireAuth>
-                <LiveProjects />
-              </RequireAuth>
+              <RegionGuard>
+                <RequireAuth>
+                  <Landing />
+                </RequireAuth>
+              </RegionGuard>
             }
           />
 
           <Route
-            path="/experience"
+            path="/:region/showcase"
             element={
-              <RequireAuth>
-                <Suspense fallback={<div style={{ padding: 24 }}>Loading…</div>}>
-                  <Experience />
-                </Suspense>
-              </RequireAuth>
+              <RegionGuard>
+                <RequireAuth>
+                  <Showcase />
+                </RequireAuth>
+              </RegionGuard>
             }
           />
 
           <Route
-            path="/gallery"
+            path="/:region/live-projects"
             element={
-              <RequireAuth>
-                <ScreenshotGallery />
-              </RequireAuth>
+              <RegionGuard>
+                <RequireAuth>
+                  <LiveProjects />
+                </RequireAuth>
+              </RegionGuard>
             }
           />
 
-          <Route path="/demo-videos" element={<DemoVideos />} />
-          <Route path="/learn" element={<Learn />} />
+          <Route
+            path="/:region/experience"
+            element={
+              <RegionGuard>
+                <RequireAuth>
+                  <Suspense fallback={<div style={{ padding: 24 }}>Loading…</div>}>
+                    <Experience />
+                  </Suspense>
+                </RequireAuth>
+              </RegionGuard>
+            }
+          />
 
-          {/* ✅ Important */}
+          <Route
+            path="/:region/gallery"
+            element={
+              <RegionGuard>
+                <RequireAuth>
+                  <ScreenshotGallery />
+                </RequireAuth>
+              </RegionGuard>
+            }
+          />
+
+          <Route
+            path="/:region/demo-videos"
+            element={
+              <RegionGuard>
+                <DemoVideos />
+              </RegionGuard>
+            }
+          />
+
+          <Route
+            path="/:region/learn"
+            element={
+              <RegionGuard>
+                <Learn />
+              </RegionGuard>
+            }
+          />
+
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </AuthProvider>

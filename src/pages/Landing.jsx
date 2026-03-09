@@ -16,16 +16,22 @@ import "../pages/Landing.css";
 import Footer from "../components/Footer.jsx";
 
 import demoIcon from "../assets/view demo.png";
-import arrowPng from "../assets/Redirect Arrow.png"; // View Project arrow (PNG)
+import arrowPng from "../assets/Redirect Arrow.png";
 
-import { useNavigate } from "react-router-dom";
-
+import { useNavigate, useLocation } from "react-router-dom";
 
 /** ====== SHEET (CSV) ====== */
 const SHEET_ID = "180yy7lM0CCtiAtSr87uEm3lewU-pIdvLMGl6RXBvf8o";
-const GID = "1024074012"; // Featured Projects Page gid
+const GID = "1024074012";
 
-const HERO_MP4 = "https://s3-vizwalk-dev.flipspaces.app/uploads/Vizwalk+background+2.mov";
+const HERO_MP4 =
+  "https://s3-vizwalk-dev.flipspaces.app/uploads/Vizwalk+background+2.mov";
+
+function getRegionFromPath(pathname = "") {
+  const parts = pathname.split("/").filter(Boolean);
+  const first = (parts[0] || "").toLowerCase();
+  return first === "us" ? "us" : "in";
+}
 
 /** ====== CSV PARSER ====== */
 function parseCSV(text) {
@@ -79,7 +85,9 @@ const headerMap = (headers) => {
 };
 
 const safeGet = (row, idx, fallback = "") =>
-  idx != null && idx < row.length && row[idx] != null ? String(row[idx]).trim() : fallback;
+  idx != null && idx < row.length && row[idx] != null
+    ? String(row[idx]).trim()
+    : fallback;
 
 /** ✅ Added demoLink mapping */
 const COLS = {
@@ -107,7 +115,7 @@ const COLS = {
   ],
   youtube: ["walkthrough link", "youtube link", "youtube"],
   constructionType: ["construction type"],
-  demoLink: ["demo link", "demo", "demo url", "demo_url"], // ✅ NEW
+  demoLink: ["demo link", "demo", "demo url", "demo_url"],
 };
 
 const idxOf = (headers, keys) => {
@@ -157,7 +165,8 @@ function ImageWithFallback({ src, alt, style, className }) {
       : [src || ""];
 
   const [idx, setIdx] = useState(0);
-  const onError = () => setIdx((i) => (i < candidates.length - 1 ? i + 1 : -1));
+  const onError = () =>
+    setIdx((i) => (i < candidates.length - 1 ? i + 1 : -1));
 
   if (!src || idx === -1) {
     return (
@@ -198,38 +207,29 @@ function FeaturedCard({ item, onOpenScreenshotGallery, onOpenVizdom }) {
   const hasVizdom = Boolean(String(item.vizdomId || "").trim());
   const hasDemo = Boolean(String(item.demoLink || "").trim());
 
-  // const openDemo = (e) => {
-  //   e.stopPropagation();
-  //   const url = String(item.demoLink || "").trim();
-  //   if (!url) return;
-  //   window.open(url, "_blank", "noopener,noreferrer");
-  // };
+  const openDemo = (e) => {
+    e.stopPropagation();
+    const url = String(item.demoLink || "").trim();
+    if (!url) return;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
-  // const openYoutube = (e) => {
-  //   e.stopPropagation();
-  //   window.open(item.youtube, "_blank", "noopener,noreferrer");
-  // };
-
-    const openDemo = (e) => {
-  e.stopPropagation();
-  const url = String(item.demoLink || "").trim();
-  if (!url) return;
-  window.open(url, "_blank", "noopener,noreferrer"); // ✅ new tab
-};
-
-const openYoutube = (e) => {
-  e.stopPropagation();
-  const url = String(item.youtube || "").trim();
-  if (!url) return;
-  window.open(url, "_blank", "noopener,noreferrer"); // ✅ new tab
-};
+  const openYoutube = (e) => {
+    e.stopPropagation();
+    const url = String(item.youtube || "").trim();
+    if (!url) return;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <article className="fpProjectCard">
       <div className="fpCardMedia">
-        <ImageWithFallback className="fpCardImg" src={item.thumb} alt={item.buildName} />
+        <ImageWithFallback
+          className="fpCardImg"
+          src={item.thumb}
+          alt={item.buildName}
+        />
 
-        {/* View Project -> Screenshot Gallery */}
         <button
           className="fpViewPill"
           onClick={(e) => {
@@ -239,7 +239,12 @@ const openYoutube = (e) => {
           type="button"
         >
           View Project
-          <img className="fpViewPillArrow" src={arrowPng} alt="" aria-hidden="true" />
+          <img
+            className="fpViewPillArrow"
+            src={arrowPng}
+            alt=""
+            aria-hidden="true"
+          />
         </button>
       </div>
 
@@ -247,18 +252,22 @@ const openYoutube = (e) => {
         <h3 className="fpProjectName">{item.buildName || "Project"}</h3>
 
         <p className="fpProjectMeta">
-          {(item.constructionType || item.industry || "—")} | {formatSqft(item.areaSqft || "")}
+          {(item.constructionType || item.industry || "—")} |{" "}
+          {formatSqft(item.areaSqft || "")}
         </p>
 
         <div className="fpCardFooter">
-          {/* YouTube */}
           {hasYoutube ? (
-            <button className="fpFooterSquare" onClick={openYoutube} type="button" aria-label="Open YouTube">
+            <button
+              className="fpFooterSquare"
+              onClick={openYoutube}
+              type="button"
+              aria-label="Open YouTube"
+            >
               <img src={yt1} alt="" className="fpFooterSquareImg fpYtImg" />
             </button>
           ) : null}
 
-          {/* Vizdom */}
           {hasVizdom ? (
             <button
               className="fpFooterSquare"
@@ -273,7 +282,6 @@ const openYoutube = (e) => {
             </button>
           ) : null}
 
-          {/* View Demo -> opens Demo link column */}
           {hasDemo ? (
             <button className="fpFooterDemoBtn" onClick={openDemo} type="button">
               <img src={demoIcon} alt="" className="fpDemoIcon" />
@@ -328,7 +336,8 @@ function TestimonialsOnly() {
         <div className="tsKicker">WHAT OUR CLIENTS SAY</div>
 
         <h2 className="tsTitle">
-          Trusted by leading businesses across industries for exceptional workspace transformations
+          Trusted by leading businesses across industries for exceptional workspace
+          transformations
         </h2>
 
         <div className="tsMarquee">
@@ -352,16 +361,23 @@ function TestimonialsOnly() {
 
 export default function Landing() {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const currentRegion = getRegionFromPath(location.pathname);
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [selectedServer, setSelectedServer] = useState("india");
+  const [selectedServer, setSelectedServer] = useState(
+    currentRegion === "us" ? "us" : "india"
+  );
   const [activeCategory2, setActiveCategory2] = useState("All");
   const [searchQuery2, setSearchQuery2] = useState("");
   const [showAll2, setShowAll2] = useState(false);
-  const navigate = useNavigate();
 
+  useEffect(() => {
+    setSelectedServer(currentRegion === "us" ? "us" : "india");
+  }, [currentRegion]);
 
   useEffect(() => {
     setActiveCategory2("All");
@@ -379,7 +395,9 @@ export default function Landing() {
         if (!rows.length) throw new Error("Empty CSV");
 
         const headers = rows[0];
-        const body = rows.slice(1).filter((r) => r.some((c) => String(c || "").trim() !== ""));
+        const body = rows
+          .slice(1)
+          .filter((r) => r.some((c) => String(c || "").trim() !== ""));
 
         const iStatus = idxOf(headers, COLS.status);
         const iServer = idxOf(headers, COLS.server);
@@ -397,7 +415,7 @@ export default function Landing() {
         const iYouTube = idxOf(headers, COLS.youtube);
         const iVizdomId = idxOf(headers, COLS.vizdomId);
         const iConstructionType = idxOf(headers, COLS.constructionType);
-        const iDemoLink = idxOf(headers, COLS.demoLink); // ✅ NEW
+        const iDemoLink = idxOf(headers, COLS.demoLink);
 
         const data = body
           .map((r) => {
@@ -423,7 +441,7 @@ export default function Landing() {
               youtube: safeGet(r, iYouTube),
               vizdomId: safeGet(r, iVizdomId),
               constructionType: safeGet(r, iConstructionType),
-              demoLink: safeGet(r, iDemoLink), // ✅ NEW
+              demoLink: safeGet(r, iDemoLink),
             };
           })
           .filter(Boolean);
@@ -465,29 +483,26 @@ export default function Landing() {
   }, [items, selectedServer, activeCategory2, searchQuery2]);
 
   const handleOpenScreenshotGallery = (item) => {
-  const params = new URLSearchParams({
-    build: item.buildName || item.projectName || "Build",
-    ver: item.buildVersion || "",
-  });
+    sessionStorage.setItem(
+      "SG_BACK_URL",
+      `${window.location.pathname}${window.location.search}${window.location.hash}`
+    );
 
-  // ✅ same tab
-  window.location.href = `/gallery?${params.toString()}`;
-};
+    const params = new URLSearchParams({
+      build: item.buildName || item.projectName || "Build",
+      ver: item.buildVersion || "",
+      gid: String(GID),
+    });
 
-  // const handleOpenVizdom = (item) => {
-  //   const id = String(item?.vizdomId || "").trim();
-  //   if (!id) return;
-  //   const url = `https://vizdom.flipspaces.app/user/project/${encodeURIComponent(id)}`;
-  //   window.open(url, "_blank", "noopener,noreferrer");
-  // };
+    window.location.assign(`/${currentRegion}/gallery?${params.toString()}`);
+  };
 
- const handleOpenVizdom = (item) => {
-  const id = String(item?.vizdomId || "").trim();
-  if (!id) return;
-  const url = `https://vizdom.flipspaces.app/user/project/${encodeURIComponent(id)}`;
-  window.open(url, "_blank", "noopener,noreferrer"); // ✅ new tab
-};
-
+  const handleOpenVizdom = (item) => {
+    const id = String(item?.vizdomId || "").trim();
+    if (!id) return;
+    const url = `https://vizdom.flipspaces.app/user/project/${encodeURIComponent(id)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   if (loading) return <div style={{ ...sx.page, padding: 24 }}>Loading…</div>;
 
@@ -500,7 +515,6 @@ export default function Landing() {
         setSelectedServer={setSelectedServer}
       />
 
-      {/* HERO (video background) */}
       <section className="hero2">
         <video
           className="hero2Video"
@@ -524,27 +538,28 @@ export default function Landing() {
           </div>
 
           <div className="hero2Btns">
-           <button
-            type="button"
-            className="hero2Btn hero2BtnPrimary"
-            onClick={() => {
-  window.open(
-    "https://s3-vizwalk-dev.flipspaces.app/uploads/VW-Platform-Pres.mp4",
-    "_blank",
-    "noopener,noreferrer"
-  );
-}}
-          >
-            <span className="hero2YT" aria-hidden="true" />
-            Watch Demo
-          </button>
-
+            <button
+              type="button"
+              className="hero2Btn hero2BtnPrimary"
+              onClick={() => {
+                window.open(
+                  "https://s3-vizwalk-dev.flipspaces.app/uploads/VW-Platform-Pres.mp4",
+                  "_blank",
+                  "noopener,noreferrer"
+                );
+              }}
+            >
+              <span className="hero2YT" aria-hidden="true" />
+              Watch Demo
+            </button>
 
             <button
               type="button"
               className="hero2Btn hero2BtnSecondary"
               onClick={() =>
-                document.getElementById("featured-projects")?.scrollIntoView({ behavior: "smooth" })
+                document
+                  .getElementById("featured-projects")
+                  ?.scrollIntoView({ behavior: "smooth" })
               }
             >
               Explore Platform
@@ -553,7 +568,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Featured Projects */}
       <section id="featured-projects" className="fpSection">
         <div className="fpContainer">
           <div className="fpHeader">
@@ -597,7 +611,12 @@ export default function Landing() {
             </div>
 
             <div className="fpSearchWrap">
-              <img src={searchIcon} alt="Search" className="fpSearchIconImg" draggable={false} />
+              <img
+                src={searchIcon}
+                alt="Search"
+                className="fpSearchIconImg"
+                draggable={false}
+              />
               <input
                 value={searchQuery2}
                 onChange={(e) => setSearchQuery2(e.target.value)}
@@ -627,11 +646,10 @@ export default function Landing() {
               <button
                 type="button"
                 className="fpViewAllLink"
-                onClick={() => navigate("/showcase")}
+                onClick={() => navigate(`/${currentRegion}/showcase`)}
               >
                 View All Projects <span>↗</span>
               </button>
-
             </div>
           )}
         </div>
@@ -643,7 +661,7 @@ export default function Landing() {
   );
 }
 
-/** ====== STYLES (kept from your file) ====== */
+/** ====== STYLES ====== */
 const sx = {
   page: {
     minHeight: "100vh",

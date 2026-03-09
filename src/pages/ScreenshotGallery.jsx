@@ -3,12 +3,12 @@ import React, { useEffect, useMemo, useState, useCallback } from "react";
 import "../styles/screenshot-gallery.css";
 
 import placeholderImg from "../assets/Flipspace - Logo - Black.png";
-import backIcon from "../assets/back.png"; // ✅ your back icon
+import backIcon from "../assets/back.png";
 
 import LandingNavbar from "../components/LandingNavbar.jsx";
 import Footer from "../components/Footer.jsx";
 import { useAuth } from "../auth/AuthProvider";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 import downloadIcon from "../assets/download.png";
 import ytIcon from "../assets/yt1.png";
@@ -17,25 +17,30 @@ import vizwalkIcon from "../assets/Viz logo.png";
 import openIcon from "../assets/a1.png";
 import maximizeIcon from "../assets/full-screen.png";
 
-// ✅ Use your in-house server icons
 import indiaIcon from "../assets/india.png";
 import usIcon from "../assets/usa.png";
 
-import downloadAllIcon from "../assets/download.png"; // ✅ change to your local icon file
-import calendarIcon from "../assets/calendar.png"; // ✅ change filename to your actual icon
+import downloadAllIcon from "../assets/download.png";
+import calendarIcon from "../assets/calendar.png";
 import refreshIcon from "../assets/refresh.png";
 
 const GDRIVE_API_URL =
   "https://script.google.com/macros/s/AKfycbxcVqr7exlAGvAVSh672rB_oG7FdL0W0ymkRb_6L7A8awu7gqYDInR_6FLczLNkpr0B/exec";
 const SHEET_ID = "180yy7lM0CCtiAtSr87uEm3lewU-pIdvLMGl6RXBvf8o";
-const DEFAULT_GID = "1024074012"; // Featured Projects fallback
+const DEFAULT_GID = "1024074012";
 
 function getQuery(key, def = "") {
   const u = new URL(window.location.href);
   return u.searchParams.get(key) || def;
 }
 
-const GID = getQuery("gid", DEFAULT_GID); // ✅ uses the right sheet gid
+const GID = getQuery("gid", DEFAULT_GID);
+
+function getRegionFromPath(pathname = "") {
+  const parts = pathname.split("/").filter(Boolean);
+  const first = (parts[0] || "").toLowerCase();
+  return first === "us" ? "us" : "in";
+}
 
 function parseCSV(text) {
   if (!text) return [];
@@ -103,7 +108,7 @@ const COLS = {
   projectName: ["project slot name"],
   sbu: ["sbu"],
   areaSqft: ["area(sqft)", "area sqft", "area"],
-  industry: ["industry"],
+  ConstructionType: ["Construction Type"],
   designStyle: ["design style", "style"],
   vizdomId: ["vizdom project id", "vizdom id"],
   image: [
@@ -153,7 +158,6 @@ function prettyDate(ts) {
   return `${dd}/${mm} ${wk} ${hh}:${mn}`;
 }
 
-/** ====== IMAGE (Drive fallback) ====== */
 function ImageWithFallback({ src, alt, className, cacheBustKey = "" }) {
   const isDrive = /drive\.google\.com/i.test(src || "");
   const extractDriveId = (url = "") => {
@@ -210,7 +214,6 @@ function ImageWithFallback({ src, alt, className, cacheBustKey = "" }) {
 
 const TABS = [{ key: "screenshots", label: "Screenshots", disabled: false }];
 
-/** ====== MERGE keep old add new ====== */
 function mergeGroups(prev = [], next = []) {
   const map = new Map((prev || []).map((g) => [g.group || g.ts || "", g]));
 
@@ -244,8 +247,15 @@ function mergeGroups(prev = [], next = []) {
 
 export default function ScreenshotGallery() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const currentRegion = getRegionFromPath(location.pathname);
+
   const [activeTab, setActiveTab] = useState("screenshots");
   const { user, signOut } = useAuth();
+
+  const [selectedServer, setSelectedServer] = useState(
+    currentRegion === "us" ? "us" : "india"
+  );
 
   const [loadingHeader, setLoadingHeader] = useState(true);
   const [headerItem, setHeaderItem] = useState(null);
@@ -254,10 +264,8 @@ export default function ScreenshotGallery() {
   const [initialLoadingShots, setInitialLoadingShots] = useState(false);
   const [isRefreshingShots, setIsRefreshingShots] = useState(false);
 
-  // ✅ only changes when you click Refresh (so images don’t “flash” every render)
   const [refreshKey, setRefreshKey] = useState(String(Date.now()));
 
-  /** ====== QUERY PARAMS ====== */
   const buildQuery = getQuery("build", "Build");
   const verQuery = getQuery("ver", "");
   const thumbQuery = getQuery("thumb", "");
@@ -265,13 +273,15 @@ export default function ScreenshotGallery() {
   const catQuery = getQuery("cat", "Corporate Design");
   const areaQuery = getQuery("area", "");
 
-  /** ====== DERIVED BUILD KEY ====== */
   const buildName = headerItem?.buildName || buildQuery;
   const version = headerItem?.buildVersion || verQuery || "";
   const buildBase = (buildName || "").trim();
   const buildKey = version ? `${buildBase} ${version}` : buildBase;
 
-  /** ====== HEADER DATA ====== */
+  useEffect(() => {
+    setSelectedServer(currentRegion === "us" ? "us" : "india");
+  }, [currentRegion]);
+
   useEffect(() => {
     (async () => {
       setLoadingHeader(true);
@@ -294,7 +304,7 @@ export default function ScreenshotGallery() {
         const iBuildName = idxOf(headers, COLS.buildName);
         const iBuildVersion = idxOf(headers, COLS.buildVersion);
         const iAreaSqft = idxOf(headers, COLS.areaSqft);
-        const iIndustry = idxOf(headers, COLS.industry);
+        const iConstructionType = idxOf(headers, COLS.ConstructionType);
         const iDesignStyle = idxOf(headers, COLS.designStyle);
         const iImage = idxOf(headers, COLS.image);
         const iYouTube = idxOf(headers, COLS.youtube);
@@ -312,7 +322,7 @@ export default function ScreenshotGallery() {
               buildName: safeGet(r, iBuildName),
               buildVersion: safeGet(r, iBuildVersion),
               areaSqft: safeGet(r, iAreaSqft),
-              industry: safeGet(r, iIndustry),
+              ConstructionType: safeGet(r, iConstructionType),
               designStyle: safeGet(r, iDesignStyle),
               thumb: safeGet(r, iImage),
               youtube: safeGet(r, iYouTube),
@@ -351,14 +361,13 @@ export default function ScreenshotGallery() {
         setLoadingHeader(false);
       }
     })();
-  }, [buildQuery, verQuery, GID]);
+  }, [buildQuery, verQuery]);
 
   const hasAnyScreenshots = useMemo(
     () => (screenshotsGroups || []).some((g) => (g?.items || []).length > 0),
     [screenshotsGroups]
   );
 
-  /** ====== SCREENSHOTS FETCH (SAFE) ====== */
   const fetchScreenshots = useCallback(
     async ({ background = false } = {}) => {
       if (!buildKey) return;
@@ -395,17 +404,15 @@ export default function ScreenshotGallery() {
     fetchScreenshots({ background: false });
   }, [fetchScreenshots]);
 
-  // Auto-refresh every 5s in background
   useEffect(() => {
     const interval = setInterval(() => fetchScreenshots({ background: true }), 5000);
     return () => clearInterval(interval);
   }, [fetchScreenshots]);
 
-  /** ====== ACTIONS ====== */
   const openImage = (url) => {
-  if (!url) return;
-  window.open(url, "_blank", "noopener,noreferrer"); // ✅ new tab
-};
+    if (!url) return;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   const dl = (url) => {
     if (!url) return;
@@ -417,13 +424,12 @@ export default function ScreenshotGallery() {
     setTimeout(() => document.body.removeChild(iframe), 60000);
   };
 
-  // ✅ Vizdom (external) same tab
-const handleOpenVizdom = () => {
-  const id = String(headerItem?.vizdomId || "").trim();
-  if (!id) return;
-  const url = `https://vizdom.flipspaces.app/user/project/${encodeURIComponent(id)}`;
-  window.open(url, "_blank", "noopener,noreferrer");
-};
+  const handleOpenVizdom = () => {
+    const id = String(headerItem?.vizdomId || "").trim();
+    if (!id) return;
+    const url = `https://vizdom.flipspaces.app/user/project/${encodeURIComponent(id)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   const openVizwalk = () => {
     if (!headerItem) return;
@@ -439,7 +445,6 @@ const handleOpenVizdom = () => {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
 
-    // forward gid to Experience
     const gidFromUrl = getQuery("gid", DEFAULT_GID);
 
     const params = new URLSearchParams({
@@ -451,8 +456,11 @@ const handleOpenVizdom = () => {
       gid: String(gidFromUrl),
     });
 
-    window.open(`/experience?${params.toString()}`, "_blank", "noopener,noreferrer");
-    // navigate(`/experience?${params.toString()}`);
+    window.open(
+      `/${currentRegion}/experience?${params.toString()}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
   };
 
   const handleRefresh = async () => {
@@ -460,7 +468,7 @@ const handleOpenVizdom = () => {
     await fetchScreenshots({ background: true });
   };
 
-  const category = headerItem?.designStyle || headerItem?.industry || catQuery;
+  const category = headerItem?.designStyle || headerItem?.ConstructionType || catQuery;
   const server = headerItem?.server || serverQuery;
   const serverLabel = server === "us" ? "US Server" : "India Server";
   const areaDisplay = headerItem?.areaSqft
@@ -473,10 +481,14 @@ const handleOpenVizdom = () => {
 
   return (
     <div className="sg-page">
-      <LandingNavbar user={user} signOut={signOut} />
+      <LandingNavbar
+        user={user}
+        signOut={signOut}
+        selectedServer={selectedServer}
+        setSelectedServer={setSelectedServer}
+      />
 
       <div className="sg-container">
-        {/* ✅ Back: uses stored back url if available, else fallback */}
         <button
           className="sg-back"
           type="button"
@@ -484,7 +496,7 @@ const handleOpenVizdom = () => {
             const backUrl = sessionStorage.getItem("SG_BACK_URL");
 
             if (backUrl) {
-              window.location.assign(backUrl); // ✅ guaranteed
+              window.location.assign(backUrl);
               return;
             }
 
@@ -493,7 +505,7 @@ const handleOpenVizdom = () => {
               return;
             }
 
-            navigate("/projects");
+            navigate(`/${currentRegion}/showcase`);
           }}
         >
           <img className="sg-backIcon" src={backIcon} alt="" />
@@ -509,16 +521,16 @@ const handleOpenVizdom = () => {
                 <div className="sg-titleRow">
                   <h1 className="sg-title">{buildName || "Project"}</h1>
 
-                  <button
-                    className="sg-vizdomBtn"
-                    type="button"
-                    onClick={handleOpenVizdom}
-                    disabled={!headerItem?.vizdomId}
-                    title={!headerItem?.vizdomId ? "Vizdom ID missing in sheet" : ""}
-                  >
-                    Go to Vizdom
-                    <img className="sg-vizdomIcon" src={openIcon} alt="" />
-                  </button>
+                  {String(headerItem?.vizdomId || "").trim() ? (
+                    <button
+                      className="sg-vizdomBtn"
+                      type="button"
+                      onClick={handleOpenVizdom}
+                    >
+                      Go to Vizdom
+                      <img className="sg-vizdomIcon" src={openIcon} alt="" />
+                    </button>
+                    ) : null}
                 </div>
 
                 <div className="sg-chips sg-chips-figma">
@@ -565,10 +577,10 @@ const handleOpenVizdom = () => {
                       type="button"
                       className="sg-action"
                       onClick={() => {
-  const url = String(headerItem?.demo || "").trim();
-  if (!url) return;
-  window.open(url, "_blank", "noopener,noreferrer");
-}}
+                        const url = String(headerItem?.demo || "").trim();
+                        if (!url) return;
+                        window.open(url, "_blank", "noopener,noreferrer");
+                      }}
                     >
                       <span className="sg-actionIconWrap">
                         <img className="sg-actionIcon" src={demoIcon} alt="" />

@@ -210,30 +210,45 @@ export default function DemoVideos() {
                 r.thumbnailUrl || r.image_url || r.thumbnail || r.image || "";
               const demoUrl = r.vizwalkDemoUrl || r.walkthrough_link;
               const ytUrl = r.youtubeUrl || r.youtube;
+              const openPrimaryVideo = () => {
+              const url = ytUrl || demoUrl;
+              if (!url) return;
+              window.open(url, "_blank", "noopener,noreferrer");
+            };
 
               return (
                 <article className="dv-project-card" key={idx}>
-                  <div className="dv-card-media">
-                    <ImageWithFallback
-                      className="dv-card-img"
-                      src={thumb}
-                      alt={r.videoName || "Project"}
-                    />
+                  <div
+                      className="dv-card-media"
+                      onClick={openPrimaryVideo}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          openPrimaryVideo();
+                        }
+                      }}
+                    >
+                      <ImageWithFallback
+                        className="dv-card-img"
+                        src={thumb}
+                        alt={r.videoName || "Project"}
+                      />
 
-                    {/* ✅ SAME TAB */}
-                    {ytUrl && (
-                      <button
-                        className="dvPlayBtn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          window.open(ytUrl, "_blank", "noopener,noreferrer");
-                        }}
-                        type="button"
-                      >
-                        <span className="dvPlayTri" aria-hidden="true" />
-                      </button>
-                    )}
-                  </div>
+                      {(ytUrl || demoUrl) && (
+                        <button
+                          className="dvPlayBtn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openPrimaryVideo();
+                          }}
+                          type="button"
+                        >
+                          <span className="dvPlayTri" aria-hidden="true" />
+                        </button>
+                      )}
+                  </div>  
 
                   <div className="dv-card-details">
                     <div className="dv-sliding-content">

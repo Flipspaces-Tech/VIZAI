@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import "../styles/footer.css";
 
@@ -6,17 +6,31 @@ import vizIcon from "../assets/L1.png";
 import flipspacesLogo from "../assets/FL LOGO.png";
 
 export default function Footer() {
+  const [copied, setCopied] = useState(false);
+
+  const supportPhone = "+91 82373 44185";
+  const supportEmail = "nitesh.gaikwad@flipspaces.com";
+  const supportText = `${supportPhone}\n${supportEmail}`;
+
+  const handleCopySupport = async (e) => {
+    e.preventDefault();
+
+    try {
+      await navigator.clipboard.writeText(supportText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch (err) {
+      console.error("Copy failed:", err);
+    }
+  };
+
   return (
     <footer className="vwFooter">
       <div className="vwFooterContainer">
-        {/* Top */}
         <div className="vwFooterTop">
-          {/* Divider (full height) */}
           <div className="vwFooterDivider" aria-hidden="true" />
 
-          {/* Left brand */}
           <div className="vwFooterBrand">
-            {/* Logo redirects to home */}
             <Link to="/" className="vwFooterLogoLink" aria-label="Go to Home">
               <img className="vwFooterVizLogo" src={vizIcon} alt="Vizwalk" />
             </Link>
@@ -27,24 +41,48 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Right */}
           <div className="vwFooterRightBlock">
             <div className="vwFooterCol">
               <div className="vwFooterColTitle">PRODUCT</div>
-              <a className="vwFooterLink" href="/features">Features</a>
-              <a className="vwFooterLink" href="/gallery">Gallery</a>
-              <a className="vwFooterLink" href="/updates">Updates</a>
+              <a
+                className="vwFooterLink vwFooterLinkNoUnderline"
+                href="/updates"
+              >
+                Updates
+              </a>
             </div>
 
             <div className="vwFooterCol">
               <div className="vwFooterColTitle">RESOURCES</div>
-              <a className="vwFooterLink" href="/docs">Documentation</a>
-              <a className="vwFooterLink" href="/shortcuts">Shortcut Guide</a>
+              <a className="vwFooterLink" href="/docs">
+                FAQs
+              </a>
+              <a className="vwFooterLink" href="/shortcuts">
+                Shortcut Guide
+              </a>
+
+              <div className="vwFooterSupportWrap">
+              <button
+                type="button"
+                className="vwFooterLink vwFooterSupportBtn"
+                onClick={handleCopySupport}
+              >
+                Contact Support
+              </button>
+
+              <div className="vwFooterSupportTooltip">
+                <div>{supportPhone}</div>
+                <div>{supportEmail}</div>
+              </div>
+
+              {copied && (
+                <div className="vwFooterCopiedToast">Copied</div>
+              )}
+            </div>
             </div>
           </div>
         </div>
 
-        {/* Bottom bar */}
         <div className="vwFooterBottom">
           <div className="vwFooterBottomLeft" />
 
@@ -52,7 +90,6 @@ export default function Footer() {
             ©2026 Flipspaces. All Rights Reserved.
           </div>
 
-          {/* ✅ Bottom-right Flipspaces logo link */}
           <div className="vwFooterRightBrand">
             <a
               className="vwFooterFlipLink"

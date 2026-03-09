@@ -5,7 +5,7 @@ import vizIcon from "../assets/vw1.png";
 import vIcon from "../assets/Viz logo_01_w.png";
 import indiaFlag from "../assets/india.png";
 import usFlag from "../assets/usa.png";
-import alertIcon from "../assets/warning.png"; // <-- keep your local alert icon here
+import alertIcon from "../assets/warning.png";
 import "../styles/navbar-v2.css";
 
 const TOPBAR_KEY = "vwTopBarClosed";
@@ -16,7 +16,6 @@ const WARNING_GID = "738570445";
 const DEFAULT_TOPBAR_TEXT =
   "Make Sure Choose the region closest to you for a seamless experience";
 
-// Detect if page load is refresh/reload
 function isReloadNavigation() {
   try {
     const navEntries = performance.getEntriesByType?.("navigation");
@@ -111,6 +110,46 @@ const safeGet = (row, idx, fallback = "") =>
     ? String(row[idx]).trim()
     : fallback;
 
+// ---------- REGION HELPERS ----------
+function normalizeRegion(v = "") {
+  const s = String(v || "").trim().toLowerCase();
+  if (s === "us") return "us";
+  return "in";
+}
+
+function getRegionFromPath(pathname = "") {
+  const parts = pathname.split("/").filter(Boolean);
+  const first = (parts[0] || "").toLowerCase();
+
+  if (first === "in" || first === "us") return first;
+  return "in";
+}
+
+function stripRegionFromPath(pathname = "") {
+  const parts = pathname.split("/").filter(Boolean);
+  const first = (parts[0] || "").toLowerCase();
+
+  if (first === "in" || first === "us") {
+    return "/" + parts.slice(1).join("/");
+  }
+  return pathname || "/";
+}
+
+function buildRegionalPath(region, pathname = "/", search = "", hash = "") {
+  const cleanRegion = normalizeRegion(region);
+  let basePath = stripRegionFromPath(pathname);
+
+  if (!basePath || basePath === "") basePath = "/";
+  if (!basePath.startsWith("/")) basePath = `/${basePath}`;
+
+  const regionalPath =
+    basePath === "/"
+      ? `/${cleanRegion}`
+      : `/${cleanRegion}${basePath}`;
+
+  return `${regionalPath}${search || ""}${hash || ""}`;
+}
+
 export default function LandingNavbar({
   user,
   signOut,
@@ -128,6 +167,15 @@ export default function LandingNavbar({
   const navigate = useNavigate();
   const location = useLocation();
 
+  const currentRegion = getRegionFromPath(location.pathname);
+  const effectiveServer = currentRegion === "us" ? "us" : "india";
+
+  useEffect(() => {
+    if (setSelectedServer) {
+      setSelectedServer(effectiveServer);
+    }
+  }, [effectiveServer, setSelectedServer]);
+
   useEffect(() => {
     const onDown = (e) => {
       if (ddRef.current && !ddRef.current.contains(e.target)) setDd(false);
@@ -136,7 +184,6 @@ export default function LandingNavbar({
     return () => document.removeEventListener("mousedown", onDown);
   }, []);
 
-  // Universal warning fetch from sheet
   useEffect(() => {
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&id=${SHEET_ID}&gid=${WARNING_GID}`;
 
@@ -178,7 +225,7 @@ export default function LandingNavbar({
     })();
   }, []);
 
-  const pathname = location.pathname || "/";
+  const pathname = stripRegionFromPath(location.pathname || "/");
   const hash = location.hash || "";
 
   const isHomeActive =
@@ -192,9 +239,36 @@ export default function LandingNavbar({
   const isLearnActive = pathname.startsWith("/learn");
   const isDemoActive = pathname.startsWith("/demo-videos");
 
+  const goToRegionPath = (targetPath) => {
+    const next = buildRegionalPath(
+      currentRegion,
+      targetPath,
+      "",
+      ""
+    );
+    navigate(next);
+  };
+
   const goHome = () => {
     setDd(false);
-    navigate("/");
+    navigate(buildRegionalPath(currentRegion, "/", "", ""));
+  };
+
+  const changeRegion = (server) => {
+    const nextRegion = server === "us" ? "us" : "in";
+
+    if (setSelectedServer) {
+      setSelectedServer(server);
+    }
+
+    const nextUrl = buildRegionalPath(
+      nextRegion,
+      location.pathname,
+      location.search,
+      location.hash
+    );
+
+    navigate(nextUrl);
   };
 
   const isWarningActive =
@@ -265,7 +339,7 @@ export default function LandingNavbar({
                 className={`vwNavLink ${isHomeActive ? "isActive" : ""}`}
                 onClick={() => {
                   setDd(false);
-                  navigate("/");
+                  goToRegionPath("/");
                 }}
               >
                 HOME
@@ -285,7 +359,7 @@ export default function LandingNavbar({
                       className="vwDdItem"
                       onClick={() => {
                         setDd(false);
-                        navigate("/showcase");
+                        goToRegionPath("/showcase");
                       }}
                     >
                       Showcase Projects
@@ -295,7 +369,7 @@ export default function LandingNavbar({
                       className="vwDdItem"
                       onClick={() => {
                         setDd(false);
-                        navigate("/live-projects");
+                        goToRegionPath("/live-projects");
                       }}
                     >
                       Live Projects
@@ -308,7 +382,11 @@ export default function LandingNavbar({
                 className={`vwNavLink ${isLearnActive ? "isActive" : ""}`}
                 onClick={() => {
                   setDd(false);
-                  window.open("/learn", "_blank", "noopener,noreferrer");
+                  window.open(
+                    buildRegionalPath(currentRegion, "/learn"),
+                    "_blank",
+                    "noopener,noreferrer"
+                  );
                 }}
               >
                 LEARN
@@ -318,7 +396,7 @@ export default function LandingNavbar({
                 className={`vwNavLink ${isDemoActive ? "isActive" : ""}`}
                 onClick={() => {
                   setDd(false);
-                  navigate("/demo-videos");
+                  goToRegionPath("/demo-videos");
                 }}
               >
                 DEMO VIDEOS
@@ -329,9 +407,9 @@ export default function LandingNavbar({
               <div className="vwRegionContainer">
                 <button
                   className={`vwRegionBtn ${
-                    selectedServer === "india" ? "active" : ""
+                    effectiveServer === "india" ? "active" : ""
                   }`}
-                  onClick={() => setSelectedServer?.("india")}
+                  onClick={() => changeRegion("india")}
                   type="button"
                 >
                   <img src={indiaFlag} alt="IN" className="vwFlagIcon" />
@@ -340,9 +418,9 @@ export default function LandingNavbar({
 
                 <button
                   className={`vwRegionBtn ${
-                    selectedServer === "us" ? "active" : ""
+                    effectiveServer === "us" ? "active" : ""
                   }`}
-                  onClick={() => setSelectedServer?.("us")}
+                  onClick={() => changeRegion("us")}
                   type="button"
                 >
                   <img src={usFlag} alt="US" className="vwFlagIcon" />
