@@ -1,63 +1,55 @@
 /* =========================================================
    FOOTER WRAPPER
 ========================================================= */
-.vwFooter{
+.vwFooter {
   width: 100%;
-  background: #EAEAE8;
-  /* padding: 98px 0 18px; */
-  box-sizing: border-box;
   height: 369px;
+  background: #eaeae8;
+  box-sizing: border-box;
 }
 
-.vwFooterContainer{
+.vwFooterContainer {
   width: 100%;
   margin: 0 auto;
   box-sizing: border-box;
 }
 
-.vwFooterupdate:hover{
-  color: rgba(0,0,0,0.62);
-  text-decoration: none;
-  text-underline-offset: 3px;
-}
-.vwFooterLinkNoUnderline:hover{
-  text-decoration: none;
-}
-
 /* =========================================================
    TOP AREA (2 halves + centered divider)
 ========================================================= */
-.vwFooterTop{
+.vwFooterTop {
   position: relative;
   display: grid;
   grid-template-columns: 1fr 1fr;
   height: 369px;
   align-items: start;
   box-sizing: border-box;
-  background-color: #EAEAE8;
+  background-color: #eaeae8;
 }
 
-.vwFooterDivider{
+.vwFooterDivider {
   position: absolute;
   top: 0;
   bottom: 0;
   left: 50%;
   transform: translateX(-0.5px);
   width: 1px;
-  background: rgba(0,0,0,0.22);
+  background: rgba(0, 0, 0, 0.22);
 }
 
-/* Left brand */
-.vwFooterBrand{
+/* =========================================================
+   LEFT BRAND
+========================================================= */
+.vwFooterBrand {
   margin-left: 100px;
+  margin-top: 85px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 10px;
-  margin-top: 85px;
 }
 
-.vwFooterLogoLink{
+.vwFooterLogoLink {
   display: inline-flex;
   align-items: center;
   width: fit-content;
@@ -65,7 +57,7 @@
   cursor: pointer;
 }
 
-.vwFooterVizLogo{
+.vwFooterVizLogo {
   height: 76px;
   width: auto;
   object-fit: contain;
@@ -73,19 +65,19 @@
   margin-left: -20px;
 }
 
-.vwFooterDesc{
+.vwFooterDesc {
   max-width: 432px;
   margin-top: 22px;
   height: 90px;
   font-size: 20px;
   line-height: 1.55;
-  color: rgba(0,0,0,0.62);
+  color: rgba(0, 0, 0, 0.62);
 }
 
 /* =========================================================
    RIGHT BLOCK (Product + Resources)
 ========================================================= */
-.vwFooterRightBlock{
+.vwFooterRightBlock {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 40px;
@@ -95,78 +87,174 @@
   margin-top: 85px;
 }
 
-.vwFooterColTitle{
+.vwFooterColTitle {
   font-weight: 900;
   font-size: 22px;
-  letter-spacing: 0.10em;
-  color: rgba(0,0,0,0.55);
+  letter-spacing: 0.1em;
+  color: rgba(0, 0, 0, 0.55);
   margin-bottom: 22px;
 }
 
-.vwFooterLink{
+.vwFooterLink {
   display: block;
   font-size: 20px;
-  color: rgba(0,0,0,0.62);
+  color: rgba(0, 0, 0, 0.62);
   text-decoration: none;
   margin-bottom: 26px;
 }
 
-.vwFooterupdate{
-  display: block;
-  font-size: 20px;
-  color: rgba(0,0,0,0.62);
-  text-decoration: none;
-  margin-bottom: 26px;
-}
-
-.vwFooterLink:hover{
-  color: rgba(0,0,0,0.85);
+.vwFooterLink:hover {
+  color: rgba(0, 0, 0, 0.85);
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.vwFooterLinkNoUnderline:hover {
+  color: rgba(0, 0, 0, 0.62);
+  text-decoration: none;
+}
+
+/* =========================================================
+   CONTACT SUPPORT
+========================================================= */
+.vwFooterSupportWrap {
+  position: relative;
+  display: inline-block;
+  width: fit-content;
+}
+
+.vwFooterSupportWrap::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  height: 12px;
+}
+
+.vwFooterSupportBtn {
+  display: block;
+  margin-bottom: 26px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 20px;
+  color: rgba(0, 0, 0, 0.62);
+  text-decoration: none;
+}
+
+.vwFooterSupportBtn:hover,
+.vwFooterSupportWrap:hover .vwFooterSupportBtn,
+.vwFooterSupportBtn:focus-visible {
+  color: rgba(0, 0, 0, 0.85);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.vwFooterSupportTooltip {
+  position: absolute;
+  top: 30px;
+  min-width: 265px;
+  background: #ffffff;
+  color: rgba(0, 0, 0, 0.62);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
+  padding: 12px 14px;
+  font-size: 16px;
+  line-height: 1.45;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
+  z-index: 20;
+  white-space: nowrap;
+  border-radius: 8px;
+}
+
+.vwFooterSupportWrap:hover .vwFooterSupportTooltip,
+.vwFooterSupportWrap:focus-within .vwFooterSupportTooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.vwFooterSupportItem {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1.45;
+  color: rgba(0, 0, 0, 0.62);
+}
+
+.vwFooterSupportItem + .vwFooterSupportItem {
+  margin-top: 4px;
+}
+
+.vwFooterSupportItem:hover {
+  color: rgba(0, 0, 0, 0.88);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.vwFooterCopiedToast {
+  position: absolute;
+  top: 60px;
+  left: -80px;
+  background: #1f1f1f;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  padding: 10px 14px;
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  z-index: 25;
 }
 
 /* =========================================================
    BOTTOM BAR
 ========================================================= */
-.vwFooterBottom{
-  background: #EAEAE8;
-  border-top: 1px solid rgba(0,0,0,0.18);
-
+.vwFooterBottom {
+  background: #eaeae8;
+  border-top: 1px solid rgba(0, 0, 0, 0.18);
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   box-sizing: border-box;
 }
 
-.vwFooterBottomLeft{
+.vwFooterBottomLeft {
   height: 72px;
 }
 
-/* Center text */
-.vwFooterCopy{
+.vwFooterCopy {
   text-align: center;
   font-size: 16px;
   height: 20px;
   font-weight: 200;
 }
 
-/* ✅ Bottom-right logo zone */
-.vwFooterRightBrand{
+.vwFooterRightBrand {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  padding-right: 60px; /* tweak if you want it closer/farther from edge */
+  padding-right: 60px;
 }
 
-/* clickable link wrapper */
-.vwFooterFlipLink{
+.vwFooterFlipLink {
   display: inline-flex;
   align-items: center;
   text-decoration: none;
 }
 
-/* flipspaces logo image */
-.vwFooterFlipLogo{
+.vwFooterFlipLogo {
   width: 302px;
   height: 55px;
   object-fit: contain;
@@ -175,75 +263,7 @@
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-.vwFooterFlipLink:hover .vwFooterFlipLogo{
+.vwFooterFlipLink:hover .vwFooterFlipLogo {
   opacity: 1;
   transform: translateY(-1px);
 }
-
-.vwFooterLinkNoUnderline:hover{
-  text-decoration: none;
-}
-
-.vwFooterSupportBtn{
-  background: transparent;
-  border: none;
-  padding: 0;
-  text-align: left;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.vwFooterSupportBtn:hover{
-  color: rgba(0,0,0,0.85);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.vwFooterSupportWrap{
-  position: relative;
-  width: fit-content;
-}
-
-.vwFooterSupportTooltip{
-  position: absolute;
-  top: -20px;
-  left: 0;
-  min-width: 265px;
-  background: #ffffff;
-  color: rgba(0,0,0,0.62);
-  border: 1px solid rgba(0,0,0,0.12);
-  box-shadow: 0 10px 24px rgba(0,0,0,0.10);
-  padding: 12px 14px;
-  font-size: 16px;
-  line-height: 1.45;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(6px);
-  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
-  pointer-events: none;
-  z-index: 20;
-  white-space: nowrap;
-  border-radius: 8px;
-}
-
-.vwFooterCol:has(.vwFooterSupportBtn:hover) .vwFooterSupportTooltip,
-.vwFooterCol:has(.vwFooterSupportBtn:focus-visible) .vwFooterSupportTooltip{
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-}
-
-.vwFooterCopiedToast{
-  position: absolute;
-  top: -65px;
-  left: 150;
-  background: #1f1f1f;
-  color: #fff;
-  font-size: 14px;
-  line-height: 1;
-  padding: 10px 14px;
-  border-radius: 8px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-  z-index: 25;
-}
-

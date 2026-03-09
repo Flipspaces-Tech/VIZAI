@@ -6,19 +6,16 @@ import vizIcon from "../assets/L1.png";
 import flipspacesLogo from "../assets/FL LOGO.png";
 
 export default function Footer() {
-  const [copied, setCopied] = useState(false);
+  const [copiedText, setCopiedText] = useState("");
 
   const supportPhone = "+91 82373 44185";
   const supportEmail = "nitesh.gaikwad@flipspaces.com";
-  const supportText = `${supportPhone}\n${supportEmail}`;
 
-  const handleCopySupport = async (e) => {
-    e.preventDefault();
-
+  const handleCopyText = async (text) => {
     try {
-      await navigator.clipboard.writeText(supportText);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
+      await navigator.clipboard.writeText(text);
+      setCopiedText(text);
+      setTimeout(() => setCopiedText(""), 1800);
     } catch (err) {
       console.error("Copy failed:", err);
     }
@@ -54,31 +51,46 @@ export default function Footer() {
 
             <div className="vwFooterCol">
               <div className="vwFooterColTitle">RESOURCES</div>
+
               <a className="vwFooterLink" href="/docs">
                 FAQs
               </a>
+
               <a className="vwFooterLink" href="/shortcuts">
                 Shortcut Guide
               </a>
 
               <div className="vwFooterSupportWrap">
-              <button
-                type="button"
-                className="vwFooterLink vwFooterSupportBtn"
-                onClick={handleCopySupport}
-              >
-                Contact Support
-              </button>
+                <button type="button" className="vwFooterSupportBtn">
+                  Contact Support
+                </button>
 
-              <div className="vwFooterSupportTooltip">
-                <div>{supportPhone}</div>
-                <div>{supportEmail}</div>
+                <div className="vwFooterSupportTooltip">
+                  <button
+                    type="button"
+                    className="vwFooterSupportItem"
+                    onClick={() => handleCopyText(supportPhone)}
+                    title="Click to copy phone number"
+                  >
+                    {supportPhone}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="vwFooterSupportItem"
+                    onClick={() => handleCopyText(supportEmail)}
+                    title="Click to copy email"
+                  >
+                    {supportEmail}
+                  </button>
+                </div>
+
+                {copiedText && (
+                  <div className="vwFooterCopiedToast">
+                    Copied
+                  </div>
+                )}
               </div>
-
-              {copied && (
-                <div className="vwFooterCopiedToast">Copied</div>
-              )}
-            </div>
             </div>
           </div>
         </div>
