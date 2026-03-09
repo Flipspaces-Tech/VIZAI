@@ -36,12 +36,12 @@ export default function App() {
           <Route path="/" element={<Navigate to="/in" replace />} />
 
           {/* old URLs -> redirect to India by default */}
-          <Route path="/showcase" element={<Navigate to="/in/showcase" replace />} />
+          {/* <Route path="/showcase" element={<Navigate to="/in/showcase" replace />} />
           <Route path="/live-projects" element={<Navigate to="/in/live-projects" replace />} />
           <Route path="/experience" element={<Navigate to="/in/experience" replace />} />
           <Route path="/gallery" element={<Navigate to="/in/gallery" replace />} />
           <Route path="/demo-videos" element={<Navigate to="/in/demo-videos" replace />} />
-          <Route path="/learn" element={<Navigate to="/in/learn" replace />} />
+          <Route path="/learn" element={<Navigate to="/in/learn" replace />} /> */}
 
           {/* region routes */}
           <Route
