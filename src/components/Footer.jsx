@@ -52,7 +52,12 @@ export default function Footer() {
             <div className="vwFooterCol">
               <div className="vwFooterColTitle">RESOURCES</div>
 
-              <a className="vwFooterLink" href="/docs">
+              <a
+                className="vwFooterLink"
+                href="https://docs.google.com/document/d/e/2PACX-1vSXd89uQ6zlQROTwFqh6OhvoJTn7s_Znrme5J1_uHRTBFbu36Zhcc1ZyPMjdYwWkNd_bs_mfxe9lEsa/pub"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 FAQs
               </a>
 
