@@ -107,9 +107,11 @@ body,
 
 .hero2Btns {
   margin-top: 18px;
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .hero2Btn {
@@ -127,6 +129,7 @@ body,
   align-items: center;
   gap: 8px;
   backdrop-filter: blur(2px);
+ 
 }
 
 .hero2Btn:hover {
@@ -140,6 +143,7 @@ body,
 
 .hero2BtnSecondary {
   background: rgba(255, 255, 255, 0.06);
+  padding-left: 21px;
 }
 
 .hero2YT {
@@ -150,7 +154,7 @@ body,
   position: relative;
   display: inline-block;
   margin-right: 5px;
-  margin-left: 10px;
+  margin-left: 20px;
   scale: 2;
 }
 
@@ -622,4 +626,7 @@ body,
   .tsCard {
     width: 320px;
   }
+}
+#featured-projects {
+  scroll-margin-top: 50px;
 }

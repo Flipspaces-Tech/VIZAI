@@ -1,5 +1,5 @@
 // src/pages/Landing.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import vizIcon from "../assets/L1.png";
 import yt1 from "../assets/yt1.png";
 import vz1 from "../assets/vz1.png";
@@ -19,6 +19,7 @@ import demoIcon from "../assets/view demo.png";
 import arrowPng from "../assets/Redirect Arrow.png";
 
 import { useNavigate, useLocation } from "react-router-dom";
+
 
 /** ====== SHEET (CSV) ====== */
 const SHEET_ID = "180yy7lM0CCtiAtSr87uEm3lewU-pIdvLMGl6RXBvf8o";
@@ -375,6 +376,8 @@ export default function Landing() {
   const [searchQuery2, setSearchQuery2] = useState("");
   const [showAll2, setShowAll2] = useState(false);
 
+  const featuredProjectsRef = useRef(null);
+
   useEffect(() => {
     setSelectedServer(currentRegion === "us" ? "us" : "india");
   }, [currentRegion]);
@@ -556,11 +559,12 @@ export default function Landing() {
             <button
               type="button"
               className="hero2Btn hero2BtnSecondary"
-              onClick={() =>
-                document
-                  .getElementById("featured-projects")
-                  ?.scrollIntoView({ behavior: "smooth" })
-              }
+              onClick={() => {
+                featuredProjectsRef.current?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                });
+              }}
             >
               Explore Platform
             </button>
@@ -568,7 +572,11 @@ export default function Landing() {
         </div>
       </section>
 
-      <section id="featured-projects" className="fpSection">
+      <section
+  id="featured-projects"
+  ref={featuredProjectsRef}
+  className="fpSection"
+>
         <div className="fpContainer">
           <div className="fpHeader">
             <div className="fpHeaderLeft">
