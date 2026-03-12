@@ -316,6 +316,12 @@ function TestimonialsOnly() {
         "Flipspaces designed our Mumbai, Hyderabad, Chennai, and Bangalore offices with open spaces, natural light, and a vibrant, modern work environment.",
     },
     {
+      name: "Vishal Shah",
+      role: "Talakunchi",
+      quote:
+        "Right from understanding our expectations to the design and execution of the entire project, Flipspaces handled everything with utmost professionalism. We are extremely happy with the outcome",
+    },
+    {
       name: "Kunal Shah",
       role: "Honest",
       quote:
@@ -327,6 +333,7 @@ function TestimonialsOnly() {
       quote:
         "Flipspaces delivered our project on time with professionalism and excellence. Grateful for their hard work and eager to collaborate again!",
     },
+    
   ];
 
   const loop = [...testimonials, ...testimonials];
