@@ -1,0 +1,131 @@
+.videoModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.62);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  z-index: 10000;
+}
+
+.videoModalCard {
+  width: min(1100px, 92vw);
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
+
+.videoModalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 22px 14px;
+}
+
+.videoModalTitleWrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.videoModalYTIcon {
+  width: 46px;
+  height: 32px;
+  border-radius: 8px;
+  background: #ff0000;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.videoModalTitle {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.videoModalSubtitle {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.videoModalClose {
+  border: none;
+  background: transparent;
+  font-size: 40px;
+  line-height: 1;
+  cursor: pointer;
+  color: #111;
+  padding: 0;
+}
+
+.videoModalBody {
+  padding: 0 22px 22px;
+}
+
+.videoModalIframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  display: block;
+  background: #000;
+}
+
+.videoModalFallback {
+  min-height: 300px;
+  display: grid;
+  place-items: center;
+  color: #444;
+  background: #f3f3f3;
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .videoModalOverlay {
+    padding: 14px;
+  }
+
+  .videoModalCard {
+    width: 100%;
+  }
+
+  .videoModalHeader {
+    padding: 16px 16px 10px;
+  }
+
+  .videoModalBody {
+    padding: 0 16px 16px;
+  }
+
+  .videoModalTitle {
+    font-size: 18px;
+  }
+
+  .videoModalClose {
+    font-size: 32px;
+  }
+}
+.videoModalHeaderIconWrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 38px;
+}
+
+.videoModalHeaderIconImg {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  display: block;
+}

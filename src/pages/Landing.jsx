@@ -18,6 +18,8 @@ import Footer from "../components/Footer.jsx";
 import demoIcon from "../assets/view demo.png";
 import arrowPng from "../assets/Redirect Arrow.png";
 
+import { useVideoModal } from "../context/VideoModalContext";
+
 import { useNavigate, useLocation } from "react-router-dom";
 
 
@@ -203,24 +205,26 @@ function ImageWithFallback({ src, alt, style, className }) {
 }
 
 /** ====== FEATURED CARD ====== */
-function FeaturedCard({ item, onOpenScreenshotGallery, onOpenVizdom }) {
+function FeaturedCard({
+  item,
+  onOpenScreenshotGallery,
+  onOpenVizdom,
+  onOpenYoutube,
+  onOpenDemo,
+}) {
   const hasYoutube = Boolean(String(item.youtube || "").trim());
   const hasVizdom = Boolean(String(item.vizdomId || "").trim());
   const hasDemo = Boolean(String(item.demoLink || "").trim());
 
-  const openDemo = (e) => {
-    e.stopPropagation();
-    const url = String(item.demoLink || "").trim();
-    if (!url) return;
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
+const openDemo = (e) => {
+  e.stopPropagation();
+  onOpenDemo?.();
+};
 
-  const openYoutube = (e) => {
-    e.stopPropagation();
-    const url = String(item.youtube || "").trim();
-    if (!url) return;
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
+ const openYoutube = (e) => {
+  e.stopPropagation();
+  onOpenYoutube?.();
+};
 
   return (
     <article className="fpProjectCard">
@@ -382,6 +386,8 @@ export default function Landing() {
   const [activeCategory2, setActiveCategory2] = useState("All");
   const [searchQuery2, setSearchQuery2] = useState("");
   const [showAll2, setShowAll2] = useState(false);
+
+  const { openVideo } = useVideoModal();
 
   const featuredProjectsRef = useRef(null);
 
@@ -648,6 +654,22 @@ export default function Landing() {
                 item={item}
                 onOpenScreenshotGallery={() => handleOpenScreenshotGallery(item)}
                 onOpenVizdom={() => handleOpenVizdom(item)}
+                onOpenYoutube={() =>
+                  openVideo(
+                    item.youtube,
+                    item.buildName || item.projectName || "Project Walkthrough",
+                    "Offline-ready project walkthrough",
+                    { type: "youtube" }
+                  )
+                }
+                onOpenDemo={() =>
+                  openVideo(
+                    item.demoLink,
+                    item.buildName || item.projectName || "Project Demo",
+                    "Offline-ready project Demo",
+                    { type: "demo" }
+                  )
+                }
               />
             ))}
           </div>

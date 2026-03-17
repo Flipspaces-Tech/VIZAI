@@ -8,6 +8,7 @@ import backIcon from "../assets/back.png";
 import LandingNavbar from "../components/LandingNavbar.jsx";
 import Footer from "../components/Footer.jsx";
 import { useAuth } from "../auth/AuthProvider";
+import { useVideoModal } from "../context/VideoModalContext";
 import { useNavigate, useLocation } from "react-router-dom";
 
 import downloadIcon from "../assets/download.png";
@@ -252,6 +253,7 @@ export default function ScreenshotGallery() {
 
   const [activeTab, setActiveTab] = useState("screenshots");
   const { user, signOut } = useAuth();
+  const { openVideo } = useVideoModal();
 
   const [selectedServer, setSelectedServer] = useState(
     currentRegion === "us" ? "us" : "india"
@@ -431,6 +433,30 @@ export default function ScreenshotGallery() {
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
+  const handleOpenYoutube = () => {
+    const url = String(headerItem?.youtube || "").trim();
+    if (!url) return;
+
+    openVideo(
+      url,
+      buildName || "Project Walkthrough",
+      "Offline-ready project walkthrough",
+      { type: "youtube" }
+    );
+  };
+
+  const handleOpenDemo = () => {
+    const url = String(headerItem?.demo || "").trim();
+    if (!url) return;
+
+    openVideo(
+      url,
+      buildName || "Project Demo",
+      "Offline-ready project Demo",
+      { type: "demo" }
+    );
+  };
+
   const openVizwalk = () => {
     if (!headerItem) return;
 
@@ -530,7 +556,7 @@ export default function ScreenshotGallery() {
                       Go to Vizdom
                       <img className="sg-vizdomIcon" src={openIcon} alt="" />
                     </button>
-                    ) : null}
+                  ) : null}
                 </div>
 
                 <div className="sg-chips sg-chips-figma">
@@ -555,11 +581,7 @@ export default function ScreenshotGallery() {
                     type="button"
                     className="sg-action"
                     disabled={!headerItem?.youtube}
-                    onClick={() => {
-                      const url = String(headerItem?.youtube || "").trim();
-                      if (!url) return;
-                      window.open(url, "_blank", "noopener,noreferrer");
-                    }}
+                    onClick={handleOpenYoutube}
                   >
                     <span className="sg-actionIconWrap">
                       <img className="sg-actionIcon" src={ytIcon} alt="" />
@@ -576,11 +598,7 @@ export default function ScreenshotGallery() {
                     <button
                       type="button"
                       className="sg-action"
-                      onClick={() => {
-                        const url = String(headerItem?.demo || "").trim();
-                        if (!url) return;
-                        window.open(url, "_blank", "noopener,noreferrer");
-                      }}
+                      onClick={handleOpenDemo}
                     >
                       <span className="sg-actionIconWrap">
                         <img className="sg-actionIcon" src={demoIcon} alt="" />

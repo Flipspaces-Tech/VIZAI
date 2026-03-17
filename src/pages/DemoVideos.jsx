@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import LandingNavbar from "../components/LandingNavbar.jsx";
 import Footer from "../components/Footer.jsx";
 import { useAuth } from "../auth/AuthProvider";
+import { useVideoModal } from "../context/VideoModalContext";
 
 // Assets
 import ytIcon from "../assets/yt1.png";
@@ -85,7 +86,9 @@ export default function DemoVideos() {
   const [activeType, setActiveType] = useState("All");
   const [query, setQuery] = useState("");
   const [selectedServer, setSelectedServer] = useState("india");
+
   const { user, signOut } = useAuth();
+  const { openVideo } = useVideoModal();
 
   useEffect(() => {
     async function load() {
@@ -107,22 +110,19 @@ export default function DemoVideos() {
     load();
   }, []);
 
-  // ✅ SAME TAB
   const openScreenshotGallery = (row) => {
-  // ✅ store where we came from so gallery back button works
-  sessionStorage.setItem(
-    "SG_BACK_URL",
-    window.location.pathname + window.location.search
-  );
+    sessionStorage.setItem(
+      "SG_BACK_URL",
+      window.location.pathname + window.location.search
+    );
 
-  const params = new URLSearchParams({
-    build: row.videoName || row.buildName || "Build",
-    ver: row.buildVersion || row.ver || "",
-  });
+    const params = new URLSearchParams({
+      build: row.videoName || row.buildName || "Build",
+      ver: row.buildVersion || row.ver || "",
+    });
 
-  // ✅ same tab
-  window.location.assign(`/gallery?${params.toString()}`);
-};
+    window.location.assign(`/gallery?${params.toString()}`);
+  };
 
   const typeOptions = useMemo(() => {
     const set = new Set(["All"]);
@@ -150,6 +150,44 @@ export default function DemoVideos() {
       return typeOk && match;
     });
   }, [rows, activeType, query]);
+
+  const openYoutubeVideo = (row) => {
+    const ytUrl = row.youtubeUrl || row.youtube;
+    if (!ytUrl) return;
+
+    openVideo(
+      ytUrl,
+      row.videoName || row.buildName || "Project Walkthrough",
+      "Offline-ready project walkthrough",
+      { type: "youtube" }
+    );
+  };
+
+  const openDemoVideo = (row) => {
+    const demoUrl = row.vizwalkDemoUrl || row.walkthrough_link;
+    if (!demoUrl) return;
+
+    openVideo(
+      demoUrl,
+      row.videoName || row.buildName || "Project Demo",
+      "Offline-ready project Demo",
+      { type: "demo" }
+    );
+  };
+
+  const openPrimaryVideo = (row) => {
+    const ytUrl = row.youtubeUrl || row.youtube;
+    const demoUrl = row.vizwalkDemoUrl || row.walkthrough_link;
+
+    if (ytUrl) {
+      openYoutubeVideo(row);
+      return;
+    }
+
+    if (demoUrl) {
+      openDemoVideo(row);
+    }
+  };
 
   return (
     <div className="dv-page-container">
@@ -210,45 +248,40 @@ export default function DemoVideos() {
                 r.thumbnailUrl || r.image_url || r.thumbnail || r.image || "";
               const demoUrl = r.vizwalkDemoUrl || r.walkthrough_link;
               const ytUrl = r.youtubeUrl || r.youtube;
-              const openPrimaryVideo = () => {
-              const url = ytUrl || demoUrl;
-              if (!url) return;
-              window.open(url, "_blank", "noopener,noreferrer");
-            };
 
               return (
                 <article className="dv-project-card" key={idx}>
                   <div
-                      className="dv-card-media"
-                      onClick={openPrimaryVideo}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          openPrimaryVideo();
-                        }
-                      }}
-                    >
-                      <ImageWithFallback
-                        className="dv-card-img"
-                        src={thumb}
-                        alt={r.videoName || "Project"}
-                      />
+                    className="dv-card-media"
+                    onClick={() => openPrimaryVideo(r)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        openPrimaryVideo(r);
+                      }
+                    }}
+                  >
+                    <ImageWithFallback
+                      className="dv-card-img"
+                      src={thumb}
+                      alt={r.videoName || "Project"}
+                    />
 
-                      {(ytUrl || demoUrl) && (
-                        <button
-                          className="dvPlayBtn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openPrimaryVideo();
-                          }}
-                          type="button"
-                        >
-                          <span className="dvPlayTri" aria-hidden="true" />
-                        </button>
-                      )}
-                  </div>  
+                    {(ytUrl || demoUrl) && (
+                      <button
+                        className="dvPlayBtn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openPrimaryVideo(r);
+                        }}
+                        type="button"
+                      >
+                        <span className="dvPlayTri" aria-hidden="true" />
+                      </button>
+                    )}
+                  </div>
 
                   <div className="dv-card-details">
                     <div className="dv-sliding-content">
@@ -263,11 +296,10 @@ export default function DemoVideos() {
                       </p>
 
                       <div className="dv-card-footer">
-                        {/* ✅ SAME TAB */}
                         {ytUrl && (
                           <button
                             className="dv-footerSquare"
-                            onClick={() => window.open(ytUrl, "_blank", "noopener,noreferrer")}
+                            onClick={() => openYoutubeVideo(r)}
                             type="button"
                           >
                             <img
@@ -278,11 +310,10 @@ export default function DemoVideos() {
                           </button>
                         )}
 
-                        {/* ✅ SAME TAB */}
                         {demoUrl && (
                           <button
                             className="dv-footerSquare"
-                            onClick={() => window.open(demoUrl, "_blank", "noopener,noreferrer")}
+                            onClick={() => openDemoVideo(r)}
                             type="button"
                           >
                             <img
@@ -293,11 +324,10 @@ export default function DemoVideos() {
                           </button>
                         )}
 
-                        {/* ✅ SAME TAB */}
                         {demoUrl && (
                           <button
                             className="dv-footerDemoBtn"
-                            onClick={() => window.open(demoUrl, "_blank", "noopener,noreferrer")}
+                            onClick={() => openDemoVideo(r)}
                             type="button"
                           >
                             <img src={demoIcon} alt="" className="dv-demoIcon" />
@@ -307,7 +337,6 @@ export default function DemoVideos() {
                       </div>
                     </div>
 
-                    {/* ✅ Gallery (same tab) */}
                     <button
                       className="dvGalleryArrowBtn"
                       type="button"

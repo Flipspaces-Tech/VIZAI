@@ -5,6 +5,7 @@ import { useLocation } from "react-router-dom";
 import LandingNavbar from "../components/LandingNavbar.jsx";
 import Footer from "../components/Footer.jsx";
 import { useAuth } from "../auth/AuthProvider";
+import { useVideoModal } from "../context/VideoModalContext";
 
 import yt1 from "../assets/yt1.png";
 import vz1 from "../assets/vz1.png";
@@ -192,23 +193,25 @@ function ImageWithFallback({ src, alt, style, className }) {
 }
 
 /** ====== FEATURED CARD ====== */
-function FeaturedCard({ item, onOpenScreenshotGallery, onOpenVizdom }) {
+function FeaturedCard({
+  item,
+  onOpenScreenshotGallery,
+  onOpenVizdom,
+  onOpenYoutube,
+  onOpenDemo,
+}) {
   const hasYoutube = Boolean(String(item.youtube || "").trim());
   const hasVizdom = Boolean(String(item.vizdomId || "").trim());
   const hasDemo = Boolean(String(item.demoLink || "").trim());
 
   const openDemo = (e) => {
     e.stopPropagation();
-    const url = String(item.demoLink || "").trim();
-    if (!url) return;
-    window.open(url, "_blank", "noopener,noreferrer");
+    onOpenDemo?.(item);
   };
 
   const openYoutube = (e) => {
     e.stopPropagation();
-    const url = String(item.youtube || "").trim();
-    if (!url) return;
-    window.open(url, "_blank", "noopener,noreferrer");
+    onOpenYoutube?.(item);
   };
 
   return (
@@ -287,6 +290,7 @@ function FeaturedCard({ item, onOpenScreenshotGallery, onOpenVizdom }) {
 /** ====== SHOWCASE PAGE ====== */
 export default function Showcase() {
   const { user, signOut } = useAuth();
+  const { openVideo } = useVideoModal();
   const location = useLocation();
   const currentRegion = getRegionFromPath(location.pathname);
 
@@ -423,6 +427,24 @@ export default function Showcase() {
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
+  const handleOpenYoutube = (item) => {
+    openVideo(
+      item.youtube,
+      item.buildName || item.projectName || "Project Walkthrough",
+      "Offline-ready project walkthrough",
+      { type: "youtube" }
+    );
+  };
+
+  const handleOpenDemo = (item) => {
+    openVideo(
+      item.demoLink,
+      item.buildName || item.projectName || "Project Demo",
+      "Offline-ready project Demo",
+      { type: "demo" }
+    );
+  };
+
   return (
     <div style={sx.page}>
       <LandingNavbar
@@ -498,6 +520,8 @@ export default function Showcase() {
                     item={item}
                     onOpenScreenshotGallery={handleOpenScreenshotGallery}
                     onOpenVizdom={handleOpenVizdom}
+                    onOpenYoutube={handleOpenYoutube}
+                    onOpenDemo={handleOpenDemo}
                   />
                 ))}
               </div>
