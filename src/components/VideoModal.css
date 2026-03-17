@@ -5,66 +5,94 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 28px;
+  padding: 24px;
   z-index: 10000;
 }
 
 .videoModalCard {
-  width: min(1100px, 92vw);
-  background: #fff;
-  border-radius: 4px;
+  width: min(1320px, 90vw);
+  background: #ffffff;
+  border-radius: 3px;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
   overflow: hidden;
 }
 
 .videoModalHeader {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 22px 22px 14px;
+  padding: 14px 22px 12px;
+  min-height: 72px;
+  box-sizing: border-box;
 }
 
 .videoModalTitleWrap {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 14px;
+  min-width: 0;
+  flex: 1;
 }
 
-.videoModalYTIcon {
-  width: 46px;
-  height: 32px;
+.videoModalHeaderIconWrap {
+  width: 58px;
+  height: 58px;
   border-radius: 8px;
-  background: #ff0000;
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-size: 18px;
-  line-height: 1;
-  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 58px;
+  overflow: visible;
 }
+
+.videoModalHeaderIconImg {
+  width: 48px;
+  height: 48px;
+  left: 250px;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+  transform: translateY(2px);
+}   
 
 .videoModalTitle {
   margin: 0;
-  font-size: 22px;
-  font-weight: 500;
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.08;
   color: #1a1a1a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .videoModalSubtitle {
   margin: 4px 0 0;
-  font-size: 14px;
-  color: rgba(0, 0, 0, 0.55);
+  font-size: 15px;
+  line-height: 1.2;
+  font-weight: 400;
+  color: rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .videoModalClose {
   border: none;
   background: transparent;
-  font-size: 40px;
+  font-size: 44px;
   line-height: 1;
   cursor: pointer;
-  color: #111;
+  color: #111111;
   padding: 0;
+  margin: 0;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .videoModalBody {
@@ -76,7 +104,8 @@
   aspect-ratio: 16 / 9;
   border: 0;
   display: block;
-  background: #000;
+  background: #000000;
+  border-radius: 2px;
 }
 
 .videoModalFallback {
@@ -86,6 +115,36 @@
   color: #444;
   background: #f3f3f3;
   font-size: 16px;
+  border-radius: 3px;
+}
+
+@media (max-width: 1024px) {
+  .videoModalCard {
+    width: min(96vw, 1180px);
+  }
+
+  .videoModalHeader {
+    padding: 12px 18px 10px;
+    min-height: 64px;
+  }
+
+  .videoModalBody {
+    padding: 0 18px 18px;
+  }
+
+  .videoModalHeaderIconWrap,
+  .videoModalHeaderIconImg {
+    width: 50px;
+    height: 50px;
+  }
+
+  .videoModalTitle {
+    font-size: 24px;
+  }
+
+  .videoModalSubtitle {
+    font-size: 14px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -98,34 +157,38 @@
   }
 
   .videoModalHeader {
-    padding: 16px 16px 10px;
+    padding: 12px 14px 10px;
+    min-height: auto;
+    gap: 10px;
   }
 
   .videoModalBody {
-    padding: 0 16px 16px;
+    padding: 0 14px 14px;
+  }
+
+  .videoModalTitleWrap {
+    gap: 10px;
+  }
+
+  .videoModalHeaderIconWrap,
+  .videoModalHeaderIconImg {
+    width: 40px;
+    height: 40px;
   }
 
   .videoModalTitle {
     font-size: 18px;
   }
 
+  .videoModalSubtitle {
+    font-size: 12px;
+    margin-top: 2px;
+  }
+
   .videoModalClose {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
     font-size: 32px;
   }
-}
-.videoModalHeaderIconWrap {
-  width: 38px;
-  height: 38px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 38px;
-}
-
-.videoModalHeaderIconImg {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-  display: block;
 }
