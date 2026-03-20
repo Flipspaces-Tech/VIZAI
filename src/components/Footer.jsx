@@ -43,7 +43,7 @@ export default function Footer() {
               <div className="vwFooterColTitle">PRODUCT</div>
               <a
                 className="vwFooterLink vwFooterLinkNoUnderline"
-                href="/updates"
+                // href="/updates"
               >
                 Updates
               </a>

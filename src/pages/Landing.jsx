@@ -520,7 +520,7 @@ export default function Landing() {
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
-  if (loading) return <div style={{ ...sx.page, padding: 24 }}>Loading…</div>;
+  // if (loading) return <div style={{ ...sx.page, padding: 24 }}>Loading…</div>;
 
   return (
     <div style={sx.page}>
@@ -555,19 +555,19 @@ export default function Landing() {
 
           <div className="hero2Btns">
             <button
-              type="button"
-              className="hero2Btn hero2BtnPrimary"
-              onClick={() => {
-                window.open(
-                  "https://s3-vizwalk-dev.flipspaces.app/uploads/VW-Platform-Pres.mp4",
-                  "_blank",
-                  "noopener,noreferrer"
-                );
-              }}
-            >
-              <span className="hero2YT" aria-hidden="true" />
-              Watch Demo
-            </button>
+            type="button"
+            className="hero2Btn hero2BtnPrimary"
+            onClick={() => {
+              window.open(
+                "https://s3-vizwalk-dev.flipspaces.app/uploads/VW-Platform-Pres.mp4",
+                "_blank",
+                "noopener,noreferrer"
+              );
+            }}
+          >
+            <img src={yt1} alt="" className="hero2YTIconImg" aria-hidden="true" />
+            <span>Watch Demo</span>
+          </button>
 
             <button
               type="button"
