@@ -15,26 +15,9 @@ const WARNING_GID = "738570445";
 const DEFAULT_TOPBAR_TEXT =
   "Make Sure Choose the region closest to you for a seamless experience";
 
-function isReloadNavigation() {
-  try {
-    const navEntries = performance.getEntriesByType?.("navigation");
-    if (navEntries && navEntries.length) {
-      return navEntries[0].type === "reload";
-    }
-    return performance.navigation?.type === 1;
-  } catch {
-    return false;
-  }
-}
-
 function getInitialShowTopBar() {
-  if (isReloadNavigation()) {
-    sessionStorage.removeItem(TOPBAR_KEY);
-    return true;
-  }
   return sessionStorage.getItem(TOPBAR_KEY) !== "1";
 }
-
 function parseCSV(text) {
   if (!text) return [];
   if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
@@ -194,6 +177,18 @@ export default function LandingNavbar({
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, []);
+
+  useEffect(() => {
+  const handleBeforeUnload = () => {
+    sessionStorage.removeItem(TOPBAR_KEY);
+  };
+
+  window.addEventListener("beforeunload", handleBeforeUnload);
+
+  return () => {
+    window.removeEventListener("beforeunload", handleBeforeUnload);
+  };
+}, []);
 
   useEffect(() => {
     setMobileMenuOpen(false);
