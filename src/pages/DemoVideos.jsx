@@ -328,7 +328,7 @@ export default function DemoVideos() {
                       </div>
                     </div>
 
-                    <button
+                    {/* <button
                       className="dvGalleryArrowBtn"
                       type="button"
                       onClick={(e) => {
@@ -337,7 +337,7 @@ export default function DemoVideos() {
                       }}
                     >
                       <img src={openArrowPng} alt="Open Gallery" />
-                    </button>
+                    </button> */}
                   </div>
                 </article>
               );
