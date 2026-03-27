@@ -314,20 +314,7 @@ export default function DemoVideos() {
                           </button>
                         )}
 
-                        {demoUrl && (
-                          <button
-                            className="dv-footerSquare"
-                            onClick={() => openDemoVideo(r)}
-                            type="button"
-                          >
-                            <img
-                              src={vizwalkIcon}
-                              alt=""
-                              className="dv-footerSquareImg"
-                            />
-                          </button>
-                        )}
-
+                        
                         {demoUrl && (
                           <button
                             className="dv-footerDemoBtn"

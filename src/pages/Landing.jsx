@@ -555,19 +555,20 @@ export default function Landing() {
 
           <div className="hero2Btns">
             <button
-            type="button"
-            className="hero2Btn hero2BtnPrimary"
-            onClick={() => {
-              window.open(
-                "https://s3-vizwalk-dev.flipspaces.app/uploads/VW-Platform-Pres.mp4",
-                "_blank",
-                "noopener,noreferrer"
-              );
-            }}
-          >
-            <img src={yt1} alt="" className="hero2YTIconImg" aria-hidden="true" />
-            <span>Watch Demo</span>
-          </button>
+  type="button"
+  className="hero2Btn hero2BtnPrimary"
+  onClick={() =>
+    openVideo(
+      "https://youtu.be/_-X8hoHd8Mc?si=Gc7GCiGZOmtLQ6Mv",
+      "VizWalk Demo",
+      "Interactive platform walkthrough",
+      { type: "youtube" }
+    )
+  }
+>
+  <img src={yt1} alt="" className="hero2YTIconImg" aria-hidden="true" />
+  <span>Watch Demo</span>
+</button>
 
             <button
               type="button"
