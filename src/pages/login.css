@@ -511,14 +511,18 @@ body {
 @media (max-width: 640px) {
   .vwAuthFrame {
     padding: 8px;
+    grid-template-columns: 1fr;
   }
 
   .vwAuthLeft {
-    min-height: 240px;
+    min-height: 280px;
   }
 
   .vwAuthRight {
-    padding: 18px 14px 18px;
+    padding: 20px 16px 16px;
+    min-height: auto;
+    display: flex;
+    flex-direction: column;
   }
 
   .vwCornerLogo {
@@ -533,69 +537,203 @@ body {
   }
 
   .vwFormWrap {
-    padding: 48px 8px 0;
+    width: 100%;
+    max-width: 100%;
+    padding: 32px 0 0;
+    margin: 0;
+    flex: 1;
+    justify-content: flex-start;
+    transform: none;
   }
 
   .vwRightTitle {
-    font-size: 34px;
-    margin-bottom: 34px;
+    font-size: 32px;
+    margin-bottom: 24px;
   }
 
   .vwFieldLabel {
-    font-size: 17px;
+    font-size: 15px;
+    margin-bottom: 10px;
   }
 
-  .vwInput--light,
-  .vwOtpBox--light {
-    height: 52px;
+  .vwInput--light {
+    width: 100%;
+    max-width: 100%;
+    height: 48px;
+    font-size: 15px;
+    padding: 0 12px;
   }
 
+  .vwInput--light::placeholder {
+    font-size: 14px;
+  }
+
+  .vwRememberLight {
+    margin-top: 12px;
+    font-size: 13px;
+  }
+
+  .vwCta--light {
+    margin-top: 16px;
+    width: 100%;
+    max-width: 100%;
+    height: 48px;
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .vwHint--dark {
+    margin-top: 10px;
+    font-size: 13px;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .vwMsg--dark {
+    margin-top: 10px;
+    font-size: 12px;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* OTP Optimizations - FIX FOR 6 BOXES */
   .vwOtpRow--light {
-    gap: 10px;
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    width: 100%;
+    max-width: 100%;
   }
 
   .vwOtpBox--light {
+    flex: unset;
+    min-width: 0;
+    height: 48px;
     font-size: 18px;
+    font-weight: 600;
+    border: 1px solid #cfcfcf;
+    border-radius: 4px;
+    padding: 0;
   }
 
-  .vwOtpMeta,
+  .vwOtpBox--light:focus {
+    border-color: #bdbdbd;
+    box-shadow: 0 0 0 3px rgba(245, 190, 46, 0.18);
+  }
+
+  .vwOtpMeta {
+    margin-top: 16px;
+    gap: 8px;
+    font-size: 14px;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .vwOtpTimer {
+    color: #777;
+    font-size: 14px;
+  }
+
   .vwLinkBtn {
-    font-size: 16px;
+    font-size: 14px;
+    color: #333;
+  }
+
+  .vwVerifiedSimple {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .vwVerifiedTitle {
+    font-size: 20px;
+  }
+
+  .vwVerifiedSub {
+    font-size: 12px;
+  }
+
+  .vwVerifiedSpinnerDark {
+    margin: 12px auto 0;
   }
 
   .vwSloganCard {
-    left: 18px;
-    bottom: 18px;
-    width: 180px;
-    height: 300px;
-    padding: 52px 10px;
+    left: 20px;
+    bottom: 24px;
+    width: 200px;
+    height: 320px;
+    padding: 64px 12px;
+    top: 20px;
   }
 
   .vwSloganLine1,
   .vwSloganLine3 {
-    font-size: 34px;
+    font-size: 38px;
   }
 
   .vwSloganLine2 {
-    font-size: 48px;
+    font-size: 52px;
   }
 
   .vwLeftAccent {
-    top: 14px;
-    right: 24px;
+    top: 16px;
+    right: 26px;
     width: 16px;
-    height: 100px;
+    height: 110px;
   }
 
   .vwLeftAccent1 {
-    bottom: 60px;
-    left: 18px;
-    width: 58px;
+    bottom: 70px;
+    left: 20px;
+    width: 60px;
     height: 10px;
   }
 
   .vwTerms--dark {
-    font-size: 13px;
+    position: relative;
+    transform: none;
     width: 100%;
+    max-width: 100%;
+    font-size: 12px;
+    margin-top: 16px;
+    bottom: auto;
+    left: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .vwAuthRight {
+    padding: 16px 12px 12px;
+  }
+
+  .vwFormWrap {
+    padding: 24px 0 0;
+  }
+
+  .vwRightTitle {
+    font-size: 28px;
+    margin-bottom: 20px;
+  }
+
+  .vwFieldLabel {
+    font-size: 14px;
+  }
+
+  .vwOtpRow--light {
+    gap: 6px;
+  }
+
+  .vwOtpBox--light {
+    height: 44px;
+    font-size: 16px;
+  }
+
+  .vwSloganLine1,
+  .vwSloganLine3 {
+    font-size: 32px;
+  }
+
+  .vwSloganLine2 {
+    font-size: 44px;
   }
 }
