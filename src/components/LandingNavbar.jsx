@@ -1,4 +1,3 @@
-// src/components/LandingNavbar.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import vizIcon from "../assets/vw1.png";
@@ -110,7 +109,7 @@ const safeGet = (row, idx, fallback = "") =>
     ? String(row[idx]).trim()
     : fallback;
 
-// ---------- REGION HELPERS ----------
+/* ---------- REGION HELPERS ---------- */
 function normalizeRegion(v = "") {
   const s = String(v || "").trim().toLowerCase();
   if (s === "us") return "us";
@@ -157,6 +156,8 @@ export default function LandingNavbar({
   setSelectedServer,
 }) {
   const [dd, setDd] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileProjectsOpen, setMobileProjectsOpen] = useState(false);
   const [showTopBar, setShowTopBar] = useState(getInitialShowTopBar);
   const [warningData, setWarningData] = useState({
     warningStatus: "",
@@ -164,6 +165,8 @@ export default function LandingNavbar({
   });
 
   const ddRef = useRef(null);
+  const mobileMenuRef = useRef(null);
+
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -179,10 +182,24 @@ export default function LandingNavbar({
   useEffect(() => {
     const onDown = (e) => {
       if (ddRef.current && !ddRef.current.contains(e.target)) setDd(false);
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target)) {
+        const btn = document.querySelector(".vwHamburger");
+        if (btn && !btn.contains(e.target)) {
+          setMobileMenuOpen(false);
+          setMobileProjectsOpen(false);
+        }
+      }
     };
+
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, []);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+    setMobileProjectsOpen(false);
+    setDd(false);
+  }, [location.pathname, location.search, location.hash]);
 
   useEffect(() => {
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&id=${SHEET_ID}&gid=${WARNING_GID}`;
@@ -240,17 +257,14 @@ export default function LandingNavbar({
   const isDemoActive = pathname.startsWith("/demo-videos");
 
   const goToRegionPath = (targetPath) => {
-    const next = buildRegionalPath(
-      currentRegion,
-      targetPath,
-      "",
-      ""
-    );
+    const next = buildRegionalPath(currentRegion, targetPath, "", "");
     navigate(next);
   };
 
   const goHome = () => {
     setDd(false);
+    setMobileMenuOpen(false);
+    setMobileProjectsOpen(false);
     navigate(buildRegionalPath(currentRegion, "/", "", ""));
   };
 
@@ -449,8 +463,96 @@ export default function LandingNavbar({
                   <line x1="21" y1="12" x2="9" y2="12" />
                 </svg>
               </button>
+
+              <button
+                type="button"
+                className={`vwHamburger ${mobileMenuOpen ? "isOpen" : ""}`}
+                aria-label="Open menu"
+                aria-expanded={mobileMenuOpen}
+                onClick={() => setMobileMenuOpen((v) => !v)}
+              >
+                <span />
+                <span />
+                <span />
+              </button>
             </div>
           </div>
+
+          {mobileMenuOpen && (
+            <div className="vwMobileMenu" ref={mobileMenuRef}>
+              <button
+                className={`vwMobileLink ${isHomeActive ? "isActive" : ""}`}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  goToRegionPath("/");
+                }}
+              >
+                HOME
+              </button>
+
+              <div className="vwMobileProjectsWrap">
+                <button
+                  className={`vwMobileLink ${isProjectsActive ? "isActive" : ""}`}
+                  onClick={() => setMobileProjectsOpen((v) => !v)}
+                >
+                  <span>PROJECTS</span>
+                  <span className={`vwMobileCaret ${mobileProjectsOpen ? "isOpen" : ""}`}>
+                    ▾
+                  </span>
+                </button>
+
+                {mobileProjectsOpen && (
+                  <div className="vwMobileSubmenu">
+                    <button
+                      className="vwMobileSubLink"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        setMobileProjectsOpen(false);
+                        goToRegionPath("/showcase");
+                      }}
+                    >
+                      Showcase Projects
+                    </button>
+
+                    <button
+                      className="vwMobileSubLink"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        setMobileProjectsOpen(false);
+                        goToRegionPath("/live-projects");
+                      }}
+                    >
+                      Live Projects
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <button
+                className={`vwMobileLink ${isLearnActive ? "isActive" : ""}`}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  window.open(
+                    buildRegionalPath(currentRegion, "/learn"),
+                    "_blank",
+                    "noopener,noreferrer"
+                  );
+                }}
+              >
+                LEARN
+              </button>
+
+              <button
+                className={`vwMobileLink ${isDemoActive ? "isActive" : ""}`}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  goToRegionPath("/demo-videos");
+                }}
+              >
+                DEMO VIDEOS
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

@@ -200,17 +200,21 @@ export default function DemoVideos() {
 
       <main className="dv-main-content">
         <header className="dv-header-top">
-          <div className="dv-title-group">
-            <h1 className="dv-heading">Walkthrough Videos</h1>
-            <div className="dv-badge-server">
-              <img src={indiaIcon} alt="IN" />
-              <span>India Server</span>
+          <div className="dv-header-left">
+            <div className="dv-title-row">
+              <h1 className="dv-heading">Walkthrough Videos</h1>
+
+              <div className="dv-badge-server">
+                <img src={indiaIcon} alt="IN" />
+                <span>India Server</span>
+              </div>
             </div>
+
+            <p className="dv-description">
+              Explore our premium architectural visualizations and immersive 3D
+              walkthroughs
+            </p>
           </div>
-          <p className="dv-description">
-            Explore our premium architectural visualizations and immersive 3D
-            walkthroughs
-          </p>
         </header>
 
         <section className="dv-filter-bar">

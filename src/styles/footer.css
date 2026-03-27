@@ -3,7 +3,6 @@
 ========================================================= */
 .vwFooter {
   width: 100%;
-  height: 369px;
   background: #eaeae8;
   box-sizing: border-box;
 }
@@ -15,13 +14,13 @@
 }
 
 /* =========================================================
-   TOP AREA (2 halves + centered divider)
+   TOP AREA
 ========================================================= */
 .vwFooterTop {
   position: relative;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  height: 369px;
+  min-height: 369px;
   align-items: start;
   box-sizing: border-box;
   background-color: #eaeae8;
@@ -41,12 +40,12 @@
    LEFT BRAND
 ========================================================= */
 .vwFooterBrand {
-  margin-left: 100px;
-  margin-top: 85px;
+  padding: 85px 40px 60px 100px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 10px;
+  box-sizing: border-box;
 }
 
 .vwFooterLogoLink {
@@ -68,23 +67,26 @@
 .vwFooterDesc {
   max-width: 432px;
   margin-top: 22px;
-  height: 90px;
   font-size: 20px;
   line-height: 1.55;
   color: rgba(0, 0, 0, 0.62);
 }
 
 /* =========================================================
-   RIGHT BLOCK (Product + Resources)
+   RIGHT BLOCK
 ========================================================= */
 .vwFooterRightBlock {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 40px;
+  gap: 60px;
   justify-self: end;
-  padding-right: 200px;
+  padding: 85px 100px 60px 40px;
   font-family: var(--font-heading);
-  margin-top: 85px;
+  box-sizing: border-box;
+}
+
+.vwFooterCol {
+  min-width: 160px;
 }
 
 .vwFooterColTitle {
@@ -157,12 +159,10 @@
 .vwFooterSupportTooltip {
   position: absolute;
   top: 40px;
+  left: 0;
   min-width: 265px;
   background: transparent;
   color: rgba(0, 0, 0, 0.62);
-  /* border: 1px solid rgba(0, 0, 0, 0.12); */
-  /* box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1); */
-  /* padding: 12px 14px; */
   font-size: 16px;
   line-height: 1.45;
   opacity: 0;
@@ -207,7 +207,7 @@
 .vwFooterCopiedToast {
   position: absolute;
   top: 60px;
-  left: -80px;
+  left: -20px;
   background: #1f1f1f;
   color: #fff;
   font-size: 14px;
@@ -227,6 +227,7 @@
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
+  min-height: 72px;
   box-sizing: border-box;
 }
 
@@ -237,8 +238,8 @@
 .vwFooterCopy {
   text-align: center;
   font-size: 16px;
-  height: 20px;
   font-weight: 200;
+  line-height: 1.4;
 }
 
 .vwFooterRightBrand {
@@ -246,6 +247,7 @@
   justify-content: flex-end;
   align-items: center;
   padding-right: 60px;
+  box-sizing: border-box;
 }
 
 .vwFooterFlipLink {
@@ -256,6 +258,7 @@
 
 .vwFooterFlipLogo {
   width: 302px;
+  max-width: 100%;
   height: 55px;
   object-fit: contain;
   display: block;
@@ -275,4 +278,94 @@
   text-align: left;
   cursor: pointer;
   font-family: inherit;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+@media (max-width: 1200px) {
+  .vwFooterBrand {
+    padding: 70px 30px 50px 60px;
+  }
+
+  .vwFooterRightBlock {
+    padding: 70px 60px 50px 30px;
+    gap: 40px;
+  }
+
+  .vwFooterDesc,
+  .vwFooterLink,
+  .vwFooterSupportBtn {
+    font-size: 18px;
+  }
+
+  .vwFooterColTitle {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 900px) {
+  .vwFooterTop {
+    grid-template-columns: 1fr;
+  }
+
+  .vwFooterDivider {
+    display: none;
+  }
+
+  .vwFooterBrand {
+    padding: 60px 24px 30px;
+  }
+
+  .vwFooterRightBlock {
+    justify-self: stretch;
+    grid-template-columns: 1fr 1fr;
+    padding: 20px 24px 50px;
+  }
+
+  .vwFooterBottom {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 20px 24px;
+    text-align: center;
+  }
+
+  .vwFooterBottomLeft {
+    display: none;
+  }
+
+  .vwFooterRightBrand {
+    justify-content: center;
+    padding-right: 0;
+  }
+
+  .vwFooterCopy {
+    order: 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .vwFooterRightBlock {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .vwFooterVizLogo {
+    height: 64px;
+    margin-left: -10px;
+  }
+
+  .vwFooterDesc {
+    font-size: 17px;
+  }
+
+  .vwFooterLink,
+  .vwFooterSupportBtn {
+    font-size: 18px;
+  }
+
+  .vwFooterFlipLogo {
+    width: 220px;
+    height: auto;
+  }
 }
