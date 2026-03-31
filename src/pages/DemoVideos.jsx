@@ -204,10 +204,10 @@ export default function DemoVideos() {
             <div className="dv-title-row">
               <h1 className="dv-heading">Walkthrough Videos</h1>
 
-              <div className="dv-badge-server">
+              {/* <div className="dv-badge-server">
                 <img src={indiaIcon} alt="IN" />
                 <span>India Server</span>
-              </div>
+              </div> */}
             </div>
 
             <p className="dv-description">
