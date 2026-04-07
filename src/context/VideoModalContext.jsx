@@ -12,13 +12,13 @@ export function VideoModalProvider({ children }) {
     type: "youtube",
   });
 
-  const openVideo = (url, title, subtitle, options = {}) => {
+  const openVideo = (url, title = "", subtitle = "", options = {}) => {
     setModalState({
       isOpen: true,
       videoUrl: url || "",
       title: title || "",
       subtitle: subtitle || "",
-      type: options.type || "youtube",
+      type: options?.type || "youtube",
     });
   };
 
@@ -58,8 +58,10 @@ export function VideoModalProvider({ children }) {
 
 export function useVideoModal() {
   const ctx = useContext(VideoModalContext);
+
   if (!ctx) {
     throw new Error("useVideoModal must be used inside VideoModalProvider");
   }
+
   return ctx;
 }

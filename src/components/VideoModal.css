@@ -35,6 +35,11 @@
   flex: 1;
 }
 
+.videoModalTextWrap {
+  min-width: 0;
+  flex: 1;
+}
+
 .videoModalHeaderIconWrap {
   width: 58px;
   height: 58px;
@@ -49,12 +54,11 @@
 .videoModalHeaderIconImg {
   width: 48px;
   height: 48px;
-  left: 250px;
   object-fit: contain;
   object-position: center;
   display: block;
   transform: translateY(2px);
-}   
+}
 
 .videoModalTitle {
   margin: 0;

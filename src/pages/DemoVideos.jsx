@@ -43,6 +43,127 @@ function isProbablyDriveId(x) {
   return /^[a-zA-Z0-9_-]{20,}$/.test(s);
 }
 
+function ensureHttpProtocol(url = "") {
+  const s = String(url || "").trim();
+  if (!s) return "";
+  if (/^https?:\/\//i.test(s)) return s;
+  if (s.startsWith("//")) return `https:${s}`;
+  return `https://${s}`;
+}
+
+function isDriveUrl(url = "") {
+  const s = String(url || "").toLowerCase().trim();
+  return (
+    s.includes("drive.google.com") ||
+    s.includes("drive.usercontent.google.com")
+  );
+}
+
+function isYoutubeUrl(url = "") {
+  const s = String(url || "").toLowerCase().trim();
+  return (
+    s.includes("youtube.com/watch") ||
+    s.includes("youtube.com/embed/") ||
+    s.includes("youtube.com/playlist") ||
+    s.includes("youtu.be/") ||
+    s.includes("youtube.com/shorts/") ||
+    s.includes("youtube.com/live/")
+  );
+}
+
+function getDriveEmbedUrl(url = "") {
+  const raw = String(url || "").trim();
+  if (!raw) return "";
+
+  const fileId = extractDriveFileId(raw);
+  if (fileId) {
+    return `https://drive.google.com/file/d/${fileId}/preview`;
+  }
+
+  if (isProbablyDriveId(raw)) {
+    return `https://drive.google.com/file/d/${raw}/preview`;
+  }
+
+  return ensureHttpProtocol(raw);
+}
+
+function getYoutubeEmbedUrl(url = "") {
+  const s = ensureHttpProtocol(url);
+  if (!s) return "";
+
+  try {
+    const u = new URL(s);
+
+    if (u.hostname.includes("youtu.be")) {
+      const id = u.pathname.replace("/", "").trim();
+      return id ? `https://www.youtube.com/embed/${id}?rel=0` : s;
+    }
+
+    if (u.pathname.includes("/watch")) {
+      const id = u.searchParams.get("v");
+      const list = u.searchParams.get("list");
+
+      if (id) return `https://www.youtube.com/embed/${id}?rel=0`;
+      if (list) {
+        return `https://www.youtube.com/embed/videoseries?list=${list}`;
+      }
+      return s;
+    }
+
+    if (u.pathname.includes("/playlist")) {
+      const list = u.searchParams.get("list");
+      return list
+        ? `https://www.youtube.com/embed/videoseries?list=${list}`
+        : s;
+    }
+
+    if (u.pathname.includes("/embed/")) {
+      return s;
+    }
+
+    if (u.pathname.includes("/shorts/")) {
+      const id = u.pathname.split("/shorts/")[1]?.split("/")[0];
+      return id ? `https://www.youtube.com/embed/${id}?rel=0` : s;
+    }
+
+    if (u.pathname.includes("/live/")) {
+      const id = u.pathname.split("/live/")[1]?.split("/")[0];
+      return id ? `https://www.youtube.com/embed/${id}?rel=0` : s;
+    }
+
+    return s;
+  } catch {
+    return s;
+  }
+}
+
+function getSourceFromUrl(rawUrl = "") {
+  const url = String(rawUrl || "").trim();
+  if (!url) return null;
+
+  if (isDriveUrl(url)) {
+    return {
+      type: "drive",
+      rawUrl: ensureHttpProtocol(url),
+      embedUrl: getDriveEmbedUrl(url),
+    };
+  }
+
+  if (isYoutubeUrl(url)) {
+    return {
+      type: "youtube",
+      rawUrl: ensureHttpProtocol(url),
+      embedUrl: getYoutubeEmbedUrl(url),
+    };
+  }
+
+  return {
+    type: "demo",
+    rawUrl: ensureHttpProtocol(url),
+    embedUrl: ensureHttpProtocol(url),
+  };
+}
+
 function getDriveImageCandidates(urlOrId = "") {
   if (!urlOrId) return ["https://picsum.photos/seed/viz/1400/900"];
   const raw = String(urlOrId).trim();
@@ -164,29 +285,45 @@ export default function DemoVideos() {
   };
 
   const openDemoVideo = (row) => {
-    const demoUrl = row.vizwalkDemoUrl || row.walkthrough_link;
-    if (!demoUrl) return;
+  const demoRawUrl =
+    row.vizwalkDemoUrl ||
+    row.walkthrough_link ||
+    row["Unlisted Youtube Vizwalk Demo Video Link"] ||
+    row.unlistedYoutubeVizwalkDemoVideoLink;
 
-    openVideo(
-      demoUrl,
-      row.videoName || row.buildName || "Project Demo",
-      "Offline-ready project Demo",
-      { type: "demo" }
-    );
-  };
+  if (!demoRawUrl) return;
+
+  const source = getSourceFromUrl(demoRawUrl);
+  if (!source) return;
+
+  openVideo(
+    source.embedUrl,
+    row.videoName || row.buildName || "Project Demo",
+    "Offline-ready project Demo",
+    { type: "demo" }   // ← always "demo" so the monitor icon shows
+  );
+};
 
   const openPrimaryVideo = (row) => {
-    const ytUrl = row.youtubeUrl || row.youtube;
-    const demoUrl = row.vizwalkDemoUrl || row.walkthrough_link;
+    const primaryRawUrl =
+      row.youtubeUrl ||
+      row.youtube ||
+      row["Unlisted Youtube Video Link"] ||
+      row.unlistedYoutubeVideoLink;
 
-    if (ytUrl) {
-      openYoutubeVideo(row);
-      return;
-    }
+    if (!primaryRawUrl) return;
 
-    if (demoUrl) {
-      openDemoVideo(row);
-    }
+    const source = getSourceFromUrl(primaryRawUrl);
+    if (!source) return;
+
+    openVideo(
+      source.embedUrl,
+      row.videoName || row.buildName || "Project Walkthrough",
+      source.type === "drive"
+        ? "Offline-ready project Demo"
+        : "Offline-ready project walkthrough",
+      { type: source.type }
+    );
   };
 
   return (
@@ -250,7 +387,19 @@ export default function DemoVideos() {
             {filtered.map((r, idx) => {
               const thumb =
                 r.thumbnailUrl || r.image_url || r.thumbnail || r.image || "";
-              const demoUrl = r.vizwalkDemoUrl || r.walkthrough_link;
+
+              const primaryUrl =
+                r.youtubeUrl ||
+                r.youtube ||
+                r["Unlisted Youtube Video Link"] ||
+                r.unlistedYoutubeVideoLink;
+
+              const demoUrl =
+                r.vizwalkDemoUrl ||
+                r.walkthrough_link ||
+                r["Unlisted Youtube Vizwalk Demo Video Link"] ||
+                r.unlistedYoutubeVizwalkDemoVideoLink;
+
               const ytUrl = r.youtubeUrl || r.youtube;
 
               return (
@@ -273,7 +422,7 @@ export default function DemoVideos() {
                       alt={r.videoName || "Project"}
                     />
 
-                    {(ytUrl || demoUrl) && (
+                    {primaryUrl && (
                       <button
                         className="dvPlayBtn"
                         onClick={(e) => {
@@ -314,7 +463,6 @@ export default function DemoVideos() {
                           </button>
                         )}
 
-                        
                         {demoUrl && (
                           <button
                             className="dv-footerDemoBtn"

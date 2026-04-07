@@ -3,6 +3,8 @@ import ReactDOM from "react-dom";
 import "./VideoModal.css";
 import yt1 from "../assets/yt1.png";
 import demoIcon from "../assets/view demo.png";
+import driveIcon from "../assets/drive.png";
+
 
 function getYoutubeEmbedData(rawUrl = "") {
   const input = String(rawUrl || "").trim();
@@ -54,14 +56,14 @@ function getYoutubeEmbedData(rawUrl = "") {
 
     if (videoId) {
       return {
-        type: "video",
+        kind: "youtube-video",
         embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`,
       };
     }
 
     if (playlistId) {
       return {
-        type: "playlist",
+        kind: "youtube-playlist",
         embedUrl: `https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1&rel=0`,
       };
     }
@@ -70,6 +72,76 @@ function getYoutubeEmbedData(rawUrl = "") {
   } catch {
     return null;
   }
+}
+
+function extractDriveFileId(rawUrl = "") {
+  const input = String(rawUrl || "").trim();
+  if (!input) return null;
+
+  const patterns = [
+    /\/file\/d\/([a-zA-Z0-9_-]+)/,
+    /\/d\/([a-zA-Z0-9_-]+)/,
+    /[?&]id=([a-zA-Z0-9_-]+)/,
+    /thumbnail\?id=([a-zA-Z0-9_-]+)/,
+    /drive\.usercontent\.google\.com\/uc\?id=([a-zA-Z0-9_-]+)/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = input.match(pattern);
+    if (match?.[1]) return match[1];
+  }
+
+  return null;
+}
+
+function getDriveEmbedData(rawUrl = "") {
+  const input = String(rawUrl || "").trim();
+  if (!input) return null;
+
+  const fileId = extractDriveFileId(input);
+
+  if (fileId) {
+    return {
+      kind: "drive-file",
+      embedUrl: `https://drive.google.com/file/d/${fileId}/preview`,
+    };
+  }
+
+  if (/^https:\/\/drive\.google\.com\/file\/d\/[a-zA-Z0-9_-]+\/preview/i.test(input)) {
+    return {
+      kind: "drive-file",
+      embedUrl: input,
+    };
+  }
+
+  return null;
+}
+
+function resolveEmbedData(videoUrl = "", type = "youtube") {
+  const safeType = String(type || "").toLowerCase();
+
+  if (safeType === "drive") {
+    return getDriveEmbedData(videoUrl);
+  }
+
+  if (safeType === "youtube") {
+    return getYoutubeEmbedData(videoUrl);
+  }
+
+  if (safeType === "demo") {
+    return getDriveEmbedData(videoUrl) || getYoutubeEmbedData(videoUrl) || {
+      kind: "generic",
+      embedUrl: String(videoUrl || "").trim(),
+    };
+  }
+
+  return (
+    getDriveEmbedData(videoUrl) ||
+    getYoutubeEmbedData(videoUrl) || {
+      kind: "generic",
+      embedUrl: String(videoUrl || "").trim(),
+    }
+  );
 }
 
 export default function VideoModal({
@@ -100,10 +172,15 @@ export default function VideoModal({
 
   if (!isOpen) return null;
 
-  const youtubeData = getYoutubeEmbedData(videoUrl);
-const embedUrl = youtubeData?.embedUrl || "";
+  const embedData = resolveEmbedData(videoUrl, type);
+  const embedUrl = embedData?.embedUrl || "";
 
-const headerIcon = type === "demo" ? demoIcon : yt1;
+  const headerIcon =
+  type === "youtube"
+    ? yt1
+    : type === "drive"
+    ? driveIcon
+    : demoIcon;
 
   return ReactDOM.createPortal(
     <div className="videoModalOverlay" onClick={onClose}>
@@ -124,7 +201,7 @@ const headerIcon = type === "demo" ? demoIcon : yt1;
               />
             </div>
 
-            <div>
+            <div className="videoModalTextWrap">
               <h2 className="videoModalTitle">{title}</h2>
               <p className="videoModalSubtitle">{subtitle}</p>
             </div>
@@ -152,7 +229,11 @@ const headerIcon = type === "demo" ? demoIcon : yt1;
             />
           ) : (
             <div className="videoModalFallback">
-              {type === "demo" ? "Invalid demo link" : "Invalid YouTube link"}
+              {type === "drive"
+                ? "Invalid Google Drive link"
+                : type === "youtube"
+                ? "Invalid YouTube link"
+                : "Invalid video link"}
             </div>
           )}
         </div>
