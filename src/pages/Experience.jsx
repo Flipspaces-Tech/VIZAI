@@ -1,6 +1,9 @@
 // src/pages/experience/Experience.jsx
 import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 
+// import for maya(chatbot)
+import MayaChat from '../components/MayaChat';
+
 // ====== Apps Script Web App (must end with /exec) ======
 const GDRIVE_API_URL =
   "https://script.google.com/macros/s/AKfycbxcVqr7exlAGvAVSh672rB_oG7FdL0W0ymkRb_6L7A8awu7gqYDInR_6FLczLNkpr0B/exec";
@@ -887,6 +890,7 @@ export default function Experience() {
           willChange: "transform",
         }}
       />
+      <MayaChat />
     </div>
   );
 }
