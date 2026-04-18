@@ -79,6 +79,9 @@ let sarvamFailureCount = 0;
 const SARVAM_FAILURE_THRESHOLD = 3; // Switch after 3 failures
 let useFallbackAPI = false;
 
+function makeRequestId() {
+  return `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
 export default function MayaChat() {
   const [visible, setVisible] = useState(true);
   const [isOpen, setIsOpen] = useState(false);  // ← Start CLOSED
@@ -638,12 +641,23 @@ export default function MayaChat() {
   }
 
   try {
+    const requestId = makeRequestId();
+    const payloadToSend = {
+      ...jsonData,
+      request_id: requestId,
+    };
+
+    window.lastMayaRequestId = requestId;
+
+    console.log("🆔 Generated request_id:", requestId);
+    console.log("📤 Sending Maya query with request_id:", requestId);
+
     const response = await fetch(`${RECEIVER_API_URL}/ingest`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(jsonData),
+      body: JSON.stringify(payloadToSend),
     });
 
     if (!response.ok) {
@@ -654,11 +668,7 @@ export default function MayaChat() {
 
     console.log("✅ Query JSON sent to receiver");
 
-    // wait a little, then fetch Streamlit result
-    setTimeout(() => {
-      fetchLatestResult();
-    }, 2500);
-
+    await fetchResultByRequestId(requestId);
   } catch (err) {
     console.error("Receiver API network error:", err);
   }
@@ -1014,26 +1024,41 @@ export default function MayaChat() {
     </>
   );
 }
-async function fetchLatestResult() {
-  try {
-    const res = await fetch(`${RECEIVER_API_URL}/latest-result`);
-    const data = await res.json();
+async function fetchResultByRequestId(requestId, maxAttempts = 15, delayMs = 1000) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await fetch(`${RECEIVER_API_URL}/result/${requestId}`);
+      const data = await res.json();
 
-    window.lastStreamlitResult = data.data;
+      if (data?.found && data?.data && Array.isArray(data.data.categories) && data.data.categories.length > 0) {
+        window.lastStreamlitResult = data.data;
 
-    console.log("\n\n");
-    console.log("════════════════════════════════════════");
-    console.log("📦 STREAMLIT RESULT JSON");
-    console.log("════════════════════════════════════════");
-    console.log(JSON.stringify(data.data, null, 2));
-    console.log("════════════════════════════════════════");
-    console.log(data.data);
-    console.log("════════════════════════════════════════");
-    console.log("Access via: window.lastStreamlitResult");
-    console.log("════════════════════════════════════════\n\n");
-  } catch (err) {
-    console.error("Error fetching latest result:", err);
+        console.log("\n\n");
+        console.log("════════════════════════════════════════");
+        console.log("📦 STREAMLIT RESULT JSON");
+        console.log("════════════════════════════════════════");
+        console.log("📋 FORMATTED JSON:");
+        console.log(JSON.stringify(data.data, null, 2));
+        console.log("════════════════════════════════════════");
+        console.log("🔍 JSON OBJECT (Expandable in console):");
+        console.log(data.data);
+        console.log("════════════════════════════════════════");
+        console.log("💾 Access via: window.lastStreamlitResult");
+        console.log("════════════════════════════════════════\n\n");
+
+        return data.data;
+      }
+
+      console.log(`⏳ Waiting for result for ${requestId}... attempt ${attempt}/${maxAttempts}`);
+    } catch (err) {
+      console.error("Error fetching result by request id:", err);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
+
+  console.warn(`⚠️ No result found for request_id=${requestId}`);
+  return null;
 }
 const styles = {
   toggleBtn: {
