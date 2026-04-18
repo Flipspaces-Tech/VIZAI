@@ -81,7 +81,7 @@ let useFallbackAPI = false;
 
 export default function MayaChat() {
   const [visible, setVisible] = useState(true);
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);  // ← Start CLOSED
   const [messages, setMessages] = useState([]);
   const messagesRef = useRef([]);  // ← NEW: Reliable message tracking
   const [input, setInput] = useState("");
@@ -107,16 +107,13 @@ export default function MayaChat() {
   const speechStartedRef = useRef(false);
   const firstMessageSentRef = useRef(false);  // ← NEW: Track if first message sent
 
-  // Auto-start listening on mount
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      startListening();
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Spacebar control
+  // Don't auto-start - wait for spacebar
+  // useEffect(() => {
+  //   const timer = setTimeout(() => {
+  //     startListening();
+  //   }, 500);
+  //   return () => clearTimeout(timer);
+  // }, []);
   useEffect(() => {
     const handleSpaceBar = (e) => {
       // Only if spacebar pressed
@@ -130,26 +127,43 @@ export default function MayaChat() {
       e.preventDefault();
 
       if (!isOpen) {
-        // Open the chat
+        // Open the chat and start listening
         console.log("🔓 Opening chat via spacebar");
+        
+        // Reset conversation state for fresh start
+        firstMessageSentRef.current = false;
+        wakeWordDetectedRef.current = false;
+        speechStartedRef.current = false;
+        
         setIsOpen(true);
         setVisible(true);
+        setMessages([]);
+        messagesRef.current = [];
+        
         setTimeout(() => {
           if (!listeningRef.current) {
+            console.log("🎙️ Starting listening automatically");
             startListening();
           }
         }, 300);
+      } else if (isListening) {
+        // Stop listening completely (not just pause)
+        console.log("🛑 Stopping listening via spacebar");
+        stopListeningImmediately();
+        setListeningMode("idle");
+        
+        // Reset conversation state for fresh start next time
+        console.log("🔄 Resetting conversation state");
+        firstMessageSentRef.current = false;
+        wakeWordDetectedRef.current = false;
+        speechStartedRef.current = false;
+        setMessages([]);
+        messagesRef.current = [];
       } else {
-        // If open, toggle listening on/off
-        if (isListening) {
-          console.log("⏸️ Pausing listening via spacebar");
-          pauseListening();
-          setListeningMode("paused");
-        } else {
-          console.log("▶️ Resuming listening via spacebar");
-          setListeningMode("idle");
-          resumeListening();
-        }
+        // Resume listening if paused
+        console.log("▶️ Resuming listening via spacebar");
+        setListeningMode("idle");
+        resumeListening();
       }
     };
 
@@ -289,13 +303,24 @@ export default function MayaChat() {
     }
   };
 
-  // PAUSE listening (don't stop recording, just pause monitoring)
+  // PAUSE listening (pause recording and monitoring)
   const pauseListening = () => {
-    console.log("⏸️ pauseListening called - pausing audio monitoring");
+    console.log("⏸️ pauseListening called - pausing audio recording and monitoring");
     
+    // Stop the animation frame monitoring
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
+    }
+
+    // Pause the MediaRecorder if it's recording
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      try {
+        mediaRecorderRef.current.pause();
+        console.log("⏸️ MediaRecorder paused");
+      } catch (err) {
+        console.error("Error pausing MediaRecorder:", err);
+      }
     }
 
     listeningRef.current = false;
@@ -303,9 +328,19 @@ export default function MayaChat() {
     console.log("✅ Listening paused. listeningRef.current =", listeningRef.current);
   };
 
-  // RESUME listening (restart monitoring without re-starting recording)
+  // RESUME listening (resume recording and monitoring)
   const resumeListening = () => {
-    console.log("▶️ resumeListening called - resuming audio monitoring");
+    console.log("▶️ resumeListening called - resuming audio recording and monitoring");
+    
+    // Resume the MediaRecorder if it's paused
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "paused") {
+      try {
+        mediaRecorderRef.current.resume();
+        console.log("▶️ MediaRecorder resumed");
+      } catch (err) {
+        console.error("Error resuming MediaRecorder:", err);
+      }
+    }
     
     if (!listeningRef.current && analyserRef.current) {
       listeningRef.current = true;
@@ -484,34 +519,28 @@ export default function MayaChat() {
         console.log("📊 First message?", isFirstMessage, "Wake word found?", wakeWordFound);
 
         if (isFirstMessage) {
-          // First message: MUST have wake word
-          if (wakeWordFound) {
+          // First message: Accept ANY command (don't require wake word)
+          if (transcript && transcript.length > 0) {
             firstMessageSentRef.current = true;  // ← Mark first message as sent
-            wakeWordDetectedRef.current = true;
             
-            // Extract command (remove wake words only)
+            // Remove wake words if present, but don't require them
             let command = transcript;
             for (const word of WAKE_WORDS) {
               const regex = new RegExp(`\\b${word}\\b\\s*`, "i");
               command = command.replace(regex, "").trim();
             }
-
-            console.log("✅ Wake word detected. Command extracted:", command);
-
-            if (command && command.length > 0) {
-              console.log("📤 Calling sendMessage with:", command);
-              setRecordedText(command);
-              // Call sendMessage directly with the command
-              sendMessage(command);
-            } else {
-              // Wake word detected but no command, restart listening
-              console.log("⚠️ Wake word detected but no command, restarting...");
-              setListeningMode("idle");
-              setTimeout(() => startListening(), 1000);
+            
+            // If removing wake words left nothing, use original
+            if (!command || command.length === 0) {
+              command = transcript;
             }
+
+            console.log("✅ First message accepted. Command:", command);
+            setRecordedText(command);
+            sendMessage(command);
           } else {
-            // No wake word on first message, restart listening
-            console.log("ℹ️ No wake word detected on first message, waiting for 'Hi Maya'...");
+            // Empty transcript, restart listening
+            console.log("⚠️ Empty transcript on first message, restarting...");
             setListeningMode("idle");
             setTimeout(() => startListening(), 1000);
           }
@@ -651,19 +680,41 @@ export default function MayaChat() {
       };
 
       utterance.onend = () => {
-        console.log("✅ Speaking finished");
+        console.log("✅ Speaking finished - Auto-resuming listening");
         setIsSpeaking(false);
+        
+        // AUTO-RESUME LISTENING after Maya finishes speaking
+        setListeningMode("idle");
+        speechStartedRef.current = false;
+        pauseTimeoutRef.current = null;
+        
+        setTimeout(() => {
+          console.log("🔄 Auto-resuming listening for next command");
+          startListening();
+        }, 500);
       };
 
       utterance.onerror = (event) => {
         console.error("❌ Speech error:", event.error);
         setIsSpeaking(false);
+        
+        // Resume listening even on error
+        setListeningMode("idle");
+        speechStartedRef.current = false;
+        pauseTimeoutRef.current = null;
+        setTimeout(() => startListening(), 1000);
       };
 
       window.speechSynthesis.speak(utterance);
     } catch (err) {
       console.error("❌ Text-to-speech error:", err);
       setIsSpeaking(false);
+      
+      // Resume listening on error
+      setListeningMode("idle");
+      speechStartedRef.current = false;
+      pauseTimeoutRef.current = null;
+      setTimeout(() => startListening(), 1000);
     }
   };
 
@@ -746,9 +797,19 @@ export default function MayaChat() {
         // Make JSON accessible from console window
         window.lastMayaJSON = jsonData;
         
-        // Log the JSON in console
-        console.log("📦 MAYA JSON OUTPUT:");
+        // Log the JSON in console - VERY VISIBLE
+        console.log("\n\n");
+        console.log("════════════════════════════════════════");
+        console.log("📦 📦 📦 MAYA JSON OUTPUT 📦 📦 📦");
+        console.log("════════════════════════════════════════");
+        console.log("📋 FORMATTED JSON:");
+        console.log(JSON.stringify(jsonData, null, 2));
+        console.log("════════════════════════════════════════");
+        console.log("🔍 JSON OBJECT (Expandable in console):");
         console.log(jsonData);
+        console.log("════════════════════════════════════════");
+        console.log("💾 Access from console: window.lastMayaJSON");
+        console.log("════════════════════════════════════════\n\n");
 
         await postJsonToReceiver(jsonData);
       } catch (parseErr) {
@@ -782,27 +843,12 @@ export default function MayaChat() {
       setLoading(false);
       console.log("✅ Loading set to false");
       
-      // Reset state for next listening cycle
-      setListeningMode("idle");
-      speechStartedRef.current = false;
-      pauseTimeoutRef.current = null;
-      wakeWordDetectedRef.current = false;
-      
       // Clear any pending audio chunks
       audioChunksRef.current = [];
       console.log("🧹 Audio chunks cleared");
       
-      // CRITICAL: Ensure listeningRef is false so startListening can proceed
-      console.log("📍 listeningRef.current before reset:", listeningRef.current);
-      listeningRef.current = false;
-      console.log("📍 listeningRef.current after reset:", listeningRef.current);
-      
-      console.log("🔄 Refs reset. Restarting listening in 1 second...");
-      setTimeout(() => {
-        console.log("🎙️ Restarting listening NOW...");
-        console.log("📍 listeningRef.current at restart:", listeningRef.current);
-        startListening();
-      }, 1000);
+      // Don't restart listening here - speakText will do it after speech ends
+      console.log("⏳ Waiting for speech to end, then auto-resume listening");
     }
   };
 
