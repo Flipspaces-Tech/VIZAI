@@ -1,0 +1,775 @@
+/* src/styles/screenshot-gallery.css */
+
+.sg-page {
+  min-height: 100vh;
+  background: #ffffff;
+  color: #111;
+  font-family: "Maven Pro", ui-sans-serif, system-ui, sans-serif;
+
+  --font-sans: "Poppins", ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "Noto Sans", sans-serif;
+}
+
+/* =========================
+   Layout Wrapper
+========================= */
+
+.sg-container {
+  width: min(1410px, calc(100% - 32px));
+  margin: 100px auto 60px;
+  padding: 26px 32px 60px;
+  background: #fdfdfd;
+  border: 2px solid #f1f1f1;
+  box-sizing: border-box;
+}
+
+/* =========================
+   Back Button
+========================= */
+
+.sg-back {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  color: #111;
+  opacity: 0.85;
+  margin-bottom: 18px;
+  margin-left: 30px;
+  font-size: 14px;
+}
+
+.sg-back span {
+  font-weight: 600;
+}
+
+.sg-backIcon {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  display: inline-block;
+}
+
+/* =========================
+   Top Grid
+========================= */
+
+.sg-topGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+  gap: 34px;
+  align-items: start;
+  margin-bottom: 50px;
+  width: min(1270px, 100%);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.sg-left {
+  padding-top: 6px;
+  min-width: 0;
+}
+
+.sg-loading {
+  padding: 10px 0;
+  opacity: 0.7;
+  font-weight: 600;
+}
+
+/* =========================
+   Title Row + Vizdom
+========================= */
+
+.sg-titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.sg-title {
+  margin: 0;
+  font-size: clamp(36px, 4vw, 48px);
+  letter-spacing: -0.02em;
+  font-weight: 300;
+  line-height: 1.05;
+  min-width: 0;
+}
+
+.sg-vizdomBtn {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  background: #fff;
+  color: #111;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sg-vizdomIcon {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  display: inline-block;
+  margin-left: 6px;
+  opacity: 0.9;
+}
+
+/* =========================
+   Chips Row
+========================= */
+
+.sg-chips {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sg-chips-figma {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.sg-chip {
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: #f7f7f7;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111;
+}
+
+.sg-chip-yellow {
+  background: #fff2b8;
+  border-color: #f5dd6b;
+}
+
+.sg-subText {
+  font-size: clamp(16px, 2vw, 18px);
+  color: rgba(0, 0, 0, 0.7);
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sg-subSep {
+  opacity: 0.45;
+}
+
+.sg-serverPill {
+  min-height: 24px;
+  padding: 4px 8px;
+  border-radius: 2px;
+  background: #eaeae8;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #111;
+  width: auto;
+  min-width: 110px;
+}
+
+.sg-flagImg {
+  width: 18px;
+  height: 12px;
+  object-fit: cover;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+/* =========================
+   Actions
+========================= */
+
+.sg-actions {
+  margin-top: 18px;
+  display: grid;
+  gap: 16px;
+  width: 100%;
+  max-width: 622px;
+  height: auto;
+}
+
+.sg-action {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+  cursor: pointer;
+  text-align: left;
+  min-height: 60px;
+}
+
+.sg-action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.sg-actionIconWrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  background: #f2f2f2;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.sg-actionIcon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.sg-actionText {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.sg-actionTitle {
+  font-weight: 700;
+  font-size: 16px;
+  color: #111;
+  letter-spacing: 1px;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.sg-actionSub {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.6);
+  font-weight: 500;
+  line-height: 1.1;
+  margin: 0;
+  font-family: var(--font-sans);
+}
+
+/* =========================
+   Hero Image
+========================= */
+
+.sg-hero {
+  width: 100%;
+  max-width: 583px;
+  aspect-ratio: 583 / 328;
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #fff;
+  justify-self: end;
+}
+
+.sg-heroImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* =========================
+   Panel
+========================= */
+
+.sg-panel {
+  margin-top: 26px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  background: #fff;
+  width: min(1270px, 100%);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.sg-panelTop {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sg-tabs {
+  display: inline-flex;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.sg-tab {
+  min-height: 34px;
+  border: none;
+  background: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 16px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.sg-tab:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* =========================
+   Refresh Button
+========================= */
+
+.sg-refresh {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.65);
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sg-refresh:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.sg-refresh.isRefreshing {
+  text-underline-offset: 6px;
+}
+
+.sg-refreshIcon {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  display: inline-block;
+}
+
+.sg-refreshIcon.spin {
+  animation: sgSpin 0.9s linear infinite;
+  transform-origin: 50% 50%;
+}
+
+@keyframes sgSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =========================
+   Panel Body + Empty State
+========================= */
+
+.sg-panelBody {
+  padding: 14px;
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sg-empty {
+  padding: 0;
+  color: rgba(0, 0, 0, 0.55);
+  font-weight: 600;
+  text-align: center;
+}
+
+/* =========================
+   Groups
+========================= */
+
+.sg-groups {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+}
+
+.sg-group {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f5f5f5;
+  min-height: 227px;
+  height: auto;
+}
+
+.sg-groupHeader {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sg-groupLeft {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sg-cal {
+  opacity: 0.7;
+}
+
+.sg-calIcon {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  opacity: 0.75;
+  display: inline-block;
+}
+
+.sg-date {
+  font-weight: 500;
+  font-size: 14px;
+  color: #616161;
+}
+
+.sg-count {
+  min-height: 22px;
+  padding: 0 10px;
+  border-radius: 4px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.65);
+  display: inline-flex;
+  align-items: center;
+}
+
+.sg-downloadAll {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: rgba(0, 0, 0, 0.7);
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sg-downloadAllIcon {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  opacity: 0.9;
+}
+
+/* =========================
+   Screens Grid
+========================= */
+
+.sg-grid {
+  padding: 12px;
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-wrap: nowrap;
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+}
+
+.sg-shot {
+  position: relative;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #fff;
+  cursor: pointer;
+  width: 268px;
+  height: 151px;
+  flex: 0 0 auto;
+}
+
+.sg-shotImg {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  display: block;
+}
+
+.sg-shotActions {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  display: flex;
+  gap: 8px;
+  z-index: 2;
+}
+
+.sg-shotBtn {
+  width: 30px;
+  height: 30px;
+  border-radius: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.95);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.sg-shotBtn:hover {
+  background: rgba(255, 255, 255, 1);
+}
+
+.sg-shotBtn img {
+  width: 14px;
+  height: 14px;
+  display: block;
+  opacity: 0.9;
+}
+
+/* Optional scrollbar styling */
+.sg-grid::-webkit-scrollbar {
+  height: 10px;
+}
+
+.sg-grid::-webkit-scrollbar-track {
+  background: #e9e9e9;
+  border-radius: 999px;
+}
+
+.sg-grid::-webkit-scrollbar-thumb {
+  background: #bdbdbd;
+  border-radius: 999px;
+}
+
+.sg-grid::-webkit-scrollbar-thumb:hover {
+  background: #9f9f9f;
+}
+
+/* =========================
+   Responsive
+========================= */
+
+@media (max-width: 1280px) {
+  .sg-container {
+    width: min(100%, calc(100% - 24px));
+    padding: 24px 24px 50px;
+  }
+
+  .sg-topGrid,
+  .sg-panel {
+    width: 100%;
+  }
+
+  .sg-back {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 1100px) {
+  .sg-topGrid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .sg-left {
+    width: 100%;
+    max-width: none;
+  }
+
+  .sg-actions {
+    width: 100%;
+    max-width: none;
+  }
+
+  .sg-hero {
+    justify-self: stretch;
+    max-width: none;
+    width: 100%;
+  }
+
+  .sg-panelTop {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .sg-container {
+    width: calc(100% - 16px);
+    margin: 92px auto 40px;
+    padding: 18px 14px 36px;
+  }
+
+  .sg-title {
+    font-size: 32px;
+  }
+
+  .sg-subText {
+    font-size: 16px;
+  }
+
+  .sg-titleRow {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sg-vizdomBtn {
+    align-self: flex-start;
+  }
+
+  .sg-action {
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 12px;
+    padding: 10px 12px;
+    min-height: 56px;
+  }
+
+  .sg-actionIconWrap {
+    width: 40px;
+    height: 40px;
+  }
+
+  .sg-actionTitle {
+    font-size: 15px;
+    letter-spacing: 0.4px;
+  }
+
+  .sg-actionSub {
+    font-size: 11px;
+  }
+
+  .sg-panelBody {
+    padding: 10px;
+  }
+
+  .sg-groupHeader {
+    padding: 10px;
+  }
+
+  .sg-grid {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .sg-shot {
+    width: 220px;
+    height: 124px;
+  }
+
+  .sg-shotImg {
+    height: 123px;
+  }
+}
+
+@media (max-width: 560px) {
+  .sg-container {
+    width: calc(100% - 10px);
+    padding: 14px 10px 28px;
+  }
+
+  .sg-back {
+    gap: 8px;
+    font-size: 13px;
+    margin-bottom: 14px;
+  }
+
+  .sg-title {
+    font-size: 28px;
+  }
+
+  .sg-subText {
+    font-size: 14px;
+    gap: 8px;
+  }
+
+  .sg-serverPill {
+    min-width: 96px;
+    font-size: 11px;
+    gap: 8px;
+  }
+
+  .sg-tabs {
+    width: 100%;
+  }
+
+  .sg-tab {
+    font-size: 15px;
+  }
+
+  .sg-refreshWrap {
+    width: 100%;
+  }
+
+  .sg-refresh {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .sg-groupHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .sg-downloadAll {
+    align-self: flex-start;
+  }
+
+  .sg-shot {
+    width: 190px;
+    height: 108px;
+  }
+
+  .sg-shotImg {
+    height: 107px;
+  }
+
+  .sg-shotActions {
+    right: 6px;
+    top: 6px;
+    gap: 6px;
+  }
+
+  .sg-shotBtn {
+    width: 28px;
+    height: 28px;
+  }
+
+  .sg-shotBtn img {
+    width: 12px;
+    height: 12px;
+  }
+}

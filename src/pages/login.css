@@ -1,0 +1,739 @@
+/* src/pages/login.css */
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
+
+:root {
+  --vw-font: "Poppins", Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  --vw-yellow: #f5be2e;
+  --vw-text: #222;
+  --font-sans: "Maven Pro", ui-sans-serif, system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+}
+
+/* FULL SCREEN CONTAINER */
+.vwAuthShell {
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  width: 100%;
+  background: #bfbfbf;
+  display: block;
+  padding: 0;
+}
+
+/* FULL SCREEN SPLIT + INNER FRAME FEEL */
+.vwAuthFrame {
+  width: 100%;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 46% 54%;
+  overflow: hidden;
+  padding: 10px;
+  background: #ffffff;
+}
+
+/* The actual white canvas inside */
+.vwAuthLeft,
+.vwAuthRight {
+  background: #fff;
+}
+
+/* =========================
+   LEFT
+   ========================= */
+.vwAuthLeft {
+  position: relative;
+  min-height: calc(100vh - 20px);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* yellow accent */
+.vwLeftAccent {
+  position: absolute;
+  top: 22px;
+  right: 42px;
+  width: 20px;
+  height: 142px;
+  background: var(--vw-yellow);
+  border-radius: 2px;
+  opacity: 0.95;
+}
+
+.vwLeftAccent1 {
+  position: absolute;
+  bottom: 120px;
+  left: 38px;
+  width: 78px;
+  height: 12px;
+  background: var(--vw-yellow);
+  border-radius: 2px;
+  opacity: 0.95;
+}
+
+/* slogan */
+.vwSloganCard {
+  position: absolute;
+  left: 38px;
+  bottom: 46px;
+  width: 266px;
+  height: 460px;
+  padding: 98px 10px;
+  border: 1px solid #ffedae30;
+  background: #f8d24d05;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-radius: 3px;
+}
+
+.vwSloganLine1,
+.vwSloganLine3 {
+  font-size: 64px;
+  line-height: 1.02;
+  font-weight: 100;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.vwSloganLine2 {
+  font-size: 74px;
+  line-height: 0.95;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.96);
+}
+
+/* =========================
+   RIGHT
+   ========================= */
+.vwAuthRight {
+  position: relative;
+  padding: 28px 34px 22px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* logo wrapper (top-right) */
+.vwCornerLogo {
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* left icon */
+.vwCornerLogoMark {
+  height: 34px;
+  width: auto;
+  display: block;
+}
+
+/* right text/logo */
+.vwCornerLogoWord {
+  height: 34px;
+  width: auto;
+  display: block;
+}
+
+/* content wrap */
+.vwFormWrap {
+  width: min(582px, 100%);
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  transform: translateY(-10px);
+}
+
+/* title */
+.vwRightTitle {
+  font-size: 48px;
+  font-weight: 600;
+  color: var(--vw-text);
+  margin-bottom: 74px;
+}
+
+/* label */
+.vwFieldLabel {
+  font-size: 20px;
+  color: #777;
+  margin-bottom: 8px;
+}
+
+/* input */
+.vwInput--light {
+  width: 100%;
+  max-width: 582px;
+  height: 56px;
+  border: 1px solid #cfcfcf;
+  border-radius: 4px;
+  padding: 0 10px;
+  outline: none;
+  font-size: 16px;
+  color: var(--vw-text);
+  background: #fff;
+}
+
+.vwInput--light:focus {
+  border-color: #bdbdbd;
+  box-shadow: 0 0 0 3px rgba(245, 190, 46, 0.18);
+}
+
+/* remember circle */
+.vwRememberLight {
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #777;
+  user-select: none;
+  width: fit-content;
+  cursor: pointer;
+}
+
+.vwRememberLight input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.vwRememberLight::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 1.6px solid #9a9a9a;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.vwRememberLight:has(input:checked)::before {
+  border-color: #666;
+  background: radial-gradient(circle, #666 0 45%, transparent 46% 100%);
+}
+
+/* CTA */
+.vwCta--light {
+  margin-top: 18px;
+  width: 100%;
+  max-width: 582px;
+  height: 50px;
+  border: none;
+  border-radius: 5px;
+  background: var(--vw-yellow);
+  color: #1b1b1b;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.vwCta--light:disabled {
+  background: #e6e6e6;
+  color: #8f8f8f;
+  opacity: 1;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* hint + msg */
+.vwHint--dark {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 14px;
+  color: #7a7a7a;
+  width: 100%;
+  max-width: 582px;
+}
+
+.vwMsg--dark {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #444;
+  width: 100%;
+  max-width: 582px;
+}
+
+/* OTP row */
+.vwOtpRow--light {
+  margin-top: 10px;
+  display: flex;
+  gap: 16px;
+  width: 100%;
+  max-width: 582px;
+}
+
+.vwOtpBox--light {
+  flex: 1;
+  min-width: 0;
+  height: 56px;
+  border: 1px solid #cfcfcf;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 600;
+  outline: none;
+  color: var(--vw-text);
+  background: #fff;
+}
+
+.vwOtpBox--light:focus {
+  border-color: #bdbdbd;
+  box-shadow: 0 0 0 3px rgba(245, 190, 46, 0.18);
+}
+
+/* timer + resend */
+.vwOtpMeta {
+  margin-top: 20px;
+  width: 100%;
+  max-width: 582px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 20px;
+  color: #777;
+}
+
+.vwLinkBtn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: 20px;
+  color: #333;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.vwLinkBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* verified */
+.vwVerifiedSimple {
+  text-align: center;
+  width: 100%;
+  max-width: 582px;
+}
+
+.vwVerifiedTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--vw-text);
+}
+
+.vwVerifiedSub {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #666;
+}
+
+.vwVerifiedSpinnerDark {
+  margin: 14px auto 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 3px solid rgba(0, 0, 0, 0.15);
+  border-top-color: rgba(0, 0, 0, 0.55);
+  animation: vwSpin 0.9s linear infinite;
+}
+
+@keyframes vwSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Terms */
+.vwTerms--dark {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(582px, calc(100% - 48px));
+  font-size: 14px;
+  color: #777;
+  text-align: center;
+  font-weight: 400;
+  font-family: var(--vw-font);
+}
+
+.vwTermLink--dark {
+  color: #444;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* =========================
+   RESPONSIVE
+   ========================= */
+@media (max-width: 1280px) {
+  .vwRightTitle {
+    font-size: 44px;
+    margin-bottom: 60px;
+  }
+
+  .vwSloganLine1,
+  .vwSloganLine3 {
+    font-size: 56px;
+  }
+
+  .vwSloganLine2 {
+    font-size: 66px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .vwFormWrap {
+    width: min(520px, 100%);
+    padding: 0 20px;
+  }
+
+  .vwRightTitle {
+    font-size: 40px;
+    margin-bottom: 48px;
+  }
+
+  .vwFieldLabel {
+    font-size: 18px;
+  }
+
+  .vwOtpMeta,
+  .vwLinkBtn {
+    font-size: 18px;
+  }
+
+  .vwSloganCard {
+    width: 240px;
+    height: 430px;
+    padding: 88px 12px;
+  }
+
+  .vwSloganLine1,
+  .vwSloganLine3 {
+    font-size: 52px;
+  }
+
+  .vwSloganLine2 {
+    font-size: 60px;
+  }
+}
+
+@media (max-width: 900px) {
+  .vwAuthFrame {
+    grid-template-columns: 1fr;
+    min-height: 100vh;
+    height: auto;
+    padding: 10px;
+  }
+
+  .vwAuthLeft {
+    min-height: 280px;
+  }
+
+  .vwAuthRight {
+    min-height: 480px;
+    padding: 24px 20px 20px;
+    display: block;
+  }
+
+  .vwCornerLogo {
+    top: 14px;
+    right: 18px;
+  }
+
+  .vwFormWrap {
+    width: 100%;
+    max-width: 582px;
+    margin: 0 auto;
+    padding: 56px 12px 0;
+    transform: none;
+  }
+
+  .vwRightTitle {
+    font-size: 38px;
+    margin-bottom: 42px;
+  }
+
+  .vwTerms--dark {
+    position: static;
+    transform: none;
+    width: 100%;
+    max-width: 582px;
+    margin: 24px auto 0;
+  }
+
+  .vwSloganCard {
+    left: 28px;
+    bottom: 28px;
+    width: 220px;
+    height: 380px;
+    padding: 72px 12px;
+  }
+
+  .vwSloganLine1,
+  .vwSloganLine3 {
+    font-size: 48px;
+  }
+
+  .vwSloganLine2 {
+    font-size: 56px;
+  }
+
+  .vwLeftAccent {
+    top: 18px;
+    right: 34px;
+    height: 126px;
+  }
+
+  .vwLeftAccent1 {
+    bottom: 90px;
+    left: 28px;
+  }
+}
+
+@media (max-width: 640px) {
+  .vwAuthFrame {
+    padding: 8px;
+    grid-template-columns: 1fr;
+  }
+
+  .vwAuthLeft {
+    min-height: 280px;
+  }
+
+  .vwAuthRight {
+    padding: 20px 16px 16px;
+    min-height: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .vwCornerLogo {
+    top: 12px;
+    right: 14px;
+    gap: 8px;
+  }
+
+  .vwCornerLogoMark,
+  .vwCornerLogoWord {
+    height: 28px;
+  }
+
+  .vwFormWrap {
+    width: 100%;
+    max-width: 100%;
+    padding: 32px 0 0;
+    margin: 0;
+    flex: 1;
+    justify-content: flex-start;
+    transform: none;
+  }
+
+  .vwRightTitle {
+    font-size: 32px;
+    margin-bottom: 24px;
+  }
+
+  .vwFieldLabel {
+    font-size: 15px;
+    margin-bottom: 10px;
+  }
+
+  .vwInput--light {
+    width: 100%;
+    max-width: 100%;
+    height: 48px;
+    font-size: 15px;
+    padding: 0 12px;
+  }
+
+  .vwInput--light::placeholder {
+    font-size: 14px;
+  }
+
+  .vwRememberLight {
+    margin-top: 12px;
+    font-size: 13px;
+  }
+
+  .vwCta--light {
+    margin-top: 16px;
+    width: 100%;
+    max-width: 100%;
+    height: 48px;
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .vwHint--dark {
+    margin-top: 10px;
+    font-size: 13px;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .vwMsg--dark {
+    margin-top: 10px;
+    font-size: 12px;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* OTP Optimizations - FIX FOR 6 BOXES */
+  .vwOtpRow--light {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .vwOtpBox--light {
+    flex: unset;
+    min-width: 0;
+    height: 48px;
+    font-size: 18px;
+    font-weight: 600;
+    border: 1px solid #cfcfcf;
+    border-radius: 4px;
+    padding: 0;
+  }
+
+  .vwOtpBox--light:focus {
+    border-color: #bdbdbd;
+    box-shadow: 0 0 0 3px rgba(245, 190, 46, 0.18);
+  }
+
+  .vwOtpMeta {
+    margin-top: 16px;
+    gap: 8px;
+    font-size: 14px;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .vwOtpTimer {
+    color: #777;
+    font-size: 14px;
+  }
+
+  .vwLinkBtn {
+    font-size: 14px;
+    color: #333;
+  }
+
+  .vwVerifiedSimple {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .vwVerifiedTitle {
+    font-size: 20px;
+  }
+
+  .vwVerifiedSub {
+    font-size: 12px;
+  }
+
+  .vwVerifiedSpinnerDark {
+    margin: 12px auto 0;
+  }
+
+  .vwSloganCard {
+    left: 20px;
+    bottom: 24px;
+    width: 200px;
+    height: 320px;
+    padding: 64px 12px;
+    top: 20px;
+  }
+
+  .vwSloganLine1,
+  .vwSloganLine3 {
+    font-size: 38px;
+  }
+
+  .vwSloganLine2 {
+    font-size: 52px;
+  }
+
+  .vwLeftAccent {
+    top: 16px;
+    right: 26px;
+    width: 16px;
+    height: 110px;
+  }
+
+  .vwLeftAccent1 {
+    bottom: 70px;
+    left: 20px;
+    width: 60px;
+    height: 10px;
+  }
+
+  .vwTerms--dark {
+    position: relative;
+    transform: none;
+    width: 100%;
+    max-width: 100%;
+    font-size: 12px;
+    margin-top: 16px;
+    bottom: auto;
+    left: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .vwAuthRight {
+    padding: 16px 12px 12px;
+  }
+
+  .vwFormWrap {
+    padding: 24px 0 0;
+  }
+
+  .vwRightTitle {
+    font-size: 28px;
+    margin-bottom: 20px;
+  }
+
+  .vwFieldLabel {
+    font-size: 14px;
+  }
+
+  .vwOtpRow--light {
+    gap: 6px;
+  }
+
+  .vwOtpBox--light {
+    height: 44px;
+    font-size: 16px;
+  }
+
+  .vwSloganLine1,
+  .vwSloganLine3 {
+    font-size: 32px;
+  }
+
+  .vwSloganLine2 {
+    font-size: 44px;
+  }
+}

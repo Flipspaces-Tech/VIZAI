@@ -1,0 +1,43 @@
+[
+  {
+    "group": "Enterprise",
+    "title": "Corporate Office",
+    "client": "Crescent",
+    "subtitle": "Office • Infra • Modern • Luxury",
+    "thumb": "/thumbs/corporate.jpg",
+    "url": "https://vizwalk-web.vercel.app",
+    "active": true
+  },
+  {
+    "group": "Enterprise",
+    "title": "Co-working Space",
+    "subtitle": "Office • Infra • Modern • Luxury",
+    "thumb": "/thumbs/cowork.jpg",
+    "url": "https://vizwalk-web.vercel.app",
+    "active": true
+  },
+  {
+    "group": "Enterprise",
+    "title": "Residential",
+    "subtitle": "Office • Infra • Modern • Luxury",
+    "thumb": "/thumbs/residential.jpg",
+    "url": "https://vizwalk-web.vercel.app",
+    "active": true
+  },
+  {
+    "group": "SME",
+    "title": "Dezerv",
+    "subtitle": "Office • Infra • Modern • Luxury",
+    "thumb": "/thumbs/dezerv.jpg",
+    "url": "https://vizwalk-web.vercel.app",
+    "active": true
+  },
+  {
+    "group": "US",
+    "title": "Cryptto",
+    "subtitle": "Office • Infra • Modern • Luxury",
+    "thumb": "/thumbs/crypto.jpg",
+    "url": "https://vizwalk-web.vercel.app",
+    "active": true
+  }
+]

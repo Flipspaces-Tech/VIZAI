@@ -1,0 +1,371 @@
+/* =========================================================
+   FOOTER WRAPPER
+========================================================= */
+.vwFooter {
+  width: 100%;
+  background: #eaeae8;
+  box-sizing: border-box;
+}
+
+.vwFooterContainer {
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* =========================================================
+   TOP AREA
+========================================================= */
+.vwFooterTop {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 369px;
+  align-items: start;
+  box-sizing: border-box;
+  background-color: #eaeae8;
+}
+
+.vwFooterDivider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-0.5px);
+  width: 1px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+/* =========================================================
+   LEFT BRAND
+========================================================= */
+.vwFooterBrand {
+  padding: 85px 40px 60px 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  box-sizing: border-box;
+}
+
+.vwFooterLogoLink {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.vwFooterVizLogo {
+  height: 76px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+  margin-left: -20px;
+}
+
+.vwFooterDesc {
+  max-width: 432px;
+  margin-top: 22px;
+  font-size: 20px;
+  line-height: 1.55;
+  color: rgba(0, 0, 0, 0.62);
+}
+
+/* =========================================================
+   RIGHT BLOCK
+========================================================= */
+.vwFooterRightBlock {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  justify-self: end;
+  padding: 85px 100px 60px 40px;
+  font-family: var(--font-heading);
+  box-sizing: border-box;
+}
+
+.vwFooterCol {
+  min-width: 160px;
+}
+
+.vwFooterColTitle {
+  font-weight: 900;
+  font-size: 22px;
+  letter-spacing: 0.1em;
+  color: rgba(0, 0, 0, 0.55);
+  margin-bottom: 22px;
+}
+
+.vwFooterLink {
+  display: block;
+  font-size: 20px;
+  color: rgba(0, 0, 0, 0.62);
+  text-decoration: none;
+  margin-bottom: 26px;
+}
+
+.vwFooterLink:hover {
+  color: rgba(0, 0, 0, 0.85);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.vwFooterLinkNoUnderline:hover {
+  color: rgba(0, 0, 0, 0.62);
+  text-decoration: none;
+}
+
+/* =========================================================
+   CONTACT SUPPORT
+========================================================= */
+.vwFooterSupportWrap {
+  position: relative;
+  display: inline-block;
+  width: fit-content;
+}
+
+.vwFooterSupportWrap::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  height: 12px;
+}
+
+.vwFooterSupportBtn {
+  display: block;
+  margin-bottom: 26px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 20px;
+  color: rgba(0, 0, 0, 0.62);
+  text-decoration: none;
+}
+
+.vwFooterSupportBtn:hover,
+.vwFooterSupportWrap:hover .vwFooterSupportBtn,
+.vwFooterSupportBtn:focus-visible {
+  color: rgba(0, 0, 0, 0.85);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.vwFooterSupportTooltip {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  min-width: 265px;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.62);
+  font-size: 16px;
+  line-height: 1.45;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
+  z-index: 20;
+  white-space: nowrap;
+  border-radius: 8px;
+}
+
+.vwFooterSupportWrap:hover .vwFooterSupportTooltip,
+.vwFooterSupportWrap:focus-within .vwFooterSupportTooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.vwFooterSupportItem {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1.45;
+  color: rgba(0, 0, 0, 0.62);
+}
+
+.vwFooterSupportItem + .vwFooterSupportItem {
+  margin-top: 4px;
+}
+
+.vwFooterSupportItem:hover {
+  color: rgba(0, 0, 0, 0.88);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.vwFooterCopiedToast {
+  position: absolute;
+  top: 60px;
+  left: -20px;
+  background: #1f1f1f;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  padding: 10px 14px;
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  z-index: 25;
+}
+
+/* =========================================================
+   BOTTOM BAR
+========================================================= */
+.vwFooterBottom {
+  background: #eaeae8;
+  border-top: 1px solid rgba(0, 0, 0, 0.18);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  min-height: 72px;
+  box-sizing: border-box;
+}
+
+.vwFooterBottomLeft {
+  height: 72px;
+}
+
+.vwFooterCopy {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 200;
+  line-height: 1.4;
+}
+
+.vwFooterRightBrand {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding-right: 60px;
+  box-sizing: border-box;
+}
+
+.vwFooterFlipLink {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.vwFooterFlipLogo {
+  width: 302px;
+  max-width: 100%;
+  height: 55px;
+  object-fit: contain;
+  display: block;
+  opacity: 0.95;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.vwFooterFlipLink:hover .vwFooterFlipLogo {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.vwFooterShortcutBtn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+@media (max-width: 1200px) {
+  .vwFooterBrand {
+    padding: 70px 30px 50px 60px;
+  }
+
+  .vwFooterRightBlock {
+    padding: 70px 60px 50px 30px;
+    gap: 40px;
+  }
+
+  .vwFooterDesc,
+  .vwFooterLink,
+  .vwFooterSupportBtn {
+    font-size: 18px;
+  }
+
+  .vwFooterColTitle {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 900px) {
+  .vwFooterTop {
+    grid-template-columns: 1fr;
+  }
+
+  .vwFooterDivider {
+    display: none;
+  }
+
+  .vwFooterBrand {
+    padding: 60px 24px 30px;
+  }
+
+  .vwFooterRightBlock {
+    justify-self: stretch;
+    grid-template-columns: 1fr 1fr;
+    padding: 20px 24px 50px;
+  }
+
+  .vwFooterBottom {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 20px 24px;
+    text-align: center;
+  }
+
+  .vwFooterBottomLeft {
+    display: none;
+  }
+
+  .vwFooterRightBrand {
+    justify-content: center;
+    padding-right: 0;
+  }
+
+  .vwFooterCopy {
+    order: 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .vwFooterRightBlock {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .vwFooterVizLogo {
+    height: 64px;
+    margin-left: -10px;
+  }
+
+  .vwFooterDesc {
+    font-size: 17px;
+  }
+
+  .vwFooterLink,
+  .vwFooterSupportBtn {
+    font-size: 18px;
+  }
+
+  .vwFooterFlipLogo {
+    width: 220px;
+    height: auto;
+  }
+}

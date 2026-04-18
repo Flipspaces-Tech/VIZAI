@@ -1,0 +1,576 @@
+:root {
+  --vwTopBarH: 34px;
+  --vwNavH: 52px;
+
+  --vwYellow: #f3c21a;
+  --vwDark: #3c3b37;
+  --vwWhite: #ffffff;
+  --vwBorder: rgba(255, 255, 255, 0.35);
+}
+
+.vwNavWrap,
+.vwNavWrap * {
+  box-sizing: border-box;
+}
+
+.vwNavWrap {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  font-family: "Inter", "Segoe UI", sans-serif;
+}
+
+.vwContainer {
+  width: 96%;
+  max-width: 1800px;
+  margin: 0 auto;
+}
+
+/* --- Top Bar --- */
+.vwTopBar {
+  background: var(--vwYellow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-height: 48px;
+}
+
+.vwTopBarInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.vwTopBarTextWrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.vwTopBarText {
+  font-size: 16px;
+  color: #111;
+  letter-spacing: 0.02em;
+  flex: 1;
+}
+
+.vwTopBarAlertIcon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.vwTopBarClose {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #111;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+}
+
+/* --- Navbar Main --- */
+.vwNav {
+  background: #3f3932;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  min-height: 76px;
+  position: relative;
+}
+
+.vwNavInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 76px;
+  position: relative;
+}
+
+/* 1. Logo Group */
+.vwLogoGroup {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  height: 100%;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.vwLogoIcon {
+  height: 38px;
+  width: auto;
+  display: block;
+}
+
+.vwLogoDivider {
+  width: 1px;
+  height: 20px;
+  background-color: rgba(255, 255, 255, 0.4);
+  margin: 0 16px;
+}
+
+.vwIcon {
+  height: 28px;
+  width: auto;
+  display: block;
+}
+
+/* 2. Navigation Links */
+.vwNavLinks {
+  display: flex;
+  align-items: center;
+  gap: 60px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.vwNavLink {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 300;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.8);
+  text-transform: uppercase;
+  padding: 5px 0;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.vwNavLink:hover {
+  color: #fff;
+}
+
+.vwNavLink.isActive {
+  color: #fff;
+  font-weight: 600;
+  opacity: 1;
+}
+
+/* Dropdown styling */
+.vwDd {
+  position: relative;
+}
+
+.vwDdMenu {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  padding: 8px;
+  border-radius: 8px;
+  background: #3f3932;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 99999;
+}
+
+.vwDdItem {
+  position: relative;
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  padding: 10px 10px 10px 12px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 300;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.vwDdItem + .vwDdItem {
+  margin-top: 2px;
+  padding-top: 12px;
+}
+
+.vwDdItem + .vwDdItem::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 2px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.vwDdItem:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.vwDdItem:hover::after,
+.vwDdItem.isActive::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 7px;
+  bottom: 7px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--vwYellow);
+  margin-left: -5px;
+}
+
+.vwDdItem.isActive {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* 3. Right Controls */
+.vwNavRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.vwRegionContainer {
+  display: flex;
+  align-items: center;
+  background: #2d2c28;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  padding: 2px;
+  height: 38px;
+  overflow: hidden;
+}
+
+.vwRegionBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 0 16px;
+  height: 100%;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.vwRegionBtn.active {
+  background: #f3c21a;
+  color: #000000;
+}
+
+.vwFlagIcon {
+  width: 20px;
+  height: 14px;
+  object-fit: cover;
+  border-radius: 2px;
+}
+
+.vwIconBtn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  height: 34px;
+  width: 34px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  cursor: pointer;
+  margin-left: 8px;
+  transition: border-color 0.2s, background 0.2s;
+  flex-shrink: 0;
+}
+
+.vwIconBtn:hover {
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Hamburger */
+.vwHamburger {
+  display: none;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.vwHamburger span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  border-radius: 999px;
+  background: #fff;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.vwHamburger.isOpen span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+
+.vwHamburger.isOpen span:nth-child(2) {
+  opacity: 0;
+}
+
+.vwHamburger.isOpen span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+/* Mobile menu */
+.vwMobileMenu {
+  display: none;
+}
+
+/* Responsive Handling */
+@media (max-width: 1200px) {
+  .vwNavLinks {
+    gap: 34px;
+  }
+
+  .vwNavLink {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 980px) {
+  .vwNavLinks {
+    display: none;
+  }
+
+  .vwHamburger {
+    display: inline-flex;
+  }
+
+  .vwMobileMenu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  position: absolute;
+  top: 100%;
+  right: 12px;
+  width: 220px;
+
+  padding: 12px;
+  background: #3f3932;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
+
+  z-index: 10000;
+}
+
+  .vwMobileLink {
+    width: 100%;
+    min-height: 44px;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-align: left;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .vwMobileLink:hover,
+  .vwMobileLink.isActive {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .vwMobileProjectsWrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .vwMobileCaret {
+    transition: transform 0.2s ease;
+  }
+
+  .vwMobileCaret.isOpen {
+    transform: rotate(180deg);
+  }
+
+  .vwMobileSubmenu {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-left: 10px;
+  }
+
+  .vwMobileSubLink {
+    width: 100%;
+    min-height: 40px;
+    border: none;
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 14px;
+    text-align: left;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  .vwMobileSubLink:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+}
+
+@media (max-width: 768px) {
+  .vwContainer {
+    width: calc(100% - 16px);
+  }
+
+  .vwTopBar {
+    min-height: 48px;
+  }
+
+  .vwTopBarInner {
+    gap: 10px;
+  }
+
+  .vwTopBarText {
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .vwTopBarAlertIcon {
+    width: 16px;
+    height: 16px;
+  }
+
+  .vwNav {
+    min-height: 64px;
+  }
+
+  .vwNavInner {
+    min-height: 64px;
+  }
+
+  .vwLogoIcon {
+    height: 30px;
+  }
+
+  .vwLogoDivider {
+    margin: 0 10px;
+    height: 18px;
+  }
+
+  .vwIcon {
+    height: 24px;
+  }
+
+  .vwNavRight {
+    gap: 8px;
+  }
+
+  .vwRegionContainer {
+    height: 36px;
+  }
+
+  .vwRegionBtn {
+    padding: 0 12px;
+    gap: 6px;
+    font-size: 13px;
+  }
+
+  .vwFlagIcon {
+    width: 18px;
+    height: 12px;
+  }
+
+  .vwIconBtn {
+    height: 34px;
+    width: 34px;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .vwTopBarInner {
+    align-items: flex-start;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .vwTopBar {
+    min-height: 52px;
+  }
+
+  .vwTopBarText {
+    font-size: 13px;
+  }
+
+  .vwNav {
+    min-height: 62px;
+  }
+
+  .vwNavInner {
+    min-height: 62px;
+  }
+
+  .vwLogoIcon {
+    height: 26px;
+  }
+
+  .vwIcon {
+    height: 20px;
+  }
+
+  .vwLogoDivider {
+    margin: 0 8px;
+  }
+
+  .vwRegionBtn {
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  .vwHamburger {
+    width: 36px;
+    height: 36px;
+  }
+
+  .vwIconBtn {
+    width: 36px;
+    height: 36px;
+  }
+}

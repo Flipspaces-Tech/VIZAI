@@ -1,0 +1,618 @@
+/* src/pages/Landing.css */
+
+/* =========================================================
+   GLOBAL BASE
+========================================================= */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  font-family: var(--font-sans);
+}
+
+/* =========================================================
+   LOADER
+========================================================= */
+.sp-loader {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.sp-loader img {
+  max-width: 520px;
+  width: 60vw;
+  height: auto;
+}
+
+/* =========================================================
+   HERO
+========================================================= */
+.hero2 {
+  width: 100%;
+  height: 840px;
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: #000;
+}
+
+.hero2Video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.06);
+  filter: saturate(0.95) contrast(1) brightness(1.01);
+}
+
+.hero2Overlay {
+  position: absolute;
+  inset: 0;
+}
+
+.hero2Inner {
+  position: relative;
+  z-index: 2;
+  width: min(1348px, 92vw);
+  text-align: center;
+  color: rgba(255, 255, 255, 0.92);
+  padding: 0 16px;
+}
+
+.hero2Kicker {
+  margin-bottom: 5px;
+  font-size: 22px;
+  letter-spacing: 0.1em;
+  color: #3f3932;
+  font-weight: 200;
+}
+
+.hero2Title {
+  margin-bottom: 12px;
+  font-family: var(--font-heading);
+  font-size: 64px;
+  line-height: 1.05;
+  letter-spacing: 0.005em;
+  font-weight: 100;
+  color: #3f3932;
+}
+
+.hero2Desc {
+  max-width: 1348px;
+  width: min(1348px, 92vw);
+  margin: 0 auto;
+  text-align: center;
+  text-wrap: balance;
+  font-family: var(--font-sans);
+  font-size: 30px;
+  line-height: 1.6;
+  font-weight: 300;
+  color: #3f3932;
+}
+
+.hero2Desc b,
+.hero2Desc strong {
+  font-weight: 300;
+}
+
+.hero2Btns {
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.hero2Btn {
+  height: 52px;
+  min-width: 224px;
+  padding: 0 18px;
+  border-radius: 4px;
+  border: 1px solid #3f3932;
+  background: rgba(255, 255, 255, 0.1);
+  color: #3f3932;
+  font-size: 24px;
+  font-weight: 300;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  backdrop-filter: blur(2px);
+  white-space: nowrap;
+}
+
+.hero2Btn:hover {
+  background: #3f393208;
+  border-color: #3f3932;
+}
+
+.hero2BtnPrimary {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.hero2BtnSecondary {
+  background: rgba(255, 255, 255, 0.06);
+  padding-left: 21px;
+}
+.hero2YTIconImg {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  display: block;
+  margin-left: 10px;
+  margin-right: 2px;
+  flex: 0 0 22px;
+}
+
+/* =========================================================
+   FEATURED PROJECTS
+========================================================= */
+.fpSection {
+  width: 100%;
+  background: #ffffff;
+  padding: 56px 0 70px;
+}
+
+.fpContainer {
+  width: min(1520px, calc(100vw - 48px));
+  margin: 0 auto;
+}
+
+.fpHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  min-height: 92px;
+  margin-bottom: 50px;
+}
+
+.fpHeaderLeft {
+  width: 100%;
+}
+
+.fpTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.fpTitle {
+  margin: 0;
+  font-size: 48px;
+  font-weight: 200;
+  letter-spacing: -0.2px;
+  font-family: var(--font-heading);
+}
+
+.fpSub {
+  margin-top: 6px;
+  font-size: 18px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.fpServerBadge {
+  height: 28px;
+  min-width: 126px;
+  padding: 0 6px;
+  border-radius: 2px;
+  background: #eaeaea;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: auto;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111;
+}
+
+.fpServerBadgeIcon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  display: block;
+}
+
+.fpServerBadgeText {
+  width: auto;
+  height: auto;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.fpControls {
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.fpChips {
+  display: flex;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+
+.fpChips .dv-chip {
+  border-radius: 3px !important;
+  padding: 6px 16px !important;
+  font-size: 14px !important;
+  border: 1px solid rgba(0, 0, 0, 0.25) !important;
+  background: #fff !important;
+  color: rgba(0, 0, 0, 0.65) !important;
+}
+
+.fpChips .dv-chip--active {
+  background: #efefef !important;
+  color: #111 !important;
+  font-weight: 900;
+  border-color: rgba(0, 0, 0, 0.35) !important;
+}
+
+.fpSearchWrap {
+  height: 36px;
+  width: 210px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  border-radius: 3px;
+  padding: 0 10px;
+}
+
+.fpSearchIconImg {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  display: block;
+}
+
+.fpSearchInput {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 12px;
+}
+
+.fpSearchInput::placeholder {
+  color: #000;
+  opacity: 1;
+}
+
+/* =========================================================
+   GRID
+========================================================= */
+.fpGrid {
+  margin-top: 36px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 28px;
+}
+
+.fpEmpty {
+  text-align: center;
+  padding: 24px 0;
+  opacity: 0.75;
+  font-weight: 600;
+}
+
+.fpBottom {
+  display: flex;
+  justify-content: center;
+  margin-top: 60px;
+}
+
+.fpViewAllLink {
+  position: relative;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 22px;
+  font-weight: 300;
+  letter-spacing: 0.03em;
+  color: #111;
+  padding: 0 0 8px;
+  line-height: 1;
+}
+
+.fpViewAllLink::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 0;
+  width: 209px;
+  height: 2px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.fpViewAllLink span {
+  font-size: 30px;
+  letter-spacing: 0;
+  margin-left: -10px;
+  margin-top: -10px;
+  transform: translateY(2px);
+}
+
+/* =========================================================
+   FEATURED CARD
+========================================================= */
+.fpProjectCard {
+  width: 100%;
+  min-width: 0;
+  background: transparent;
+  border-radius: 6px;
+  padding-bottom: 15px;
+  transition: box-shadow 0.35s ease, transform 0.35s ease;
+}
+
+.fpProjectCard:hover {
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.fpCardMedia {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 488 / 326;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #f5f5f5;
+  margin-bottom: 16px;
+}
+
+.fpCardMedia::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.42);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}
+
+.fpProjectCard:hover .fpCardMedia::after {
+  opacity: 1;
+}
+
+.fpCardImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* View Project button */
+.fpViewPill {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  z-index: 5;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 2px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111;
+  cursor: pointer;
+  transition: background-color 0.35s ease, border-color 0.35s ease;
+}
+
+.fpProjectCard:hover .fpViewPill {
+  background: #f3c21a;
+  border-color: #f3c21a;
+}
+
+.fpViewPillArrow {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  display: block;
+}
+
+/* Details below image */
+.fpCardDetails {
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.fpProjectCard:hover .fpCardDetails {
+  transform: translateX(14px);
+}
+
+.fpProjectName {
+  font-size: 30px;
+  font-weight: 300;
+  color: #111;
+  margin: 0 0 6px 0;
+  font-family: var(--font-heading);
+}
+
+.fpProjectMeta {
+  font-size: 18px;
+  color: rgba(0, 0, 0, 0.65);
+  margin: 0 0 10px 0;
+}
+
+.fpCardFooter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 1px;
+  flex-wrap: wrap;
+}
+
+.fpFooterSquare {
+  width: 32px;
+  height: 32px;
+  border-radius: 3px;
+  border: 0.5px solid rgba(0, 0, 0, 0.35);
+  background: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.fpFooterSquareImg {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.fpYtImg {
+  width: 20px;
+  height: 20px;
+}
+
+.fpFooterDemoBtn {
+  height: 32px;
+  padding: 8px 10px;
+  border-radius: 3px;
+  border: 0.5px solid rgba(0, 0, 0, 0.35);
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #222;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.fpDemoIcon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+@media (max-width: 1600px) {
+  .fpContainer,
+  .tsInner {
+    width: min(1520px, calc(100vw - 40px));
+  }
+}
+
+@media (max-width: 1200px) {
+  .fpGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fpTitle {
+    font-size: 42px;
+  }
+
+  .hero2Title {
+    font-size: 56px;
+  }
+
+  .hero2Desc {
+    font-size: 26px;
+  }
+
+  .tsTitle {
+    font-size: 34px;
+  }
+}
+
+@media (max-width: 768px) {
+  .fpContainer,
+  .tsInner {
+    width: min(1520px, calc(100vw - 24px));
+  }
+
+  .fpGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .fpControls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .fpSearchWrap {
+    width: 100%;
+  }
+
+  .fpChips {
+    flex-wrap: wrap;
+  }
+
+  .hero2 {
+    height: 720px;
+  }
+
+  .hero2Title {
+    font-size: 42px;
+  }
+
+  .hero2Desc {
+    font-size: 20px;
+    width: min(92vw, 900px);
+  }
+
+  .hero2Btns {
+    flex-direction: column;
+  }
+
+  .fpTitleRow {
+    flex-wrap: wrap;
+  }
+
+  .fpTitle {
+    font-size: 36px;
+  }
+
+  .fpProjectName {
+    font-size: 26px;
+  }
+
+  .fpProjectMeta {
+    font-size: 16px;
+  }
+
+  .tsTitle {
+    font-size: 28px;
+  }
+
+  .tsCard {
+    width: 320px;
+  }
+}
+#featured-projects {
+  scroll-margin-top: 50px;
+}

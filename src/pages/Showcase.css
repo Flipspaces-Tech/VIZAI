@@ -1,0 +1,359 @@
+/* =========================
+   FEATURED PROJECTS ONLY
+   ========================= */
+
+.fpSection {
+  width: 100%;
+  background: #ffffff;
+  padding: 56px 0 70px;
+}
+
+.fpContainer {
+  width: 1520px;
+  margin: 0 auto;
+}
+
+/* Header */
+.fpHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  height: 92px;
+  margin-bottom: 50px;
+}
+
+.fpHeaderLeft {
+  width: 100%;
+}
+
+.fpTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fpTitle {
+  margin: 0;
+  font-size: 48px;
+  font-weight: 200;
+  letter-spacing: -0.2px;
+  font-family: var(--font-heading);
+}
+
+.fpSub {
+  margin-top: 6px;
+  font-size: 18px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+/* Server badge */
+.fpServerBadge {
+  width: 126px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: #f8ee86;
+  border: 1px solid #f5dd6b;
+  color: #000;
+  font-size: 14px;
+}
+
+.fpServerBadgeIcon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  display: block;
+}
+
+.fpServerBadgeText {
+  width: 84px;
+  height: 16px;
+  font-size: 14px;
+}
+
+/* Controls row */
+.fpControls {
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+/* Chips */
+.fpChips {
+  display: flex;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+
+.fpChips .dv-chip {
+  border-radius: 3px !important;
+  padding: 6px 16px !important;
+  font-size: 14px !important;
+  border: 1px solid rgba(0, 0, 0, 0.25) !important;
+  background: #fff !important;
+  color: rgba(0, 0, 0, 0.65) !important;
+}
+
+.fpChips .dv-chip--active {
+  background: #efefef !important;
+  color: #111 !important;
+  font-weight: 900;
+  border-color: rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Search */
+.fpSearchWrap {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  border-radius: 3px;
+  padding: 0 10px;
+  width: 210px;
+  flex: 0 0 auto;
+}
+
+.fpSearchIconImg {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  display: block;
+}
+
+.fpSearchInput {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 12px;
+  width: 100%;
+}
+
+.fpSearchInput::placeholder {
+  color: #000;
+  opacity: 1;
+}
+
+/* Grid */
+.fpGrid {
+  margin-top: 36px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 28px;
+}
+
+/* Empty */
+.fpEmpty {
+  text-align: center;
+  padding: 24px 0;
+  opacity: 0.75;
+  font-weight: 600;
+}
+
+/* Bottom link */
+.fpBottom {
+  display: flex;
+  justify-content: center;
+  margin-top: 60px;
+}
+
+.fpViewAllLink {
+  position: relative;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 22px;
+  font-weight: 300;
+  letter-spacing: 0.18em;
+  color: #111;
+  padding: 0 0 8px;
+  line-height: 1;
+}
+
+.fpViewAllLink::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 0;
+  width: 340px;
+  height: 2px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.fpViewAllLink span {
+  font-size: 30px;
+  letter-spacing: 0;
+  margin-left: -10px;
+  margin-top: -10px;
+  transform: translateY(2px);
+}
+
+/* ===== Featured Projects card ===== */
+
+.fpProjectCard {
+  width: 488px;
+  background: transparent;
+  border-radius: 6px;
+  padding-bottom: 15px;
+  transition: box-shadow 0.35s ease, transform 0.35s ease;
+}
+
+.fpProjectCard:hover {
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.10);
+}
+
+/* Media */
+.fpCardMedia {
+  position: relative;
+  width: 488px;
+  height: 326px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #f5f5f5;
+  margin-bottom: 16px;
+}
+
+.fpCardImg {
+  width: 488px;
+  height: 326px;
+  object-fit: cover;
+  display: block;
+}
+
+/* Darken image on hover */
+.fpCardMedia::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.42);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}
+
+.fpProjectCard:hover .fpCardMedia::after {
+  opacity: 1;
+}
+
+/* View Project pill */
+.fpViewPill {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  z-index: 5;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 2px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111;
+  cursor: pointer;
+  transition: background-color 0.35s ease, border-color 0.35s ease;
+}
+
+.fpProjectCard:hover .fpViewPill {
+  background: #f3c21a;
+  border-color: #f3c21a;
+}
+
+.fpViewPillArrow {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  display: block;
+}
+
+/* Details */
+.fpCardDetails {
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.fpProjectCard:hover .fpCardDetails {
+  transform: translateX(14px);
+}
+
+.fpProjectName {
+  font-size: 30px;
+  font-weight: 300;
+  color: #111;
+  margin: 0 0 6px 0;
+  font-family: var(--font-heading);
+}
+
+.fpProjectMeta {
+  font-size: 18px;
+  color: rgba(0, 0, 0, 0.65);
+  margin: 0 0 10px 0;
+}
+
+/* Footer row */
+.fpCardFooter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 1px;
+}
+
+.fpFooterSquare {
+  width: 32px;
+  height: 32px;
+  border-radius: 3px;
+  border: 0.5px solid rgba(0, 0, 0, 0.35);
+  background: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.fpFooterSquareImg {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.fpYtImg {
+  width: 20px;
+  height: 20px;
+}
+
+.fpFooterDemoBtn {
+  height: 32px;
+  padding: 8px 10px;
+  border-radius: 3px;
+  border: 0.5px solid rgba(0, 0, 0, 0.35);
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #222;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.fpDemoIcon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}

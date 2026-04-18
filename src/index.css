@@ -1,0 +1,660 @@
+:root {
+  --font-heading: "Maven Pro", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Poppins", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+
+  /* Optional: color + radius tokens used by Lovable */
+  --radius: 1rem;
+  --shadow-card: 0 4px 20px -4px hsl(0 0% 0% / 0.08);
+  --shadow-yellow: 0 20px 60px -15px hsl(48 96% 53% / 0.3);
+}
+
+body {
+  background-color: #1c1c1e;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+
+video {
+  object-fit: cover;
+  height: 100%;
+  width: 100%;
+
+}
+ 
+
+#videoElement {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+   background: #18181A;
+}
+
+#videoElementParent {
+  position: absolute;
+  width: 100%;
+  overflow: hidden;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  margin: auto;
+  box-sizing: border-box;
+  pointer-events: all;
+  cursor: default;
+}
+
+#streamingVideo {
+  background: #18181A;
+  position: absolute;
+}
+
+#logo {
+  display: block;
+  max-width: 150px;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  margin: 16px auto 0;
+}
+
+.hidden {
+  display: none;
+}
+
+.flex {
+  display: flex;
+}
+
+.containMain {
+  background: #18181A;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  height: 100%;
+  height: -webkit-fill-available;
+  justify-content: center;
+  position: fixed;
+  width: 100%;
+}
+
+.containLoading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+ display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  z-index: 1000; 
+}
+
+
+
+.Header {
+  position: relative;
+  background-color: #000;
+}
+
+.loader-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+
+  .controlPanel {
+    position: fixed;
+    bottom: 20px;
+    display: flex;
+    gap: 10px;
+    z-index:1;
+  }
+
+
+/* Close Button */
+.close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+/* Stats Container */
+.stats-container {
+  margin-top: 20px;
+}
+
+.stat-item {
+  margin-bottom: 10px;
+}
+
+#passwordScreen {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  justify-content: center;
+  z-index: 1002;
+}
+
+#passwordForm {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  padding: 14px 20px;
+  border-radius: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+#passwordForm input {
+  padding: 10px 14px;
+  font-size: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  background-color: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  width: 180px;
+  outline: none;
+}
+
+#passwordForm input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+#passwordForm button {
+  padding: 10px 20px;
+  font-size: 16px;
+  border: none;
+  border-radius: 6px;
+  background-color: #4e9cff;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
+
+#passwordForm button:hover {
+  background-color: #327dcd;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  touch-action: none;
+  overscroll-behavior: none;
+  margin: 0;
+  padding: 0;
+}
+
+
+/* Modal Overlay */
+.modal-overlay-stats {
+  position: fixed;
+  z-index: 1000;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Modal Content */
+.modal-content-stats {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 500px;
+  width: 100%;
+  position: relative;
+  max-height: 80%;
+  overflow-y: auto;
+}
+
+/* Media Query for Tablet (Screen width <= 768px) */
+@media (max-width: 768px) {
+  .modal-content-stats {
+    max-width: 90%;
+    max-height: 70%;
+  }
+}
+
+/* Media Query for Mobile (Screen width <= 480px) */
+@media (max-width: 480px) {
+  .modal-content-stats {
+    max-width: 90%;
+    max-height: 60%;
+  }
+}
+
+.close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.floatingInputBox {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.7);
+    border: 1px solid #000;
+    border-radius: 8px;
+    padding: 16px;
+    width: 70vw;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.modalKeyboardTextArea {
+    width: 100%;
+    height: 120px;
+    resize: vertical;
+    padding: 10px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.modalKeyboardInputRow {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.btn-keyboard-flat {
+    padding: 8px 16px;
+    background-color: #007aff;
+    border: none;
+    color: #e5e5ea;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.btn-keyboard-flat:hover {
+    background-color: #007bff98;
+}
+
+.btn-keyboard-flat-cancel {
+    padding: 8px 16px;
+    background-color:#444;
+    border: none;
+    color: #e5e5ea;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.btn-keyboard-flat-cancel:hover {
+    background-color:#44444475;
+}
+
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body{
+  background: #ffffff; /* light warm like Image2 */
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  overflow-y: auto;
+}
+
+/* only lock scroll in Experience */
+body.no-scroll{
+  overflow: hidden;
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
+/* ===== Lovable fonts ===== */
+@import url("https://fonts.googleapis.com/css2?family=Maven+Pro:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
+
+/* ===== Lovable tokens (minimal + safe) ===== */
+
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Force headings to match Lovable */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #ffffff;
+  font-family: var(--font-sans);
+  overflow-y: auto;
+}
+
+/* ===== Part 2 (Featured Projects) ===== */
+.lv-projects {
+  padding: 80px 0;
+  background: #fff;
+}
+
+.lv-container {
+  width: min(1180px, 92vw);
+  margin: 0 auto;
+}
+
+/* Header */
+.lv-projHead {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.lv-pillServer {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 999px;
+  background: rgba(245,165,36,0.12);
+  color: #a56100;
+  border: 1px solid rgba(245,165,36,0.22);
+  margin-bottom: 14px;
+}
+
+.lv-projTitle {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 34px;
+  letter-spacing: -0.6px;
+  color: #141414;
+  margin: 0;
+}
+
+.lv-projSub {
+  margin-top: 10px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: rgba(20,20,20,0.72);
+  max-width: 680px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Controls */
+.lv-projControls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: stretch;
+  justify-content: space-between;
+  margin: 22px 0 22px;
+}
+
+@media (min-width: 1024px) {
+  .lv-projControls {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.lv-chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+@media (min-width: 1024px) {
+  .lv-chipRow { justify-content: flex-start; }
+}
+
+.lv-chip {
+  border: 1px solid rgba(0,0,0,0.10);
+  background: rgba(255,255,255,0.9);
+  border-radius: 999px;
+  padding: 9px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(20,20,20,0.70);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.lv-chip:hover {
+  transform: translateY(-1px);
+  border-color: rgba(245,165,36,0.45);
+  color: #141414;
+  box-shadow: var(--shadow-card);
+}
+
+.lv-chip.active {
+  background: #f5a524;
+  color: #fff;
+  border-color: rgba(0,0,0,0.08);
+  box-shadow: var(--shadow-yellow);
+}
+
+.lv-searchWrap {
+  position: relative;
+  width: 100%;
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
+}
+@media (min-width: 1024px) {
+  .lv-searchWrap { margin-left: 0; margin-right: 0; }
+}
+
+.lv-searchIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.lv-searchInput {
+  width: 100%;
+  height: 42px;
+  padding: 0 14px 0 40px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,0.10);
+  background: rgba(255,255,255,0.92);
+  outline: none;
+  font-size: 13px;
+  color: #141414;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.lv-searchInput:focus {
+  border-color: rgba(245,165,36,0.55);
+  box-shadow: 0 0 0 5px rgba(245,165,36,0.14);
+}
+
+.lv-viewAllRow {
+  display: flex;
+  justify-content: center;
+  margin: 10px 0 18px;
+}
+
+.lv-ghostBtn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  color: rgba(20,20,20,0.70);
+  padding: 10px 14px;
+  border-radius: 999px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.lv-ghostBtn:hover {
+  background: rgba(0,0,0,0.05);
+  color: #141414;
+}
+
+/* Grid */
+.lv-projGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+@media (min-width: 768px) {
+  .lv-projGrid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 1024px) {
+  .lv-projGrid { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* Card */
+.lv-card {
+  background: rgba(255,255,255,0.95);
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.lv-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(245,165,36,0.35);
+  box-shadow: 0 18px 55px rgba(0,0,0,0.14);
+}
+
+.lv-cardMedia {
+  position: relative;
+  cursor: pointer;
+}
+
+.lv-cardImg {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  display: block;
+}
+
+.lv-cardServer {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.lv-cardBody {
+  padding: 14px;
+}
+
+.lv-cardCat {
+  display: inline-flex;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(245,165,36,0.14);
+  color: #a56100;
+  border: 1px solid rgba(245,165,36,0.22);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.lv-cardTitle {
+  margin-top: 10px;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 14px;
+  color: #141414;
+}
+
+.lv-cardMeta {
+  margin-top: 6px;
+  font-size: 12px;
+  color: rgba(20,20,20,0.70);
+}
+
+.lv-cardRow {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.lv-ytBtn {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.10);
+  background: #fff;
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+  color: #141414;
+  font-weight: 900;
+}
+
+.lv-detailBtn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(20,20,20,0.72);
+}
+
+.lv-empty {
+  text-align: center;
+  padding: 64px 0;
+  color: rgba(20,20,20,0.65);
+  font-weight: 600;
+}
+
+html, body, #root{
+  font-family: var(--font-sans);
+}

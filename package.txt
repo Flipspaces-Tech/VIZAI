@@ -1,0 +1,50 @@
+{
+  "name": "streampixelsdkexample",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@dicebear/collection": "^9.2.3",
+    "@dicebear/core": "^9.2.3",
+    "browserify-zlib": "^0.2.0",
+    "crypto-browserify": "^3.12.1",
+    "emoji-picker-react": "^4.12.3",
+    "https-browserify": "^1.0.0",
+    "nameforgejs": "^1.4.1",
+    "os-browserify": "^0.3.0",
+    "path-browserify": "^1.0.1",
+    "react": "^18.3.1",
+    "react-app-rewired": "^0.1.0",
+    "react-bootstrap": "^2.10.10",
+    "react-dom": "^18.3.1",
+    "react-icons": "^5.5.0",
+    "react-router-dom": "^7.9.4",
+    "react-scripts": "^0.0.0",
+    "stream-browserify": "^3.0.0",
+    "stream-http": "^3.2.0",
+    "streampixelsdk": "git+https://github.com/infinity-void-metaverse/Streampixel-Web-SDK.git#latest"
+  },
+  "scripts": {
+    "start": "react-scripts start"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "process": "^0.11.10"
+  }
+}

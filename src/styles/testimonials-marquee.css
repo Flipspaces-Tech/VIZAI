@@ -1,0 +1,148 @@
+/* =========================
+   Testimonials (Figma Image1)
+   1440-only / fixed look
+   Background image ONLY
+   ========================= */
+
+
+
+
+.tsSection{
+  width: 100%;
+  height: 730px;                 /* figma height */
+  position: relative;
+  overflow: hidden;
+  background-color: #4b4b4b;
+
+  /* ✅ bg image from assets */
+  background-image: url("../assets/Testimonial BG.png");
+  background-repeat: no-repeat;
+  background-position: center 1%;   /* adjust if needed */
+  background-size: 2000px auto;      /* adjust size to match figma */
+}
+
+/* ✅ dim overlay to match figma contrast */
+.tsSection::after{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.25);   /* increase/decrease to match */
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ✅ inner content sits above bg + overlay */
+.tsInner{
+  position: relative;
+  z-index: 1;
+  width: 1520px;                 /* match your fpContainer */
+  margin: 0 auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-top: 10px;
+}
+
+/* Heading */
+.tsKicker{
+  text-align: center;
+  font-size: 18px;
+  letter-spacing: 0.22em;
+  color: rgba(255,255,255,0.70);
+  margin-bottom: 10px;
+}
+
+.tsTitle{
+  text-align: center;
+  color: #fff;
+  font-size: 48px;
+  font-weight: 0;
+  line-height: 1.25;
+  margin: 0 auto 40px;
+  max-width: 1440px;
+}
+
+/* Marquee viewport */
+.tsMarquee{
+  position: relative;
+  width: 100%;
+  /* overflow: hidden; */
+}
+
+/* Track (your JS must duplicate the array) */
+.tsTrack{
+  display: flex;
+  gap: 44px;
+  width: max-content;
+  will-change: transform;
+  animation: tsMarquee var(--ts-duration, 54s) linear infinite;
+}
+
+/* Cards */
+.tsCard{
+  width: 585px;
+  height: 227px;
+  background: #ffffff;
+  border-radius: 4px;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.20);
+  padding: 28px 28px;
+  flex: 0 0 auto;
+}
+
+.tsName{
+  font-size: 28px;
+  color: #111;
+  font-weight: 0;
+}
+
+.tsRole{
+  font-size: 18px;
+  color: rgba(0,0,0,0.55);
+}
+
+.tsQuote{
+  margin-top: 14px;
+  font-size: 16px;
+  line-height: 1.55;
+  color: rgba(0,0,0,0.62);
+  font-style: italic;
+}
+
+/* Side fades */
+/* .tsFadeL,
+.tsFadeR{
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 210px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.tsFadeL{
+  left: 0;
+  background: linear-gradient(to right, #4b4b4b 10%, rgba(75,75,75,0) 100%);
+}
+
+.tsFadeR{
+  right: 0;
+  background: linear-gradient(to left, #4b4b4b 10%, rgba(75,75,75,0) 100%);
+} */
+
+/* Infinite loop */
+@keyframes tsMarquee{
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); } /* because array is duplicated in JS */
+}
+
+/* Pause on hover */
+/* .tsMarquee:hover .tsTrack{
+  animation-play-state: paused;
+} */
+.tsTitle{
+  font-weight: 100 !important;
+  -webkit-text-stroke: 0.25px rgba(255,255,255,0.35); /* optional: helps thin fonts stay readable */
+}
+.tsKicker{ margin-top: -60px; }
+.tsTitle{ margin-top: 8px; }
