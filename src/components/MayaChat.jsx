@@ -632,28 +632,39 @@ export default function MayaChat() {
   };
 
   const postJsonToReceiver = async (jsonData) => {
-    if (!RECEIVER_API_URL) {
-      console.warn("REACT_APP_RECEIVER_API_URL is missing");
+  if (!RECEIVER_API_URL) {
+    console.warn("REACT_APP_RECEIVER_API_URL is missing");
+    return;
+  }
+
+  try {
+    const response = await fetch(`${RECEIVER_API_URL}/ingest`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(jsonData),
+    });
+
+    if (!response.ok) {
+      const txt = await response.text();
+      console.error("Receiver API error:", response.status, txt);
       return;
     }
 
-    try {
-      const response = await fetch(`${RECEIVER_API_URL}/ingest`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(jsonData),
-      });
+    console.log("✅ Query JSON sent to receiver");
 
-      if (!response.ok) {
-        const txt = await response.text();
-        console.error("Receiver API error:", response.status, txt);
-      }
-    } catch (err) {
-      console.error("Receiver API network error:", err);
-    }
-  };
+    // wait a little, then fetch Streamlit result
+    setTimeout(() => {
+      fetchLatestResult();
+    }, 2500);
+
+  } catch (err) {
+    console.error("Receiver API network error:", err);
+  }
+};
+
+  
 
   // Text-to-Speech function using Web Speech API
   const speakText = async (text) => {
@@ -1003,7 +1014,27 @@ export default function MayaChat() {
     </>
   );
 }
+async function fetchLatestResult() {
+  try {
+    const res = await fetch(`${RECEIVER_API_URL}/latest-result`);
+    const data = await res.json();
 
+    window.lastStreamlitResult = data.data;
+
+    console.log("\n\n");
+    console.log("════════════════════════════════════════");
+    console.log("📦 STREAMLIT RESULT JSON");
+    console.log("════════════════════════════════════════");
+    console.log(JSON.stringify(data.data, null, 2));
+    console.log("════════════════════════════════════════");
+    console.log(data.data);
+    console.log("════════════════════════════════════════");
+    console.log("Access via: window.lastStreamlitResult");
+    console.log("════════════════════════════════════════\n\n");
+  } catch (err) {
+    console.error("Error fetching latest result:", err);
+  }
+}
 const styles = {
   toggleBtn: {
     position: "fixed",
