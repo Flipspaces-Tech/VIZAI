@@ -74,8 +74,8 @@ const processSarvamQueue = async () => {
 
   isSarvamProcessing = false;
   
-  // Process next item after 3 second delay
-  setTimeout(processSarvamQueue, 3000);
+  // Process next item after 2 second delay
+  setTimeout(processSarvamQueue, 2000);
 };
 
 const sarvamSTT = async (audioBlob, callback) => {
@@ -100,11 +100,6 @@ const sarvamSTT = async (audioBlob, callback) => {
 
     if (!response.ok) {
       sarvamFailureCount++;
-      // 429 = rate limited — back off for 10 seconds before allowing next call
-      if (response.status === 429) {
-        console.warn("⚠️ Sarvam rate limited (429) — backing off 10s");
-        await new Promise(resolve => setTimeout(resolve, 10000));
-      }
       callback(null);
       return;
     }
@@ -329,22 +324,18 @@ export default function MayaChat() {
       };
 
       actualRecorder.onstop = async () => {
-        if (audioChunksRef.current.length > 0 && speechStartedRef.current) {
-          // Only send to Sarvam if real speech was detected by audio monitor
+        if (audioChunksRef.current.length > 0) {
           const audioBlob = new Blob(audioChunksRef.current, { type: "audio/mp4" });
-          if (audioBlob.size > 15000) {
+          // Only send to Sarvam if blob is large enough to contain real speech
+          // Blobs under 10KB are silence/noise — sending them causes 400 errors
+          if (audioBlob.size > 10000) {
             await sendAudioToSarvam(audioBlob);
           } else {
-            // Speech detected but blob too small — noise, restart quietly
+            // Silent audio — just restart listening quietly
             setListeningMode("idle");
             speechStartedRef.current = false;
             setTimeout(() => startListening(), 500);
           }
-        } else {
-          // No speech detected at all — restart quietly, never call Sarvam
-          setListeningMode("idle");
-          speechStartedRef.current = false;
-          setTimeout(() => startListening(), 500);
         }
       };
 
@@ -662,9 +653,6 @@ export default function MayaChat() {
           setLoading(false);
           isProcessingRef.current = false;
           setListeningMode("idle");
-          speechStartedRef.current = false;
-          pauseTimeoutRef.current = null;
-          listeningRef.current = false;
           setTimeout(() => startListening(), 1000);
           return;
         }
@@ -707,12 +695,6 @@ export default function MayaChat() {
       const errorMessages = [...messagesRef.current, { role: "assistant", content: "Oops! Something went wrong. Please try again." }];
       setMessages(errorMessages);
       messagesRef.current = errorMessages;
-      // On error only — reset and restart listening since speakText won't be called
-      setListeningMode("idle");
-      speechStartedRef.current = false;
-      pauseTimeoutRef.current = null;
-      listeningRef.current = false;
-      setTimeout(() => startListening(), 1000);
     } finally {
       setLoading(false);
       audioChunksRef.current = [];
