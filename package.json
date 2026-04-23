@@ -25,6 +25,7 @@
     "react-icons": "5.5.0",
     "react-router-dom": "7.9.4",
     "react-scripts": "5.0.1",
+    "sarvamai": "^1.1.7",
     "stream-browserify": "^3.0.0",
     "stream-http": "^3.2.0",
     "streampixelsdk": "git+https://github.com/infinity-void-metaverse/Streampixel-Web-SDK.git"
