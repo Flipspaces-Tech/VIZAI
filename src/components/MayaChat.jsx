@@ -44,38 +44,42 @@ User: "I want Warm Minimal conference room: sofa + 2 chairs + lighting under ₹
 {"reply": "Creating your warm minimal conference setup...", "intent": "bundle", "params": {"category": "sofa,chair,lighting", "style": "minimal", "color": null, "secondary_colors": [], "room": "conference_room", "mood": "warm", "price_range": "under 80000", "material": null, "quantity": {"sofa": 1, "chair": 2, "lighting": 1}, "seating_capacity": null, "budget": 80000, "additional_params": {"finish": null, "texture": null, "lighting": "warm"}}}`;
 
 // ✅ FIXED: Simple API key loading for Create React App
-const WAKE_WORDS = ["hi maya", "hey maya", "maaya", "maya"];
+const WAKE_WORDS = ["hi maya", "hey maya", "maaya", "maya", "mara", "hi mara"];
 const SILENCE_TIMEOUT = 2000;
-const NOISE_THRESHOLD = 25;
-const SPEECH_CONFIDENCE_THRESHOLD = 0.75;
+const NOISE_THRESHOLD = 50;
+const SPEECH_CONFIDENCE_THRESHOLD = 0.85;
 const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY || "";
 const SARVAM_API_KEY = process.env.REACT_APP_SARVAM_API_KEY || "";
 const RECEIVER_API_URL = "https://maya-receiver-api.onrender.com";
 
 let sarvamFailureCount = 0;
-let sarvamQueue = [];
-let isSarvamProcessing = false;
 
-const processSarvamQueue = async () => {
-  if (isSarvamProcessing || sarvamQueue.length === 0) return;
+// Separate queues for STT and TTS — they never block each other
+let sttQueue = [];
+let ttsQueue = [];
+let isSTTProcessing = false;
+let isTTSProcessing = false;
 
-  isSarvamProcessing = true;
-  const { type, data, callback } = sarvamQueue.shift();
-
+const processSTTQueue = async () => {
+  if (isSTTProcessing || sttQueue.length === 0) return;
+  isSTTProcessing = true;
+  const { data, callback } = sttQueue.shift();
   try {
-    if (type === "STT") {
-      await sarvamSTT(data, callback);
-    } else if (type === "TTS") {
-      await sarvamTTS(data, callback);
-    }
-  } catch (err) {
-    // Error handled in the function
-  }
+    await sarvamSTT(data, callback);
+  } catch (err) {}
+  isSTTProcessing = false;
+  setTimeout(processSTTQueue, 500);
+};
 
-  isSarvamProcessing = false;
-  
-  // Process next item after 2 second delay
-  setTimeout(processSarvamQueue, 2000);
+const processTTSQueue = async () => {
+  if (isTTSProcessing || ttsQueue.length === 0) return;
+  isTTSProcessing = true;
+  const { data, callback } = ttsQueue.shift();
+  try {
+    await sarvamTTS(data, callback);
+  } catch (err) {}
+  isTTSProcessing = false;
+  setTimeout(processTTSQueue, 500);
 };
 
 const sarvamSTT = async (audioBlob, callback) => {
@@ -100,6 +104,11 @@ const sarvamSTT = async (audioBlob, callback) => {
 
     if (!response.ok) {
       sarvamFailureCount++;
+      // 429 = rate limited — back off for 10 seconds before allowing next call
+      if (response.status === 429) {
+        console.warn("⚠️ Sarvam rate limited (429) — backing off 10s");
+        await new Promise(resolve => setTimeout(resolve, 10000));
+      }
       callback(null);
       return;
     }
@@ -324,18 +333,24 @@ export default function MayaChat() {
       };
 
       actualRecorder.onstop = async () => {
-        if (audioChunksRef.current.length > 0) {
-          const audioBlob = new Blob(audioChunksRef.current, { type: "audio/mp4" });
-          // Only send to Sarvam if blob is large enough to contain real speech
-          // Blobs under 10KB are silence/noise — sending them causes 400 errors
-          if (audioBlob.size > 10000) {
+        const blobCount = audioChunksRef.current.length;
+        const audioBlob = blobCount > 0 ? new Blob(audioChunksRef.current, { type: "audio/mp4" }) : null;
+        const blobSize = audioBlob ? audioBlob.size : 0;
+
+        if (audioBlob && blobCount > 0) {
+          const hasSpeech = speechStartedRef.current || blobSize > 30000;
+
+          if (hasSpeech && blobSize > 15000) {
             await sendAudioToSarvam(audioBlob);
           } else {
-            // Silent audio — just restart listening quietly
             setListeningMode("idle");
             speechStartedRef.current = false;
             setTimeout(() => startListening(), 500);
           }
+        } else {
+          setListeningMode("idle");
+          speechStartedRef.current = false;
+          setTimeout(() => startListening(), 500);
         }
       };
 
@@ -479,15 +494,13 @@ export default function MayaChat() {
   };
 
   const sendAudioToSarvam = async (audioBlob) => {
-    sarvamQueue.push({
-      type: "STT",
+    sttQueue.push({
       data: audioBlob,
       callback: (transcript) => {
         if (transcript) {
           setLiveText("");
           handleTranscript(transcript);
         } else {
-          // Sarvam failed — reset state cleanly and restart listening
           audioChunksRef.current = [];
           speechStartedRef.current = false;
           setListeningMode("idle");
@@ -495,8 +508,7 @@ export default function MayaChat() {
         }
       }
     });
-
-    processSarvamQueue();
+    processSTTQueue();
   };
 
   const streamMessageText = (fullText) => {
@@ -537,16 +549,14 @@ export default function MayaChat() {
     }
   };
 
-  const speakText = (text) => {
+  const speakText = (text, fullText) => {
     if (!text || text.trim().length === 0) return;
 
-    sarvamQueue.push({
-      type: "TTS",
+    ttsQueue.push({
       data: text,
       callback: (audioBase64) => {
         if (audioBase64) {
           setIsSpeaking(true);
-          
           try {
             const binaryString = atob(audioBase64);
             const bytes = new Uint8Array(binaryString.length);
@@ -557,10 +567,43 @@ export default function MayaChat() {
             const audioUrl = URL.createObjectURL(audioBlob);
             const audio = new Audio(audioUrl);
 
+            audio.onloadedmetadata = () => {
+              // Calculate word delay based on actual audio duration
+              const words = fullText.split(" ");
+              const audioDurationMs = audio.duration * 1000;
+              const delayPerWord = Math.max(80, audioDurationMs / words.length);
+
+              // Start audio and word streaming at the same time
+              audio.play().catch(() => setIsSpeaking(false));
+
+              // 🗣️ TALKING — mic fully paused, prevents feedback loop
+              setListeningMode("talking");
+              stopListeningImmediately();
+
+              // Stream words in sync with audio
+              let currentIndex = 0;
+              let displayedText = "";
+
+              const streamNextWord = () => {
+                if (currentIndex < words.length) {
+                  displayedText += (currentIndex > 0 ? " " : "") + words[currentIndex];
+                  const streamedMessages = [
+                    ...messagesRef.current.slice(0, -1),
+                    { role: "assistant", content: displayedText }
+                  ];
+                  setMessages(streamedMessages);
+                  messagesRef.current = streamedMessages;
+                  currentIndex++;
+                  setTimeout(streamNextWord, delayPerWord);
+                }
+              };
+
+              streamNextWord();
+            };
+
             audio.onended = () => {
               setIsSpeaking(false);
               URL.revokeObjectURL(audioUrl);
-
               // 🗣️ TALKING done — go back to 👂 LISTENING
               setListeningMode("idle");
               speechStartedRef.current = false;
@@ -574,25 +617,28 @@ export default function MayaChat() {
               URL.revokeObjectURL(audioUrl);
             };
 
-            audio.play().catch(() => setIsSpeaking(false));
-
-            // 🗣️ TALKING — mic fully paused, prevents feedback loop
-            setListeningMode("talking");
-            stopListeningImmediately();
           } catch (err) {
             setIsSpeaking(false);
           }
+        } else {
+          // TTS failed — still show text and restart listening
+          setListeningMode("idle");
+          speechStartedRef.current = false;
+          pauseTimeoutRef.current = null;
+          listeningRef.current = false;
+          setTimeout(() => startListening(), 1000);
         }
       }
     });
-
-    processSarvamQueue();
+    processTTSQueue();
   };
 
   const sendMessage = async (textToSend = null) => {
     const messageText = textToSend || input;
 
     if (isProcessingRef.current) {
+      // Already processing a command — clear STT queue to prevent duplicates
+      sttQueue = [];
       return;
     }
 
@@ -649,10 +695,14 @@ export default function MayaChat() {
         window.lastMayaJSON = jsonData;
 
         const filterInstance = new MayaQueryFilter();
-        if (!filterInstance.validateIntent(jsonData)) {
+        const intentValid = filterInstance.validateIntent(jsonData);
+        if (!intentValid) {
           setLoading(false);
           isProcessingRef.current = false;
           setListeningMode("idle");
+          speechStartedRef.current = false;
+          pauseTimeoutRef.current = null;
+          listeningRef.current = false;
           setTimeout(() => startListening(), 1000);
           return;
         }
@@ -683,18 +733,23 @@ export default function MayaChat() {
         displayText = raw;
       }
 
-      const allMessages = [...messagesRef.current, { role: "assistant", content: displayText }];
+      const allMessages = [...messagesRef.current, { role: "assistant", content: "" }];
 
       setMessages(allMessages);
       messagesRef.current = allMessages;
 
-      speakText(displayText);
-      streamMessageText(displayText);
+      speakText(displayText, displayText);
     } catch (err) {
       console.error("❌ Error:", err.message);
       const errorMessages = [...messagesRef.current, { role: "assistant", content: "Oops! Something went wrong. Please try again." }];
       setMessages(errorMessages);
       messagesRef.current = errorMessages;
+      // On error only — reset and restart listening since speakText won't be called
+      setListeningMode("idle");
+      speechStartedRef.current = false;
+      pauseTimeoutRef.current = null;
+      listeningRef.current = false;
+      setTimeout(() => startListening(), 1000);
     } finally {
       setLoading(false);
       audioChunksRef.current = [];

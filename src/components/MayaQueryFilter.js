@@ -18,7 +18,7 @@ export class MayaQueryFilter {
       "one moment", "just a second", "give me a second", "wait",
 
       // Demo Control (REMOVED most - these are valid design commands)
-      "next", "can you", "check this",
+      "next", "check this",
       "do you see", "see that", "look here", "watch this",
 
       // General Chat
@@ -46,10 +46,18 @@ export class MayaQueryFilter {
     // Valid design intents
     this.PRIMARY_INTENTS = [
       "search_product",
+      "display_products",
       "apply_theme",
+      "style_consultation",
       "product_swap",
+      "palette_match",
       "room_setup",
-      "palette_match"
+      "budget_analysis",
+      "quick_filter",
+      "bundle",
+      "comparison",
+      "upgrade",
+      "refine"
     ];
 
     this.INTENT_CONFIDENCE_THRESHOLD = 0.7;
