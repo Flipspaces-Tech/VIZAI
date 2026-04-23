@@ -7,7 +7,7 @@ export class MayaQueryEngine {
     this.filter = new MayaQueryFilter();
     this.SILENCE_TIMEOUT = 2000; // 2 seconds
     this.MIN_COMMAND_LENGTH = 2; // CHANGED: 4 → 2 (allow shorter queries like "green sofas")
-    this.WAKE_WORDS = ["hi maya", "hey maya", "maaya","maya"];
+    this.WAKE_WORDS = ["hi maya", "hey maya", "maaya", "maya"];
     this.accumulatedQuery = "";
   }
 

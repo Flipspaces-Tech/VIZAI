@@ -1,99 +1,179 @@
 import { useState, useRef, useEffect } from "react";
+import { MayaQueryEngine } from './MayaQueryEngine';
+import { MayaQueryFilter } from './MayaQueryFilter';
 
-const SYSTEM_PROMPT = `You are Maya, a witty and charming interior design assistant for Vizwalk — a real-time AI-powered design platform.
+const SYSTEM_PROMPT = `You are Maya, a witty and charming interior design assistant for Vizwalk.
 
-PERSONALITY & VOICE:
-- Speak like a confident, stylish friend with great taste
-- Warm, playful, slightly witty — never robotic
-- Keep responses short (1–2 lines max)
-- Use natural design language (mood, palette, texture, tone)
+PERSONALITY: Speak like a confident, stylish friend with great taste. Warm, playful, slightly witty.
+Keep responses short (1–2 lines max). Use natural design language.
 
-CRITICAL: YOU MUST RETURN VALID JSON OBJECT ONLY - NOT TEXT!
-The user interface requires valid JSON. Always respond with the exact JSON format below. Never return plain text.
+CRITICAL: RESPOND ONLY IN VALID JSON - Never use plain text!
 
-SUPPORTED INTENTS:
-search_product, display_products, apply_theme, style_consultation, product_swap, palette_match, room_setup, budget_analysis, quick_filter
-
-MANDATORY - ALWAYS RETURN THIS EXACT JSON FORMAT (no exceptions):
+JSON FORMAT:
 {
-  "reply": "<conversational response 1-2 lines only>",
-  "intent": "<one intent from list or null>",
+  "reply": "<1-2 line conversational response>",
+  "intent": "<search_product|display_products|apply_theme|style_consultation|product_swap|palette_match|room_setup|budget_analysis|quick_filter|bundle|comparison|upgrade|refine>",
   "params": {
-    "category": "<sofa/chair/table/lamp/decor or null>",
-    "style": "<modern/traditional/minimalist/eclectic or null>",
-    "color": "<primary color or null>",
+    "category": "<sofa|chair|table|lamp|decor or null>",
+    "style": "<modern|traditional|minimalist|eclectic or null>",
+    "color": "<color or null>",
     "secondary_colors": ["<color1>", "<color2>"] or [],
-    "room": "<living_room/bedroom/kitchen/dining_room or null>",
-    "mood": "<cozy/bold/minimal/warm/elegant or null>",
-    "price_range": "<budget range or null>",
-    "material": "<leather/wood/fabric/metal or null>",
+    "room": "<living_room|bedroom|kitchen|dining_room|conference_room or null>",
+    "mood": "<cozy|bold|minimal|warm|elegant or null>",
+    "price_range": "<budget or null>",
+    "material": "<leather|wood|fabric|metal or null>",
     "quantity": <number or null>,
     "seating_capacity": <number or null>,
-    "budget": <numeric value or null>,
+    "budget": <numeric or null>,
     "additional_params": {
-      "finish": "<matte/glossy/natural or null>",
-      "texture": "<velvet/linen/smooth/rough or null>",
-      "lighting": "<natural/warm/cool or null>"
+      "finish": "<matte|glossy|natural or null>",
+      "texture": "<velvet|linen|smooth|rough or null>",
+      "lighting": "<natural|warm|cool or null>"
     }
   }
 }
 
-RULES:
-1. RESPOND ONLY IN JSON - Never use markdown, code blocks, or plain text
-2. Extract ALL design parameters from user message
-3. Always include ALL fields in params (use null for missing values)
-4. Map to the most specific intent
-5. Keep reply to 1-2 lines maximum
-6. Return valid JSON that can be parsed immediately
+RULES: Extract ALL parameters. Use null for missing values. Return ONLY JSON.
 
-EXAMPLES - Copy this format exactly:
+EXAMPLES:
 
-User: "Show me modern green sofas for living room"
-{"reply": "Modern green sofas — strong choice. Pulling options.", "intent": "search_product", "params": {"category": "sofa", "style": "modern", "color": "green", "secondary_colors": [], "room": "living_room", "mood": null, "price_range": null, "material": null, "quantity": null, "seating_capacity": null, "budget": null, "additional_params": {"finish": null, "texture": null, "lighting": null}}}
+User: "Show me modern sofas under ₹50,000"
+{"reply": "Modern sofas coming right up!", "intent": "search_product", "params": {"category": "sofa", "style": "modern", "color": null, "secondary_colors": [], "room": null, "mood": null, "price_range": "under 50000", "material": null, "quantity": null, "seating_capacity": null, "budget": 50000, "additional_params": {"finish": null, "texture": null, "lighting": null}}}
 
-User: "I want a cozy traditional setup under 50k"
-{"reply": "Perfect! Cozy traditional pieces coming right up.", "intent": "room_setup", "params": {"category": "furniture_set", "style": "traditional", "color": null, "secondary_colors": [], "room": null, "mood": "cozy", "price_range": "under 50000", "material": null, "quantity": null, "seating_capacity": null, "budget": 50000, "additional_params": {"finish": null, "texture": null, "lighting": null}}}
+User: "I want Warm Minimal conference room: sofa + 2 chairs + lighting under ₹80,000"
+{"reply": "Creating your warm minimal conference setup...", "intent": "bundle", "params": {"category": "sofa,chair,lighting", "style": "minimal", "color": null, "secondary_colors": [], "room": "conference_room", "mood": "warm", "price_range": "under 80000", "material": null, "quantity": {"sofa": 1, "chair": 2, "lighting": 1}, "seating_capacity": null, "budget": 80000, "additional_params": {"finish": null, "texture": null, "lighting": "warm"}}}`;
 
-User: "What colors match my blue sofa?"
-{"reply": "Blue is versatile! Neutrals ground it, or try terracotta.", "intent": "palette_match", "params": {"category": "sofa", "style": null, "color": "blue", "secondary_colors": ["neutral", "terracotta"], "room": null, "mood": null, "price_range": null, "material": null, "quantity": null, "seating_capacity": null, "budget": null, "additional_params": {"finish": null, "texture": null, "lighting": null}}}
-
-FINAL REMINDER: You must ONLY output valid JSON object. No other text. No markdown. No code blocks. Only JSON.`;
-
-const WAKE_WORDS = ["hi maya", "maya"];
-const PAUSE_TIMEOUT = 1500;  // Reduced from 2000ms to 1.5 seconds
-const NOISE_THRESHOLD = 15;
-const SPEECH_CONFIDENCE_THRESHOLD = 0.6;
-
+// ✅ FIXED: Simple API key loading for Create React App
+const WAKE_WORDS = ["hi maya", "hey maya", "maaya", "maya"];
+const SILENCE_TIMEOUT = 2000;
+const NOISE_THRESHOLD = 25;
+const SPEECH_CONFIDENCE_THRESHOLD = 0.75;
 const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY || "";
 const SARVAM_API_KEY = process.env.REACT_APP_SARVAM_API_KEY || "";
 const RECEIVER_API_URL = "https://maya-receiver-api.onrender.com";
 
-// Verify API keys are loaded
-console.log("🔑 API Keys Status:");
-console.log("✅ OPENAI_API_KEY loaded:", !!OPENAI_API_KEY);
-console.log("✅ SARVAM_API_KEY loaded:", !!SARVAM_API_KEY);
-console.log("✅ RECEIVER_API_URL:", RECEIVER_API_URL);
-
-// Flag to track if Sarvam is failing - fallback to Web Speech API
 let sarvamFailureCount = 0;
-const SARVAM_FAILURE_THRESHOLD = 3; // Switch after 3 failures
-let useFallbackAPI = false;
+let sarvamQueue = [];
+let isSarvamProcessing = false;
 
-function makeRequestId() {
-  return `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-}
+const processSarvamQueue = async () => {
+  if (isSarvamProcessing || sarvamQueue.length === 0) return;
+
+  isSarvamProcessing = true;
+  const { type, data, callback } = sarvamQueue.shift();
+
+  try {
+    if (type === "STT") {
+      await sarvamSTT(data, callback);
+    } else if (type === "TTS") {
+      await sarvamTTS(data, callback);
+    }
+  } catch (err) {
+    // Error handled in the function
+  }
+
+  isSarvamProcessing = false;
+  
+  // Process next item after 2 second delay
+  setTimeout(processSarvamQueue, 2000);
+};
+
+const sarvamSTT = async (audioBlob, callback) => {
+  try {
+    if (!SARVAM_API_KEY) {
+      console.warn("⚠️ SARVAM_API_KEY not set");
+      callback(null);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", audioBlob, "audio.mp4");
+    formData.append("language_code", "en-IN");
+
+    const response = await fetch("https://api.sarvam.ai/speech-to-text", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${SARVAM_API_KEY}` },
+      body: formData,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      sarvamFailureCount++;
+      callback(null);
+      return;
+    }
+
+    sarvamFailureCount = 0;
+
+    if (data.transcript) {
+      const transcript = data.transcript.toLowerCase().trim();
+      callback(transcript);
+    } else {
+      callback(null);
+    }
+  } catch (err) {
+    console.error("STT Error:", err);
+    callback(null);
+  }
+};
+
+const sarvamTTS = async (text, callback) => {
+  try {
+    if (!SARVAM_API_KEY) {
+      console.warn("⚠️ SARVAM_API_KEY not set");
+      callback(null);
+      return;
+    }
+
+    const ttsResponse = await fetch("https://api.sarvam.ai/text-to-speech", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${SARVAM_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        inputs: [text],
+        target_language_code: "en-IN",
+        model: "bulbul:v3",
+        speaker: "ritu",
+        pace: 1.0,
+        temperature: 0.6,
+      }),
+    });
+
+    if (!ttsResponse.ok) {
+      callback(null);
+      return;
+    }
+
+    const audioData = await ttsResponse.json();
+
+    if (audioData.audios && audioData.audios.length > 0) {
+      callback(audioData.audios[0]);
+    } else {
+      callback(null);
+    }
+  } catch (err) {
+    console.error("TTS Error:", err);
+    callback(null);
+  }
+};
+
 export default function MayaChat() {
   const [visible, setVisible] = useState(true);
-  const [isOpen, setIsOpen] = useState(false);  // ← Start CLOSED
+  const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
-  const messagesRef = useRef([]);  // ← NEW: Reliable message tracking
+  const messagesRef = useRef([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [listeningMode, setListeningMode] = useState("idle");
   const [recordedText, setRecordedText] = useState("");
+  const [liveText, setLiveText] = useState("");
   const [error, setError] = useState("");
-  const [isSpeaking, setIsSpeaking] = useState(false);  // ← NEW: Track Maya speaking
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isPausedListening, setIsPausedListening] = useState(false);
 
   const messagesEndRef = useRef(null);
   const panelRef = useRef(null);
@@ -108,137 +188,115 @@ export default function MayaChat() {
   const lastAudioTimeRef = useRef(0);
   const wakeWordDetectedRef = useRef(false);
   const speechStartedRef = useRef(false);
-  const firstMessageSentRef = useRef(false);  // ← NEW: Track if first message sent
+  const firstMessageSentRef = useRef(false);
+  const manuallyStoppedRef = useRef(false);
+  const hasInitializedRef = useRef(false);
+  const isProcessingRef = useRef(false);
+  const recognitionRef = useRef(null);
+  const queryEngineRef = useRef(new MayaQueryEngine());
 
-  // Don't auto-start - wait for spacebar
-  // useEffect(() => {
-  //   const timer = setTimeout(() => {
-  //     startListening();
-  //   }, 500);
-  //   return () => clearTimeout(timer);
-  // }, []);
+  useEffect(() => {
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      const timer = setTimeout(() => {
+        setIsOpen(true);
+        setVisible(true);
+        setTimeout(() => {
+          startListening();
+        }, 500);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
   useEffect(() => {
     const handleSpaceBar = (e) => {
-      // Only if spacebar pressed
       if (e.code !== "Space") return;
-      
-      // Don't trigger if user is typing in an input field
-      if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA") {
-        return;
-      }
-
+      if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA") return;
       e.preventDefault();
 
       if (!isOpen) {
-        // Open the chat and start listening
-        console.log("🔓 Opening chat via spacebar");
-        
-        // Reset conversation state for fresh start
-        firstMessageSentRef.current = false;
-        wakeWordDetectedRef.current = false;
-        speechStartedRef.current = false;
-        
+        // Open chatbot — resume listening, keep existing chat history
         setIsOpen(true);
         setVisible(true);
-        setMessages([]);
-        messagesRef.current = [];
-        
-        setTimeout(() => {
-          if (!listeningRef.current) {
-            console.log("🎙️ Starting listening automatically");
-            startListening();
-          }
-        }, 300);
-      } else if (isListening) {
-        // Stop listening completely (not just pause)
-        console.log("🛑 Stopping listening via spacebar");
-        stopListeningImmediately();
-        setListeningMode("idle");
-        
-        // Reset conversation state for fresh start next time
-        console.log("🔄 Resetting conversation state");
-        firstMessageSentRef.current = false;
-        wakeWordDetectedRef.current = false;
-        speechStartedRef.current = false;
-        setMessages([]);
-        messagesRef.current = [];
+        setTimeout(() => !listeningRef.current && startListening(), 300);
       } else {
-        // Resume listening if paused
-        console.log("▶️ Resuming listening via spacebar");
-        setListeningMode("idle");
-        resumeListening();
+        // Minimize chatbot — stop mic but keep chat history intact
+        stopListeningImmediately();
+        setIsOpen(false);
       }
     };
 
     window.addEventListener("keydown", handleSpaceBar);
     return () => window.removeEventListener("keydown", handleSpaceBar);
-  }, [isOpen, isListening]);
+  }, [isOpen]);
 
   useEffect(() => {
-    console.log("📱 Messages state updated. Current messages:", messages);
-    console.log("📱 Messages count:", messages.length);
-    messagesRef.current = messages;  // ← Keep ref in sync with state
-    if (messages.length > 0) {
-      console.log("📋 Full messages list:", JSON.stringify(messages, null, 2));
-    }
+    messagesRef.current = messages;
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Debug hook to monitor state changes
-  useEffect(() => {
-    console.log("🔍 DEBUG: Component rendered with", messages.length, "messages");
-  });
+  const startWebSpeechAPI = () => {
+    try {
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = "en-IN";
+      recognition.continuous = false;
+      recognition.interimResults = true;
+
+      recognition.onresult = (event) => {
+        let interimTranscript = "";
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+
+          if (!event.results[i].isFinal) {
+            interimTranscript += transcript;
+          }
+        }
+
+        if (interimTranscript) {
+          setLiveText(interimTranscript);
+        }
+      };
+
+      recognition.onerror = () => {
+        // Silent
+      };
+
+      recognition.onend = () => {
+        // Silent
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      // Silent
+    }
+  };
 
   const startListening = async () => {
-    console.log("🎙️ startListening called. Current listeningRef:", listeningRef.current);
-    
-    // If already listening, don't start again
-    if (listeningRef.current) {
-      console.log("⚠️ Already listening, skipping restart");
-      return;
-    }
+    if (listeningRef.current) return;
 
     try {
-      setError("");
-      console.log("🔄 Starting fresh listening session...");
-      console.log("   - Requesting microphone access...");
-      
-      // Clean up any leftover audio chunks
       audioChunksRef.current = [];
-      console.log("🧹 Audio chunks cleared before new session");
 
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,  // Changed to true for better audio levels
-        },
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
 
-      console.log("✅ Microphone access granted. Stream:", stream);
       streamRef.current = stream;
       listeningRef.current = true;
       lastAudioTimeRef.current = Date.now();
       wakeWordDetectedRef.current = false;
       speechStartedRef.current = false;
 
-      console.log("✅ listeningRef.current set to true");
-
-      // Create fresh AudioContext for each session (avoid reuse issues)
       let audioContext = audioContextRef.current;
       if (!audioContext || audioContext.state === "closed") {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
         audioContextRef.current = audioContext;
-        console.log("✅ New AudioContext created (previous was closed)");
-      } else {
-        console.log("✅ Reusing existing AudioContext");
       }
 
-      // Resume context if suspended
-      if (audioContext.state === "suspended") {
-        await audioContext.resume();
-        console.log("✅ AudioContext resumed");
-      }
+      if (audioContext.state === "suspended") await audioContext.resume();
 
       const analyser = audioContext.createAnalyser();
       analyser.fftSize = 512;
@@ -246,120 +304,59 @@ export default function MayaChat() {
 
       const source = audioContext.createMediaStreamSource(stream);
       source.connect(analyser);
-      console.log("✅ Audio source connected to analyser");
 
-      const mediaRecorder = new MediaRecorder(stream, { 
-        mimeType: "audio/mp4",  // Changed to mp4 which is widely supported
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: "audio/mp4",
         audioBitsPerSecond: 16000
       });
-      
-      // Fallback if mp4 not supported
+
       if (!MediaRecorder.isTypeSupported("audio/mp4")) {
-        console.warn("⚠️ audio/mp4 not supported, trying audio/webm");
-        const recorder = new MediaRecorder(stream, { 
-          audioBitsPerSecond: 16000 
-        });
-        mediaRecorderRef.current = recorder;
+        mediaRecorderRef.current = new MediaRecorder(stream, { audioBitsPerSecond: 16000 });
       } else {
         mediaRecorderRef.current = mediaRecorder;
       }
-      
+
       const actualRecorder = mediaRecorderRef.current;
       audioChunksRef.current = [];
 
-      console.log("✅ MediaRecorder created");
-
       actualRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-          console.log("📝 Audio chunk received:", event.data.size, "bytes");
-        }
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
       };
 
       actualRecorder.onstop = async () => {
-        console.log("🛑 MediaRecorder stopped. Total chunks:", audioChunksRef.current.length);
         if (audioChunksRef.current.length > 0) {
           const audioBlob = new Blob(audioChunksRef.current, { type: "audio/mp4" });
-          console.log("🔊 Audio blob created:", audioBlob.size, "bytes");
-          await sendAudioToSarvam(audioBlob);
-        } else {
-          console.warn("⚠️ No audio chunks to process");
+          // Only send to Sarvam if blob is large enough to contain real speech
+          // Blobs under 10KB are silence/noise — sending them causes 400 errors
+          if (audioBlob.size > 10000) {
+            await sendAudioToSarvam(audioBlob);
+          } else {
+            // Silent audio — just restart listening quietly
+            setListeningMode("idle");
+            speechStartedRef.current = false;
+            setTimeout(() => startListening(), 500);
+          }
         }
       };
 
-      actualRecorder.onerror = (event) => {
-        console.error("❌ MediaRecorder error:", event?.error?.message);
-        setError("Recording error: " + (event?.error?.message || "unknown error"));
+      actualRecorder.onerror = () => {
         stopListeningImmediately();
       };
 
-      actualRecorder.start(500);  // Request data every 500ms for faster processing
-      console.log("🔴 MediaRecorder started. Ready to listen!");
+      actualRecorder.start(500);
       setIsListening(true);
       setListeningMode("idle");
+
+      startWebSpeechAPI();
+
       monitorAudioLevels(analyser);
     } catch (err) {
-      console.error("❌ Error in startListening:", err.message);
-      setError("Microphone access denied. Check browser permissions.");
       listeningRef.current = false;
       setIsListening(false);
     }
   };
 
-  // PAUSE listening (pause recording and monitoring)
-  const pauseListening = () => {
-    console.log("⏸️ pauseListening called - pausing audio recording and monitoring");
-    
-    // Stop the animation frame monitoring
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
-
-    // Pause the MediaRecorder if it's recording
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      try {
-        mediaRecorderRef.current.pause();
-        console.log("⏸️ MediaRecorder paused");
-      } catch (err) {
-        console.error("Error pausing MediaRecorder:", err);
-      }
-    }
-
-    listeningRef.current = false;
-    setIsListening(false);
-    console.log("✅ Listening paused. listeningRef.current =", listeningRef.current);
-  };
-
-  // RESUME listening (resume recording and monitoring)
-  const resumeListening = () => {
-    console.log("▶️ resumeListening called - resuming audio recording and monitoring");
-    
-    // Resume the MediaRecorder if it's paused
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "paused") {
-      try {
-        mediaRecorderRef.current.resume();
-        console.log("▶️ MediaRecorder resumed");
-      } catch (err) {
-        console.error("Error resuming MediaRecorder:", err);
-      }
-    }
-    
-    if (!listeningRef.current && analyserRef.current) {
-      listeningRef.current = true;
-      setIsListening(true);
-      speechStartedRef.current = false;
-      monitorAudioLevels(analyserRef.current);
-      console.log("✅ Listening resumed. listeningRef.current =", listeningRef.current);
-    }
-  };
-
   const stopListeningImmediately = () => {
-    console.log("🛑 stopListeningImmediately called");
-    console.log("   - animationFrameRef.current:", !!animationFrameRef.current);
-    console.log("   - mediaRecorderRef.current:", !!mediaRecorderRef.current);
-    console.log("   - streamRef.current:", !!streamRef.current);
-    
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
@@ -379,27 +376,29 @@ export default function MayaChat() {
       pauseTimeoutRef.current = null;
     }
 
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (err) {}
+    }
+
     listeningRef.current = false;
     setIsListening(false);
-    console.log("✅ Listening stopped. listeningRef.current =", listeningRef.current);
   };
 
   const monitorAudioLevels = (analyser) => {
     const dataArray = new Uint8Array(analyser.frequencyBinCount);
-    let silenceFrameCount = 0;  // Track consecutive silence frames
+    let silenceFrameCount = 0;
     let lastSpeechTime = Date.now();
 
     const checkAudio = () => {
-      if (!listeningRef.current) {
-        return;
-      }
+      if (!listeningRef.current) return;
 
       analyser.getByteFrequencyData(dataArray);
 
-      // Calculate more sophisticated audio metrics
       let sum = 0;
       let count = 0;
-      const relevantBins = dataArray.slice(10, 150); // Focus on speech frequencies (100Hz-4kHz)
+      const relevantBins = dataArray.slice(10, 150);
 
       for (let i = 0; i < relevantBins.length; i++) {
         sum += relevantBins[i] * relevantBins[i];
@@ -410,12 +409,11 @@ export default function MayaChat() {
       const speechConfidence = count / relevantBins.length;
       const isSpeech = speechEnergy > NOISE_THRESHOLD && speechConfidence > SPEECH_CONFIDENCE_THRESHOLD;
 
-      // Detect speech (not just noise)
       if (isSpeech) {
         lastSpeechTime = Date.now();
         lastAudioTimeRef.current = lastSpeechTime;
-        silenceFrameCount = 0;  // Reset silence counter on speech
-        
+        silenceFrameCount = 0;
+
         if (!speechStartedRef.current) {
           speechStartedRef.current = true;
           setListeningMode("continuous");
@@ -426,21 +424,15 @@ export default function MayaChat() {
           pauseTimeoutRef.current = null;
         }
       } else {
-        // Silence detected
         silenceFrameCount++;
         const timeSinceSpeech = Date.now() - lastSpeechTime;
-        
-        // Detect pause: Stop as soon as we detect silence (very aggressive)
-        // silenceFrameCount > 3 = ~300ms of silence = definitely a pause
-        if (speechStartedRef.current && silenceFrameCount > 3 && timeSinceSpeech > 800) {
+
+        if (speechStartedRef.current && silenceFrameCount > 2 && timeSinceSpeech > SILENCE_TIMEOUT) {
           if (!pauseTimeoutRef.current) {
-            console.log("⏸️ PAUSE DETECTED! Silence:", silenceFrameCount, "frames, Time:", timeSinceSpeech, "ms");
             setListeningMode("paused");
             pauseTimeoutRef.current = true;
 
-            // Stop listening and process on pause - IMMEDIATELY
             if (listeningRef.current) {
-              console.log("🛑 STOPPING RECORDING IMMEDIATELY");
               stopListeningImmediately();
               setListeningMode("processing");
             }
@@ -454,327 +446,178 @@ export default function MayaChat() {
     checkAudio();
   };
 
-  const sendAudioToSarvam = async (audioBlob) => {
-    try {
-      if (!SARVAM_API_KEY) {
-        setError("Sarvam API key missing.");
-        console.error("❌ Sarvam API key is missing");
-        return;
-      }
-
-      console.log("🎙️ Sending audio to Sarvam. Blob size:", audioBlob.size, "Type:", audioBlob.type);
-      console.log("🔑 SARVAM_API_KEY present:", !!SARVAM_API_KEY);
-
-      const formData = new FormData();
-      formData.append("file", audioBlob, "audio.mp4");
-      formData.append("language_code", "en-IN");
-
-      console.log("📤 FormData prepared. Sending to Sarvam API...");
-
-      const response = await fetch("https://api.sarvam.ai/speech-to-text", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${SARVAM_API_KEY}`,
-        },
-        body: formData,
-      });
-
-      console.log("📥 Sarvam API response status:", response.status);
-
-      const data = await response.json();
-      console.log("📦 Sarvam API response data:", data);
-
-      if (!response.ok) {
-        const errorMsg = data.error || data.message || JSON.stringify(data);
-        console.error("❌ Sarvam API Error:", response.status, errorMsg);
-        
-        sarvamFailureCount++;
-        console.warn(`⚠️ Sarvam failure count: ${sarvamFailureCount}/${SARVAM_FAILURE_THRESHOLD}`);
-        
-        if (sarvamFailureCount >= SARVAM_FAILURE_THRESHOLD) {
-          console.error("🔄 Sarvam API failing repeatedly. Switching to fallback STT...");
-          useFallbackAPI = true;
-        }
-        
-        setError(`API Error ${response.status}: ${errorMsg}`);
-        // Restart listening on error
-        setTimeout(() => {
-          console.log("🔄 Restarting listening after Sarvam error...");
-          startListening();
-        }, 1000);
-        return;
-      }
-      
-      // Reset failure count on success
-      sarvamFailureCount = 0;
-
-      if (data.transcript) {
-        const transcript = data.transcript.toLowerCase().trim();
-        console.log("🎤 Transcript:", transcript);
-
-        // Check for wake words
-        const wakeWordFound = WAKE_WORDS.some((word) => transcript.includes(word));
-        
-        // Only require wake word on the FIRST message of the conversation
-        // Use ref to track this, not messages.length (which has async issues)
-        const isFirstMessage = !firstMessageSentRef.current;
-
-        console.log("📊 First message?", isFirstMessage, "Wake word found?", wakeWordFound);
-
-        if (isFirstMessage) {
-          // First message: Accept ANY command (don't require wake word)
-          if (transcript && transcript.length > 0) {
-            firstMessageSentRef.current = true;  // ← Mark first message as sent
-            
-            // Remove wake words if present, but don't require them
-            let command = transcript;
-            for (const word of WAKE_WORDS) {
-              const regex = new RegExp(`\\b${word}\\b\\s*`, "i");
-              command = command.replace(regex, "").trim();
-            }
-            
-            // If removing wake words left nothing, use original
-            if (!command || command.length === 0) {
-              command = transcript;
-            }
-
-            console.log("✅ First message accepted. Command:", command);
-            setRecordedText(command);
-            sendMessage(command);
-          } else {
-            // Empty transcript, restart listening
-            console.log("⚠️ Empty transcript on first message, restarting...");
-            setListeningMode("idle");
-            setTimeout(() => startListening(), 1000);
-          }
-        } else {
-          // Subsequent messages: accept any speech, no wake word needed
-          console.log("✅ Conversation already started. Processing transcript as command.");
-          
-          // Remove wake words if present (for consistency), but don't require them
-          let command = transcript;
-          for (const word of WAKE_WORDS) {
-            const regex = new RegExp(`\\b${word}\\b\\s*`, "i");
-            command = command.replace(regex, "").trim();
-          }
-          
-          // If removing wake words left us with nothing, use original
-          if (!command || command.length === 0) {
-            command = transcript;
-          }
-
-          console.log("📤 Sending command:", command);
-          setRecordedText(command);
-          sendMessage(command);
-        }
-      } else {
-        // Sarvam returned empty transcript - use Web Speech API fallback IMMEDIATELY
-        console.log("⚠️ Sarvam returned empty! Using Web Speech API fallback...");
-        sarvamFailureCount++;
-        
-        console.log("🎤 Starting Web Speech API (immediate fallback)...");
-        
-        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-        recognition.lang = "en-IN";
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        
-        recognition.onstart = () => {
-          console.log("🎤 Web Speech API listening...");
-          setListeningMode("continuous");
-        };
-        
-        recognition.onresult = (event) => {
-          let transcript = "";
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            transcript += event.results[i][0].transcript;
-          }
-          console.log("🎤 Web Speech transcript:", transcript);
-          if (transcript.trim()) {
-            const command = transcript.trim();
-            console.log("✅ Web Speech recognized:", command);
-            sendMessage(command);
-          } else {
-            console.log("⚠️ Web Speech empty, restarting...");
-            setListeningMode("idle");
-            speechStartedRef.current = false;
-            pauseTimeoutRef.current = null;
-            setTimeout(() => startListening(), 1000);
-          }
-        };
-        
-        recognition.onerror = (event) => {
-          console.error("❌ Web Speech error:", event.error);
-          setListeningMode("idle");
-          speechStartedRef.current = false;
-          pauseTimeoutRef.current = null;
-          setTimeout(() => startListening(), 1500);
-        };
-        
-        recognition.onend = () => {
-          console.log("🎤 Web Speech API ended - restarting listening");
-          setListeningMode("idle");
-          speechStartedRef.current = false;
-          pauseTimeoutRef.current = null;
-          setTimeout(() => {
-            console.log("🔄 Restarting listening after Web Speech API ended");
-            startListening();
-          }, 1000);
-        };
-        
-        recognition.start();
-      }
-    } catch (err) {
-      setError("Transcription error: " + err.message);
-      console.error("❌ Transcription error:", err);
+  const handleTranscript = async (transcript) => {
+    if (!transcript || transcript.trim().length === 0) {
       setListeningMode("idle");
-      speechStartedRef.current = false;
-      pauseTimeoutRef.current = null;
-      setTimeout(() => startListening(), 1500);
+      setTimeout(() => startListening(), 1000);
+      return;
     }
+
+    const lowerTranscript = transcript.toLowerCase();
+
+    // Wake word check — every query, every time, must start with "Maaya"
+    const hasWakeWord = WAKE_WORDS.some(word => lowerTranscript.includes(word));
+    if (!hasWakeWord) {
+      // Silently ignore — no wake word detected
+      setListeningMode("idle");
+      setTimeout(() => startListening(), 1000);
+      return;
+    }
+
+    // Wake word found — now validate the command
+    const validation = queryEngineRef.current.validateQuery(transcript);
+
+    if (!validation.isValid) {
+      setListeningMode("idle");
+      setTimeout(() => startListening(), 1000);
+      return;
+    }
+
+    const command = validation.cleanCommand;
+    setRecordedText(command);
+    sendMessage(command);
+  };
+
+  const sendAudioToSarvam = async (audioBlob) => {
+    sarvamQueue.push({
+      type: "STT",
+      data: audioBlob,
+      callback: (transcript) => {
+        if (transcript) {
+          setLiveText("");
+          handleTranscript(transcript);
+        } else {
+          // Sarvam failed — reset state cleanly and restart listening
+          audioChunksRef.current = [];
+          speechStartedRef.current = false;
+          setListeningMode("idle");
+          setTimeout(() => startListening(), 1500);
+        }
+      }
+    });
+
+    processSarvamQueue();
+  };
+
+  const streamMessageText = (fullText) => {
+    const words = fullText.split(" ");
+    let currentIndex = 0;
+    let displayedText = "";
+
+    const streamNextWord = () => {
+      if (currentIndex < words.length) {
+        displayedText += (currentIndex > 0 ? " " : "") + words[currentIndex];
+
+        const streamedMessages = [
+          ...messagesRef.current.slice(0, -1),
+          { role: "assistant", content: displayedText }
+        ];
+
+        setMessages(streamedMessages);
+        messagesRef.current = streamedMessages;
+
+        currentIndex++;
+        setTimeout(streamNextWord, 120);
+      }
+    };
+
+    streamNextWord();
   };
 
   const postJsonToReceiver = async (jsonData) => {
-  if (!RECEIVER_API_URL) {
-    console.warn("REACT_APP_RECEIVER_API_URL is missing");
-    return;
-  }
-
-  try {
-    const requestId = makeRequestId();
-    const payloadToSend = {
-      ...jsonData,
-      request_id: requestId,
-    };
-
-    window.lastMayaRequestId = requestId;
-
-    console.log("🆔 Generated request_id:", requestId);
-    console.log("📤 Sending Maya query with request_id:", requestId);
-
-    const response = await fetch(`${RECEIVER_API_URL}/ingest`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payloadToSend),
-    });
-
-    if (!response.ok) {
-      const txt = await response.text();
-      console.error("Receiver API error:", response.status, txt);
-      return;
-    }
-
-    console.log("✅ Query JSON sent to receiver");
-
-    await fetchResultByRequestId(requestId);
-  } catch (err) {
-    console.error("Receiver API network error:", err);
-  }
-};
-
-  
-
-  // Text-to-Speech function using Web Speech API
-  const speakText = async (text) => {
-    // Cancel any ongoing speech
-    window.speechSynthesis.cancel();
-    
-    if (!text || text.trim().length === 0) {
-      console.warn("⚠️ No text to speak");
-      return;
-    }
-
-    console.log("🔊 Speaking text:", text.substring(0, 50) + "...");
-    setIsSpeaking(true);
-
+    if (!RECEIVER_API_URL) return;
     try {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1.0;  // Normal speed
-      utterance.pitch = 1.0;  // Normal pitch
-      utterance.volume = 1.0;  // Full volume
-      utterance.lang = "en-IN";  // Indian English
-
-      utterance.onstart = () => {
-        console.log("🎤 Speaking started");
-      };
-
-      utterance.onend = () => {
-        console.log("✅ Speaking finished - Auto-resuming listening");
-        setIsSpeaking(false);
-        
-        // AUTO-RESUME LISTENING after Maya finishes speaking
-        setListeningMode("idle");
-        speechStartedRef.current = false;
-        pauseTimeoutRef.current = null;
-        
-        setTimeout(() => {
-          console.log("🔄 Auto-resuming listening for next command");
-          startListening();
-        }, 500);
-      };
-
-      utterance.onerror = (event) => {
-        console.error("❌ Speech error:", event.error);
-        setIsSpeaking(false);
-        
-        // Resume listening even on error
-        setListeningMode("idle");
-        speechStartedRef.current = false;
-        pauseTimeoutRef.current = null;
-        setTimeout(() => startListening(), 1000);
-      };
-
-      window.speechSynthesis.speak(utterance);
+      await fetch(`${RECEIVER_API_URL}/ingest`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(jsonData),
+      });
     } catch (err) {
-      console.error("❌ Text-to-speech error:", err);
-      setIsSpeaking(false);
-      
-      // Resume listening on error
-      setListeningMode("idle");
-      speechStartedRef.current = false;
-      pauseTimeoutRef.current = null;
-      setTimeout(() => startListening(), 1000);
+      // Silent fail
     }
   };
 
+  const speakText = (text) => {
+    if (!text || text.trim().length === 0) return;
+
+    sarvamQueue.push({
+      type: "TTS",
+      data: text,
+      callback: (audioBase64) => {
+        if (audioBase64) {
+          setIsSpeaking(true);
+          
+          try {
+            const binaryString = atob(audioBase64);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            const audioBlob = new Blob([bytes], { type: "audio/wav" });
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+
+            audio.onended = () => {
+              setIsSpeaking(false);
+              URL.revokeObjectURL(audioUrl);
+
+              // 🗣️ TALKING done — go back to 👂 LISTENING
+              setListeningMode("idle");
+              speechStartedRef.current = false;
+              pauseTimeoutRef.current = null;
+              listeningRef.current = false;
+              setTimeout(() => startListening(), 1000);
+            };
+
+            audio.onerror = () => {
+              setIsSpeaking(false);
+              URL.revokeObjectURL(audioUrl);
+            };
+
+            audio.play().catch(() => setIsSpeaking(false));
+
+            // 🗣️ TALKING — mic fully paused, prevents feedback loop
+            setListeningMode("talking");
+            stopListeningImmediately();
+          } catch (err) {
+            setIsSpeaking(false);
+          }
+        }
+      }
+    });
+
+    processSarvamQueue();
+  };
+
   const sendMessage = async (textToSend = null) => {
-    // Use textToSend directly, don't rely on state
     const messageText = textToSend || input;
 
-    if (!messageText || !messageText.trim() || loading) {
-      console.warn("⚠️ Message text invalid or already loading:", messageText, loading);
+    if (isProcessingRef.current) {
       return;
     }
 
-    console.log("💬 Sending message:", messageText);
-    console.log("📊 Current messages count before (from ref):", messagesRef.current.length);
-    console.log("📋 Current messages before (from ref):", messagesRef.current);
+    if (!messageText || !messageText.trim() || loading) return;
+
+    isProcessingRef.current = true;
+
+    // 🧠 THINKING — mic fully off, no new query can sneak in
+    stopListeningImmediately();
+    setListeningMode("processing");
 
     const userMessage = { role: "user", content: messageText };
-    // IMPORTANT: Use ref to get latest messages, not state!
     const newMessages = [...messagesRef.current, userMessage];
-    
-    console.log("📝 User message created:", userMessage);
-    console.log("📊 New messages array will have:", newMessages.length, "messages");
-    console.log("📋 New messages array content:", newMessages);
-    
+
     setMessages(newMessages);
-    messagesRef.current = newMessages;  // ← Also update ref immediately
+    messagesRef.current = newMessages;
     setInput("");
     setRecordedText("");
     setLoading(true);
-    setError("");
-    
-    console.log("✅ setMessages called with", newMessages.length, "messages");
 
     try {
       if (!OPENAI_API_KEY) {
+        console.error("❌ OPENAI_API_KEY is missing - check your .env file");
         throw new Error("REACT_APP_OPENAI_API_KEY is missing");
       }
-
-      console.log("🚀 Calling OpenAI API with model: gpt-4o-mini");
 
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
@@ -790,105 +633,85 @@ export default function MayaChat() {
         }),
       });
 
-      console.log("📥 OpenAI response status:", response.status);
-
       const data = await response.json();
-      console.log("📦 OpenAI response data:", data);
 
-      if (!response.ok) {
-        const errorMsg = data.error?.message || data.message || JSON.stringify(data);
-        console.error("❌ OpenAI API Error:", response.status, errorMsg);
-        throw new Error(`OpenAI Error ${response.status}: ${errorMsg}`);
-      }
-
-      if (!data.choices?.[0]?.message?.content) {
-        console.error("❌ No response content from OpenAI:", data);
-        throw new Error("No response from OpenAI");
-      }
+      if (!response.ok) throw new Error(`OpenAI Error ${response.status}`);
+      if (!data.choices?.[0]?.message?.content) throw new Error("No response from OpenAI");
 
       const raw = data.choices[0].message.content;
-
       let displayText = raw;
       let jsonData = null;
 
       try {
         jsonData = JSON.parse(raw);
         displayText = jsonData.reply || raw;
-        
-        // Make JSON accessible from console window
-        window.lastMayaJSON = jsonData;
-        
-        // Log the JSON in console - VERY VISIBLE
-        console.log("\n\n");
-        console.log("════════════════════════════════════════");
-        console.log("📦 📦 📦 MAYA JSON OUTPUT 📦 📦 📦");
-        console.log("════════════════════════════════════════");
-        console.log("📋 FORMATTED JSON:");
-        console.log(JSON.stringify(jsonData, null, 2));
-        console.log("════════════════════════════════════════");
-        console.log("🔍 JSON OBJECT (Expandable in console):");
-        console.log(jsonData);
-        console.log("════════════════════════════════════════");
-        console.log("💾 Access from console: window.lastMayaJSON");
-        console.log("════════════════════════════════════════\n\n");
 
-        await postJsonToReceiver(jsonData);
+        window.lastMayaJSON = jsonData;
+
+        const filterInstance = new MayaQueryFilter();
+        if (!filterInstance.validateIntent(jsonData)) {
+          setLoading(false);
+          isProcessingRef.current = false;
+          setListeningMode("idle");
+          setTimeout(() => startListening(), 1000);
+          return;
+        }
+
+        console.log("\n╔════════════════════════════════════════════════════════════╗");
+        console.log("║           📦 MAYA JSON OUTPUT - OPENAI RESPONSE           ║");
+        console.log("╚════════════════════════════════════════════════════════════╝");
+        console.log("\n📋 COMPLETE JSON OBJECT:");
+        console.log(JSON.stringify(jsonData, null, 2));
+        console.log("\n💬 REPLY:");
+        console.log(`"${jsonData.reply}"`);
+        console.log("\n🎯 INTENT:");
+        console.log(jsonData.intent);
+        console.log("\n📊 PARAMETERS:");
+        const p = jsonData.params;
+        console.log("category:", p.category);
+        console.log("style:", p.style);
+        console.log("color:", p.color);
+        console.log("room:", p.room);
+        console.log("mood:", p.mood);
+        console.log("budget:", p.budget);
+        console.log("\n╔════════════════════════════════════════════════════════════╗");
+        console.log("║ 💾 Accessible via: window.lastMayaJSON                   ║");
+        console.log("╚════════════════════════════════════════════════════════════╝\n");
+
+        postJsonToReceiver(jsonData);
       } catch (parseErr) {
-        console.error("❌ JSON parse ERROR:", parseErr.message);
-        console.error("❌ Raw response:", raw);
         displayText = raw;
       }
 
-      console.log("💭 Adding assistant message to chat:", displayText);
-      // Use ref to ensure we have all previous messages
       const allMessages = [...messagesRef.current, { role: "assistant", content: displayText }];
-      console.log("📊 Messages before adding assistant:", messagesRef.current.length);
-      console.log("📊 Messages after adding assistant:", allMessages.length);
-      console.log("📋 Full messages array now:", allMessages);
-      
+
       setMessages(allMessages);
-      messagesRef.current = allMessages;  // ← Update ref immediately
-      
-      // Speak the response text
-      console.log("🔊 Calling speakText for Maya's response");
-      await speakText(displayText);
+      messagesRef.current = allMessages;
+
+      speakText(displayText);
+      streamMessageText(displayText);
     } catch (err) {
-      console.error("❌ Maya error:", err);
-      console.error("❌ Error details:", err.message);
+      console.error("❌ Error:", err.message);
       const errorMessages = [...messagesRef.current, { role: "assistant", content: "Oops! Something went wrong. Please try again." }];
       setMessages(errorMessages);
       messagesRef.current = errorMessages;
-      setError("Error: " + err.message);
     } finally {
-      console.log("🔄 Finally block executing...");
       setLoading(false);
-      console.log("✅ Loading set to false");
-      
-      // Clear any pending audio chunks
       audioChunksRef.current = [];
-      console.log("🧹 Audio chunks cleared");
-      
-      // Don't restart listening here - speakText will do it after speech ends
-      console.log("⏳ Waiting for speech to end, then auto-resume listening");
+      isProcessingRef.current = false;
     }
   };
 
   const handleKeyDown = (e) => {
     e.stopPropagation();
-
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
-
-    if (e.key === "Backspace") {
-      e.stopPropagation();
-    }
+    if (e.key === "Backspace") e.stopPropagation();
   };
 
-  const handlePanelKeyDown = (e) => {
-    e.stopPropagation();
-  };
+  const handlePanelKeyDown = (e) => e.stopPropagation();
 
   if (!visible) return null;
 
@@ -907,52 +730,55 @@ export default function MayaChat() {
           </button>
 
           <div style={styles.statusBar}>
-            {isListening ? (
+            {listeningMode === "talking" ? (
               <span style={styles.statusLive}>
-                🔴{" "}
-                <span style={{ fontSize: 11 }}>
-                  {listeningMode === "idle" && "LISTENING for wake word..."}
-                  {listeningMode === "continuous" && "SPEAKING... (pause to send)"}
-                  {listeningMode === "paused" && "PROCESSING..."}
-                  {listeningMode === "processing" && "THINKING..."}
-                </span>
+                🗣️ <span style={{ fontSize: 13, fontWeight: "600" }}>TALKING</span>
+              </span>
+            ) : listeningMode === "processing" || listeningMode === "paused" ? (
+              <span style={styles.statusLive}>
+                🧠 <span style={{ fontSize: 13, fontWeight: "600" }}>THINKING</span>
               </span>
             ) : (
-              <span style={styles.statusIdle}>
-                ⭕ <span style={{ fontSize: 11 }}>Say "Hi Maya" to start</span>
+              <span style={styles.statusLive}>
+                👂 <span style={{ fontSize: 13, fontWeight: "600" }}>LISTENING</span>
               </span>
             )}
           </div>
 
           <div style={styles.chatBody}>
-            {/* Debug: Check messages state */}
-            {messages.length > 0 && console.log(`🔍 RENDER: ${messages.length} messages to display`)}
-            
-            {/* Always show messages if they exist */}
             {messages.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-                {messages.map((msg, i) => {
-                  // Stable key: use array index only
-                  const msgKey = `msg-${i}`;
-                  console.log(`🔑 RENDERING msg ${i}/${messages.length}:`, msg.role, msg.content.substring(0, 30));
-                  
-                  return (
-                    <div
-                      key={msgKey}
-                      style={{
-                        display: "flex",
-                        justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
-                        marginBottom: 12,
-                        width: "100%",
-                        minHeight: "auto",
-                      }}
-                    >
-                      <div style={msg.role === "user" ? styles.userBubble : styles.aiBubble}>
-                        {msg.content}
-                      </div>
+                {messages.map((msg, i) => (
+                  <div
+                    key={`msg-${i}`}
+                    style={{
+                      display: "flex",
+                      justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
+                      marginBottom: 12,
+                      width: "100%",
+                    }}
+                  >
+                    <div style={msg.role === "user" ? styles.userBubble : styles.aiBubble}>
+                      {msg.content}
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
+
+                {liveText && (
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "flex-end",
+                      marginBottom: 12,
+                      width: "100%",
+                    }}
+                  >
+                    <div style={{ ...styles.userBubble, fontStyle: "italic", opacity: 0.8, fontSize: 12.5 }}>
+                      {liveText}
+                    </div>
+                  </div>
+                )}
+
                 {loading && (
                   <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 12 }}>
                     <div style={styles.aiBubble}>
@@ -963,7 +789,6 @@ export default function MayaChat() {
                 <div ref={messagesEndRef} style={{ height: 0 }} />
               </div>
             ) : isListening ? (
-              // Show listening animation only if no messages yet
               <div style={styles.listeningContainer}>
                 <div style={styles.listeningAnimation}>
                   <span style={styles.listeningDot}></span>
@@ -972,15 +797,13 @@ export default function MayaChat() {
                 </div>
                 <p style={styles.listeningText}>Hi, I'm Maya. I'm listening.</p>
                 <p style={styles.statusText}>
-                  {listeningMode === "continuous" && "🎤 Keep speaking... (pause to send)"}
-                  {listeningMode === "paused" && "⏸️ Processing your request..."}
-                  {listeningMode === "processing" && "🤔 Crafting a response..."}
-                  {listeningMode === "idle" && "👂 Waiting for 'Hi Maya'..."}
+                  {listeningMode === "talking" && "🗣️ Maaya is speaking..."}
+                  {(listeningMode === "processing" || listeningMode === "paused") && "🧠 Processing your request..."}
+                  {(listeningMode === "idle" || listeningMode === "continuous") && "👂 Waiting for 'Maaya'..."}
                 </p>
                 {recordedText && <p style={styles.recordedTextDisplay}>"{recordedText}"</p>}
               </div>
             ) : (
-              // Empty state - not listening, no messages
               <div style={styles.greeting}>
                 <div style={styles.sparkleIcon}>✦</div>
                 <p style={styles.greetingTitle}>Hi! I'm Maya</p>
@@ -1024,42 +847,7 @@ export default function MayaChat() {
     </>
   );
 }
-async function fetchResultByRequestId(requestId, maxAttempts = 15, delayMs = 1000) {
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      const res = await fetch(`${RECEIVER_API_URL}/result/${requestId}`);
-      const data = await res.json();
 
-      if (data?.found && data?.data && Array.isArray(data.data.categories) && data.data.categories.length > 0) {
-        window.lastStreamlitResult = data.data;
-
-        console.log("\n\n");
-        console.log("════════════════════════════════════════");
-        console.log("📦 STREAMLIT RESULT JSON");
-        console.log("════════════════════════════════════════");
-        console.log("📋 FORMATTED JSON:");
-        console.log(JSON.stringify(data.data, null, 2));
-        console.log("════════════════════════════════════════");
-        console.log("🔍 JSON OBJECT (Expandable in console):");
-        console.log(data.data);
-        console.log("════════════════════════════════════════");
-        console.log("💾 Access via: window.lastStreamlitResult");
-        console.log("════════════════════════════════════════\n\n");
-
-        return data.data;
-      }
-
-      console.log(`⏳ Waiting for result for ${requestId}... attempt ${attempt}/${maxAttempts}`);
-    } catch (err) {
-      console.error("Error fetching result by request id:", err);
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, delayMs));
-  }
-
-  console.warn(`⚠️ No result found for request_id=${requestId}`);
-  return null;
-}
 const styles = {
   toggleBtn: {
     position: "fixed",
@@ -1131,9 +919,6 @@ const styles = {
     color: "#666",
     zIndex: 10,
     transition: "background 0.2s ease",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
   },
   chatBody: {
     flex: 1,
@@ -1218,7 +1003,9 @@ const styles = {
   userBubble: {
     maxWidth: "75%",
     padding: "12px 16px",
-    borderRadius: 20,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderBottomLeftRadius: 20,
     borderBottomRightRadius: 4,
     background: "#e8e8e8",
     color: "#2d2d2d",
@@ -1231,8 +1018,10 @@ const styles = {
   aiBubble: {
     maxWidth: "75%",
     padding: "12px 16px",
-    borderRadius: 20,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     borderBottomLeftRadius: 4,
+    borderBottomRightRadius: 20,
     background: "#f0ecfb",
     color: "#2d2d2d",
     fontSize: 13.5,
