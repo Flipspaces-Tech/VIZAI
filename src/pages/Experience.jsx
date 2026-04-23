@@ -419,50 +419,34 @@ export default function Experience() {
 
   // ✅ NEW: send command to Unreal
   const sendConsoleCommandToUnreal = useCallback((command) => {
-    try {
-      const stream = PixelStreamingUiApp?.stream || PixelStreamingApp;
-      if (!stream || !command) {
-        console.warn("No active Unreal stream found.");
-        return;
-      }
+  try {
+    const payload = { msgType: command };
 
-      console.log("Sending console command to Unreal:", command);
+    console.log("Sending UI interaction to Unreal:", payload);
 
-      if (typeof stream.emitConsoleCommand === "function") {
-        stream.emitConsoleCommand(command);
-        return;
-      }
-
-      if (typeof stream.emitCommand === "function") {
-        stream.emitCommand({ ConsoleCommand: command });
-        return;
-      }
-
-      if (typeof stream.emitUIInteraction === "function") {
-        stream.emitUIInteraction({
-          message: {
-            type: "console_command",
-            value: command,
-          },
-        });
-        return;
-      }
-
-      if (typeof PixelStreamingApp?.emitUIInteraction === "function") {
-        PixelStreamingApp.emitUIInteraction({
-          message: {
-            type: "console_command",
-            value: command,
-          },
-        });
-        return;
-      }
-
-      console.warn("No supported Unreal send method found.");
-    } catch (err) {
-      console.error("Failed to send console command to Unreal:", err);
+    // Try StreamPixel stream object first
+    if (typeof PixelStreamingUiApp?.stream?.emitUIInteraction === "function") {
+      PixelStreamingUiApp.stream.emitUIInteraction(payload);
+      return;
     }
-  }, []);
+
+    // Try pixel streaming instance
+    if (typeof PixelStreamingApp?.emitUIInteraction === "function") {
+      PixelStreamingApp.emitUIInteraction(payload);
+      return;
+    }
+
+    // Browser global fallback
+    if (typeof window.pixelStreaming?.emitUIInteraction === "function") {
+      window.pixelStreaming.emitUIInteraction(payload);
+      return;
+    }
+
+    console.warn("emitUIInteraction not found on any Pixel Streaming object.");
+  } catch (err) {
+    console.error("Failed to send UI interaction to Unreal:", err);
+  }
+}, []);
 
   const extractBestImageUrl = (raw) => {
     if (typeof raw !== "string") return "";
@@ -509,6 +493,15 @@ export default function Experience() {
         }
 
         const msg = response;
+        if (msg.type === "roomSkuCsv") {
+  console.log("Received roomSkuCsv from Unreal:");
+  console.log(msg.csvRows);
+
+  // optional: keep it globally accessible for testing
+  window.lastRoomSkuCsv = msg.csvRows;
+
+  return;
+}
         if (!msg || typeof msg !== "object") return;
 
         if (Object.prototype.hasOwnProperty.call(msg, "showMouseCursor")) {
