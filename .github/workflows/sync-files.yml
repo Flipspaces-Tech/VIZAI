@@ -1,0 +1,34 @@
+name: Sync Maya Files to DDT
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout VIZAI repo
+        uses: actions/checkout@v3
+
+      - name: Clone DDT repo
+        run: |
+          git clone https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/Flipspaces-Tech/DDT.git
+
+      - name: Copy files
+        run: |
+          cp src/components/MayaChat.jsx DDT/MayaChat.jsx
+          cp src/components/MayaQueryEngine.js DDT/MayaQueryEngine.js
+          cp src/components/MayaQueryFilter.js DDT/MayaQueryFilter.js
+
+      - name: Commit and push
+        run: |
+          cd DDT
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add MayaChat.jsx MayaQueryEngine.js MayaQueryFilter.js
+          git commit -m "Auto sync Maya files" || echo "No changes"
+          git remote set-url origin https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/Flipspaces-Tech/DDT.git
+          git push origin main
