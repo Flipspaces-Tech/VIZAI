@@ -772,11 +772,11 @@ export default function Experience() {
         return;
       }
 
-      // ✅ TEMP TEST: press 7 to send getRoomSkuCsv to Unreal
+      // ✅ TEMP TEST: press 7 to send getRoomCsv to Unreal
       if (e.code === "Digit7" && !e.repeat) {
         e.preventDefault();
         e.stopPropagation();
-        sendConsoleCommandToUnreal("getRoomSkuCsv");
+        sendConsoleCommandToUnreal("getRoomCsv");
         return;
       }
     };
