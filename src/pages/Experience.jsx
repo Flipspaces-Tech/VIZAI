@@ -448,6 +448,43 @@ export default function Experience() {
   }
 }, []);
 
+const sendReplacementCsvToUnreal = useCallback((csvRows) => {
+  try {
+    const rowsArray = Array.isArray(csvRows)
+      ? csvRows
+      : String(csvRows || "")
+          .split(";")
+          .map((r) => r.trim())
+          .filter(Boolean);
+
+    const payload = {
+      msgType: "receivedReplacementCsv",
+      csvRows: rowsArray,
+    };
+
+    console.log("Sending receivedReplacementCsv to Unreal:", payload);
+
+    if (typeof PixelStreamingUiApp?.stream?.emitUIInteraction === "function") {
+      PixelStreamingUiApp.stream.emitUIInteraction(payload);
+      return;
+    }
+
+    if (typeof PixelStreamingApp?.emitUIInteraction === "function") {
+      PixelStreamingApp.emitUIInteraction(payload);
+      return;
+    }
+
+    if (typeof window.pixelStreaming?.emitUIInteraction === "function") {
+      window.pixelStreaming.emitUIInteraction(payload);
+      return;
+    }
+
+    console.warn("emitUIInteraction not found.");
+  } catch (err) {
+    console.error("Failed to send receivedReplacementCsv to Unreal:", err);
+  }
+}, []);
+
   const extractBestImageUrl = (raw) => {
     if (typeof raw !== "string") return "";
     const s = raw.trim();
@@ -779,6 +816,18 @@ export default function Experience() {
         sendConsoleCommandToUnreal("getRoomCsv");
         return;
       }
+      if (e.code === "Digit8" && !e.repeat) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const testCsvRows = [
+          "SpaceName,Category,ProductName,ProductSKU,ProductPrice,ProductQuantity,Finishes,UpdatedProductName,UpdatedProductSKU,UpdatedProductPrice,UpdatedProductQuantity,UpdatedFinishes,Area",
+          "Kitchen,Chair,AC130,SKU988,6000,1,\"ArmChair--SKU224--Cushion:NOT_FOUND:WhiteFabric,\",OC1,SKU981,5000,1,\"\",NOT_FOUND"
+        ];
+
+        sendReplacementCsvToUnreal(testCsvRows);
+        return;
+      }
     };
 
     window.addEventListener("keydown", onKey, { capture: true });
@@ -830,6 +879,7 @@ export default function Experience() {
     hardDisconnect,
     runIKeyClickSequence,
     sendConsoleCommandToUnreal,
+    sendReplacementCsvToUnreal,
   ]);
 
   return (
