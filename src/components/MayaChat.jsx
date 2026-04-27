@@ -204,6 +204,10 @@ export default function MayaChat() {
   const recognitionRef = useRef(null);
   const queryEngineRef = useRef(new MayaQueryEngine());
   const liveTextRef = useRef("");
+  
+
+  const lastMayaRequestIdRef = useRef("");
+  const resultPollIntervalRef = useRef(null);
 
   useEffect(() => {
     if (!hasInitializedRef.current) {
@@ -284,6 +288,47 @@ export default function MayaChat() {
       // Silent
     }
   };
+
+  const startPollingForResult = (requestId) => {
+  if (!requestId) return;
+
+  lastMayaRequestIdRef.current = requestId;
+
+  if (resultPollIntervalRef.current) {
+    clearInterval(resultPollIntervalRef.current);
+  }
+
+  let attempts = 0;
+
+  resultPollIntervalRef.current = setInterval(async () => {
+    attempts++;
+
+    try {
+      const res = await fetch(`${RECEIVER_API_URL}/result/${requestId}`);
+      const data = await res.json();
+
+      console.log("Polling result:", data);
+
+      if (data?.found && data?.data?.categories?.length) {
+        console.log("✅ RESULT RECEIVED FROM STREAMLIT:");
+        console.log(JSON.stringify(data.data, null, 2));
+
+        window.lastMayaSearchResult = data.data;
+
+        clearInterval(resultPollIntervalRef.current);
+        resultPollIntervalRef.current = null;
+      }
+
+      if (attempts >= 30) {
+        console.warn("Result polling stopped. No result found.");
+        clearInterval(resultPollIntervalRef.current);
+        resultPollIntervalRef.current = null;
+      }
+    } catch (err) {
+      console.error("Failed polling result:", err);
+    }
+  }, 1000);
+};
 
   const startListening = async () => {
     if (listeningRef.current) return;
@@ -575,6 +620,8 @@ export default function MayaChat() {
 
     const result = await res.json().catch(() => null);
     console.log("Receiver ingest status:", res.status, result);
+
+    startPollingForResult(payloadWithId.request_id);
   } catch (err) {
     console.error("Failed to post Maya JSON:", err);
   }
