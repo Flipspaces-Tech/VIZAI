@@ -824,7 +824,7 @@ const sendReplacementCsvToUnreal = useCallback((csvRows) => {
         sendConsoleCommandToUnreal("getRoomCsv");
         return;
       }
-      if (e.code === "Digit8" && !e.repeat) {
+      if (e.code === "Digit9" && !e.repeat) {
         e.preventDefault();
         e.stopPropagation();
         console.log("🏠 Sending getRoomNames to Unreal...");
