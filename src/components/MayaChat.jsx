@@ -92,11 +92,11 @@ const sarvamSTT = async (audioBlob, callback) => {
 
     const formData = new FormData();
     formData.append("file", audioBlob, "audio.mp4");
-    formData.append("language_code", "en-IN");
+    formData.append("model", "saaras:v2.5");
 
-    const response = await fetch("https://api.sarvam.ai/speech-to-text", {
+    const response = await fetch("https://api.sarvam.ai/speech-to-text-translate", {
       method: "POST",
-      headers: { Authorization: `Bearer ${SARVAM_API_KEY}` },
+      headers: { "api-subscription-key": SARVAM_API_KEY },
       body: formData,
     });
 
@@ -138,7 +138,7 @@ const sarvamTTS = async (text, callback) => {
     const ttsResponse = await fetch("https://api.sarvam.ai/text-to-speech", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${SARVAM_API_KEY}`,
+        "api-subscription-key": SARVAM_API_KEY,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -203,6 +203,7 @@ export default function MayaChat() {
   const isProcessingRef = useRef(false);
   const recognitionRef = useRef(null);
   const queryEngineRef = useRef(new MayaQueryEngine());
+  const liveTextRef = useRef("");
 
   useEffect(() => {
     if (!hasInitializedRef.current) {
@@ -264,6 +265,7 @@ export default function MayaChat() {
         }
 
         if (interimTranscript) {
+          liveTextRef.current = interimTranscript;
           setLiveText(interimTranscript);
         }
       };
@@ -341,6 +343,21 @@ export default function MayaChat() {
           const hasSpeech = speechStartedRef.current || blobSize > 30000;
 
           if (hasSpeech && blobSize > 15000) {
+            // Quick wake word pre-check using liveText — skips Sarvam if no wake word
+            const liveTextLower = (liveTextRef.current || "").toLowerCase();
+            const hasWakeWordInLive = liveTextLower.length > 0 &&
+              WAKE_WORDS.some(word => liveTextLower.includes(word));
+
+            // Only skip if liveText is confident (has content) and no wake word found
+            if (liveTextLower.length > 3 && !hasWakeWordInLive) {
+              setListeningMode("idle");
+              speechStartedRef.current = false;
+              liveTextRef.current = "";
+              setLiveText("");
+              setTimeout(() => startListening(), 300);
+              return;
+            }
+
             await sendAudioToSarvam(audioBlob);
           } else {
             setListeningMode("idle");
@@ -498,6 +515,7 @@ export default function MayaChat() {
       data: audioBlob,
       callback: (transcript) => {
         if (transcript) {
+          liveTextRef.current = "";
           setLiveText("");
           handleTranscript(transcript);
         } else {
@@ -563,7 +581,7 @@ export default function MayaChat() {
             for (let i = 0; i < binaryString.length; i++) {
               bytes[i] = binaryString.charCodeAt(i);
             }
-            const audioBlob = new Blob([bytes], { type: "audio/wav" });
+            const audioBlob = new Blob([bytes], { type: "audio/mpeg" });
             const audioUrl = URL.createObjectURL(audioBlob);
             const audio = new Audio(audioUrl);
 
