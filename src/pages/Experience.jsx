@@ -530,6 +530,14 @@ const sendReplacementCsvToUnreal = useCallback((csvRows) => {
         }
 
         const msg = response;
+        if (msg.type === "roomNames") {
+          console.log("🏠 Received roomNames from Unreal:");
+          console.log("response:", JSON.stringify(msg));
+          console.log("Room list:", msg.roomNames);
+          window.lastRoomNames = msg.roomNames;
+          return;
+        }
+
         if (msg.type === "roomSkuCsv") {
   console.log("Received roomSkuCsv from Unreal:");
   console.log(msg.csvRows);
@@ -816,16 +824,11 @@ const sendReplacementCsvToUnreal = useCallback((csvRows) => {
         sendConsoleCommandToUnreal("getRoomCsv");
         return;
       }
-      if (e.code === "Digit8" && !e.repeat) {
+      if (e.code === "Digit9" && !e.repeat) {
         e.preventDefault();
         e.stopPropagation();
-
-        const testCsvRows = [
-          "SpaceName,Category,ProductName,ProductSKU,ProductPrice,ProductQuantity,Finishes,UpdatedProductName,UpdatedProductSKU,UpdatedProductPrice,UpdatedProductQuantity,UpdatedFinishes,Area",
-          "Kitchen,Chair,AC130,SKU988,6000,1,\"ArmChair--SKU224--Cushion:NOT_FOUND:WhiteFabric,\",OC1,SKU981,5000,1,\"\",NOT_FOUND"
-        ];
-
-        sendReplacementCsvToUnreal(testCsvRows);
+        console.log("🏠 Sending getRoomNames to Unreal...");
+        sendConsoleCommandToUnreal("getRoomNames");
         return;
       }
     };
