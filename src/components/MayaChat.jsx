@@ -599,12 +599,13 @@ export default function MayaChat() {
     streamNextWord();
   };
 
-  const postJsonToReceiver = async (jsonData) => {
+  const postJsonToReceiver = async (jsonData, userQuery = "") => {
   if (!RECEIVER_API_URL) return;
 
   try {
     const payloadWithId = {
       ...jsonData,
+      search_query: userQuery,
       request_id: `maya-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       source: "maya_frontend",
       created_at: new Date().toISOString(),
@@ -806,7 +807,7 @@ export default function MayaChat() {
         console.log("║ 💾 Accessible via: window.lastMayaJSON                   ║");
         console.log("╚════════════════════════════════════════════════════════════╝\n");
 
-        postJsonToReceiver(jsonData);
+        postJsonToReceiver(jsonData, messageText);
       } catch (parseErr) {
         displayText = raw;
       }
