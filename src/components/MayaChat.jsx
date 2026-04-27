@@ -613,7 +613,7 @@ export default function MayaChat() {
 
     console.log("Sending Maya payload to receiver:", payloadWithId);
 
-    const res = await fetch(`${RECEIVER_API_URL}/search`, {
+    const res = await fetch(`${RECEIVER_API_URL}/ingest`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payloadWithId),
