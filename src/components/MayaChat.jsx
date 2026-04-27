@@ -537,30 +537,17 @@ export default function MayaChat() {
   };
 
   const postJsonToReceiver = async (jsonData) => {
-  if (!RECEIVER_API_URL) return;
-
-  try {
-    const payloadWithId = {
-      ...jsonData,
-      request_id: `maya-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      source: "maya_frontend",
-      created_at: new Date().toISOString(),
-    };
-
-    console.log("Sending Maya payload to receiver:", payloadWithId);
-
-    const res = await fetch(`${RECEIVER_API_URL}/ingest`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payloadWithId),
-    });
-
-    const result = await res.json().catch(() => null);
-    console.log("Receiver ingest status:", res.status, result);
-  } catch (err) {
-    console.error("Failed to post Maya JSON:", err);
-  }
-};
+    if (!RECEIVER_API_URL) return;
+    try {
+      await fetch(`${RECEIVER_API_URL}/ingest`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(jsonData),
+      });
+    } catch (err) {
+      // Silent fail
+    }
+  };
 
   const speakText = (text, fullText) => {
     if (!text || text.trim().length === 0) return;
