@@ -50,7 +50,7 @@ const NOISE_THRESHOLD = 50;
 const SPEECH_CONFIDENCE_THRESHOLD = 0.85;
 const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY || "";
 const SARVAM_API_KEY = process.env.REACT_APP_SARVAM_API_KEY || "";
-const RECEIVER_API_URL = "https://ddt-sq73.onrender.com";
+const RECEIVER_API_URL = "https://maya-receiver-api.onrender.com";
 
 let sarvamFailureCount = 0;
 
