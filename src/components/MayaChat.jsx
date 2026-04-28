@@ -54,8 +54,6 @@ const RECEIVER_API_URL = "https://maya-receiver-api.onrender.com";
 
 let sarvamFailureCount = 0;
 
-// TEST
-
 // Separate queues for STT and TTS — they never block each other
 let sttQueue = [];
 let ttsQueue = [];
@@ -206,10 +204,6 @@ export default function MayaChat() {
   const recognitionRef = useRef(null);
   const queryEngineRef = useRef(new MayaQueryEngine());
   const liveTextRef = useRef("");
-  
-
-  const lastMayaRequestIdRef = useRef("");
-  const resultPollIntervalRef = useRef(null);
 
   useEffect(() => {
     if (!hasInitializedRef.current) {
@@ -290,47 +284,6 @@ export default function MayaChat() {
       // Silent
     }
   };
-
-  const startPollingForResult = (requestId) => {
-  if (!requestId) return;
-
-  lastMayaRequestIdRef.current = requestId;
-
-  if (resultPollIntervalRef.current) {
-    clearInterval(resultPollIntervalRef.current);
-  }
-
-  let attempts = 0;
-
-  resultPollIntervalRef.current = setInterval(async () => {
-    attempts++;
-
-    try {
-      const res = await fetch(`${RECEIVER_API_URL}/result/${requestId}`);
-      const data = await res.json();
-
-      console.log("Polling result:", data);
-
-      if (data?.found && data?.data?.categories?.length) {
-        console.log("✅ RESULT RECEIVED FROM STREAMLIT:");
-        console.log(JSON.stringify(data.data, null, 2));
-
-        window.lastMayaSearchResult = data.data;
-
-        clearInterval(resultPollIntervalRef.current);
-        resultPollIntervalRef.current = null;
-      }
-
-      if (attempts >= 30) {
-        console.warn("Result polling stopped. No result found.");
-        clearInterval(resultPollIntervalRef.current);
-        resultPollIntervalRef.current = null;
-      }
-    } catch (err) {
-      console.error("Failed polling result:", err);
-    }
-  }, 1000);
-};
 
   const startListening = async () => {
     if (listeningRef.current) return;
@@ -601,34 +554,18 @@ export default function MayaChat() {
     streamNextWord();
   };
 
-  const postJsonToReceiver = async (jsonData, userQuery = "") => {
-  if (!RECEIVER_API_URL) return;
-
-  try {
-    const payloadWithId = {
-      ...jsonData,
-      search_query: userQuery,
-      request_id: `maya-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      source: "maya_frontend",
-      created_at: new Date().toISOString(),
-    };
-
-    console.log("Sending Maya payload to receiver:", payloadWithId);
-
-    const res = await fetch(`${RECEIVER_API_URL}/ingest`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payloadWithId),
-    });
-
-    const result = await res.json().catch(() => null);
-    console.log("Receiver ingest status:", res.status, result);
-
-    startPollingForResult(payloadWithId.request_id);
-  } catch (err) {
-    console.error("Failed to post Maya JSON:", err);
-  }
-};
+  const postJsonToReceiver = async (jsonData) => {
+    if (!RECEIVER_API_URL) return;
+    try {
+      await fetch(`${RECEIVER_API_URL}/ingest`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(jsonData),
+      });
+    } catch (err) {
+      // Silent fail
+    }
+  };
 
   const speakText = (text, fullText) => {
     if (!text || text.trim().length === 0) return;
@@ -809,7 +746,7 @@ export default function MayaChat() {
         console.log("║ 💾 Accessible via: window.lastMayaJSON                   ║");
         console.log("╚════════════════════════════════════════════════════════════╝\n");
 
-        postJsonToReceiver(jsonData, messageText);
+        postJsonToReceiver(jsonData);
       } catch (parseErr) {
         displayText = raw;
       }
