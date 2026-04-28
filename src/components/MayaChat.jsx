@@ -343,21 +343,6 @@ export default function MayaChat() {
           const hasSpeech = speechStartedRef.current || blobSize > 30000;
 
           if (hasSpeech && blobSize > 15000) {
-            // Quick wake word pre-check using liveText — skips Sarvam if no wake word
-            const liveTextLower = (liveTextRef.current || "").toLowerCase();
-            const hasWakeWordInLive = liveTextLower.length > 0 &&
-              WAKE_WORDS.some(word => liveTextLower.includes(word));
-
-            // Only skip if liveText is confident (has content) and no wake word found
-            if (liveTextLower.length > 3 && !hasWakeWordInLive) {
-              setListeningMode("idle");
-              speechStartedRef.current = false;
-              liveTextRef.current = "";
-              setLiveText("");
-              setTimeout(() => startListening(), 300);
-              return;
-            }
-
             await sendAudioToSarvam(audioBlob);
           } else {
             setListeningMode("idle");
