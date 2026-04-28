@@ -882,7 +882,7 @@ export default function MayaChat() {
           </div>
 
           <div style={styles.chatBody}>
-            {messages.length > 0 ? (
+            {(messages.length > 0 || liveText) ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
                 {messages.map((msg, i) => (
                   <div
