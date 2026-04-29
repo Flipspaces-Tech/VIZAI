@@ -539,6 +539,14 @@ const sendReplacementCsvToUnreal = useCallback((csvRows) => {
 
   return;
 }
+
+        // Handle roomNames response from Unreal
+        if (msg.type === "roomNames") {
+          console.log("Received roomNames from Unreal:", msg.roomNames);
+          window.lastRoomNames = msg.roomNames || [];
+          return;
+        }
+
         if (!msg || typeof msg !== "object") return;
 
         if (Object.prototype.hasOwnProperty.call(msg, "showMouseCursor")) {
@@ -881,6 +889,31 @@ const sendReplacementCsvToUnreal = useCallback((csvRows) => {
     sendConsoleCommandToUnreal,
     sendReplacementCsvToUnreal,
   ]);
+
+  // Expose sendToUnreal on window so MayaChat can send complex payloads to Unreal
+  useEffect(() => {
+    window.sendToUnreal = (payload) => {
+      try {
+        console.log("MayaChat → Unreal:", payload);
+        if (typeof PixelStreamingUiApp?.stream?.emitUIInteraction === "function") {
+          PixelStreamingUiApp.stream.emitUIInteraction(payload);
+          return;
+        }
+        if (typeof PixelStreamingApp?.emitUIInteraction === "function") {
+          PixelStreamingApp.emitUIInteraction(payload);
+          return;
+        }
+        if (typeof window.pixelStreaming?.emitUIInteraction === "function") {
+          window.pixelStreaming.emitUIInteraction(payload);
+          return;
+        }
+        console.warn("sendToUnreal: emitUIInteraction not found.");
+      } catch (err) {
+        console.error("sendToUnreal failed:", err);
+      }
+    };
+    return () => { delete window.sendToUnreal; };
+  }, []);
 
   return (
     <div className="experience-page">

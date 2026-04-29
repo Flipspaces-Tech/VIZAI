@@ -12,7 +12,7 @@ CRITICAL: RESPOND ONLY IN VALID JSON - Never use plain text!
 JSON FORMAT:
 {
   "reply": "<1-2 line conversational response>",
-  "intent": "<search_product|display_products|apply_theme|style_consultation|product_swap|palette_match|room_setup|budget_analysis|quick_filter|bundle|comparison|upgrade|refine>",
+  "intent": "<search_product|display_products|apply_theme|style_consultation|product_swap|palette_match|room_setup|budget_analysis|quick_filter|bundle|comparison|upgrade|refine|partial_swap|show_preview|confirm_order>",
   "params": {
     "category": "<sofa|chair|table|lamp|decor or null>",
     "style": "<modern|traditional|minimalist|eclectic or null>",
@@ -343,6 +343,21 @@ export default function MayaChat() {
           const hasSpeech = speechStartedRef.current || blobSize > 30000;
 
           if (hasSpeech && blobSize > 15000) {
+            // Quick wake word pre-check using liveText — skips Sarvam if no wake word
+            const liveTextLower = (liveTextRef.current || "").toLowerCase();
+            const hasWakeWordInLive = liveTextLower.length > 0 &&
+              WAKE_WORDS.some(word => liveTextLower.includes(word));
+
+            // Only skip if liveText is confident (has content) and no wake word found
+            if (liveTextLower.length > 3 && !hasWakeWordInLive) {
+              setListeningMode("idle");
+              speechStartedRef.current = false;
+              liveTextRef.current = "";
+              setLiveText("");
+              setTimeout(() => startListening(), 300);
+              return;
+            }
+
             await sendAudioToSarvam(audioBlob);
           } else {
             setListeningMode("idle");
@@ -732,6 +747,29 @@ export default function MayaChat() {
         console.log("╚════════════════════════════════════════════════════════════╝\n");
 
         postJsonToReceiver(jsonData);
+
+        // Send getRoomNames to Unreal on every query to stay updated
+        if (typeof window.sendToUnreal === "function") {
+          window.sendToUnreal({ msgType: "getRoomNames" });
+        }
+
+        // Send gotoRoom to Unreal when intent is room_setup
+        // ✅ OPTIMIZED: Only send getRoomNames when room changes
+        if (jsonData.intent === "room_setup" && jsonData.params?.room) {
+          const roomRaw = jsonData.params.room; // "conference_room"
+          const unrealRoomName = roomRaw
+            .split("_")
+            .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+            .join(""); // "ConferenceRoom"
+
+          // Only send if room is different from last time
+          if (unrealRoomName !== lastRoomRef.current) {
+            window.sendToUnreal({ msgType: "getRoomNames" }); // Update room list
+            window.sendToUnreal({ msgType: "gotoRoom", targetRoom: unrealRoomName });
+            lastRoomRef.current = unrealRoomName;
+            console.log(`🚀 gotoRoom → ${unrealRoomName}`);
+            }
+          }
       } catch (parseErr) {
         displayText = raw;
       }
