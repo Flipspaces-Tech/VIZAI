@@ -3,23 +3,16 @@
 export class MayaQueryFilter {
   constructor() {
     // Valid design intents
-    this.PRIMARY_INTENTS = [
-      "search_product",
-      "display_products",
-      "apply_theme",
+    this.PRIMARY_INTENTS = [   
+      "change_theme",
       "style_consultation",
-      "product_swap",
-      "palette_match",
-      "room_setup",
+      "selected_swap",//only one thing change in the room
+      "navigate", // to go other rooms like move to conference room
       "budget_analysis",
-      "quick_filter",
-      "bundle",
-      "comparison",
-      "upgrade",
-      "refine",
-      "partial_swap",
+      "change_budget",
+      "partial_swap",// things change in the room 
       "show_preview",
-      "confirm_order"
+      "confirm_order" 
     ];
 
     this.INTENT_CONFIDENCE_THRESHOLD = 0.7;
