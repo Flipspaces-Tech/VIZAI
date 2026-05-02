@@ -231,6 +231,76 @@ export default function Experience() {
   const currentCsvRows = useRef(null); // contains parsed rows from Unreal
   // const [currentRoomName, setCurrentRoomName] = useState(""); // contains the current room name
 
+  const parseCSVAndUpdateCurrentRows = (csvRows) => {
+    // Convert the array of strings into one single CSV block
+    const csvString = csvRows.join("\n");
+
+    // parse and store in the currentCsvRows object
+    Papa.parse(csvString, {
+      header: true,
+      skipEmptyLines: true,
+      transform: (value, column) => {
+        // We only want to transform values as they are assigned to rows
+        return value;
+      },
+      complete: (output) => {
+        const allRows = output.data.map((row) => {
+          // Initialize the array on the row object
+          if (!row.FinishDetailsList) {
+            row.FinishDetailsList = [];
+          }
+          // Add empty array for UpdatedFinishDetailsList that will bundled into a single column for UpdatedFinishes later
+          if (!row.UpdatedFinishDetailsList) {
+            row.UpdatedFinishDetailsList = [];
+          }
+
+          // Custom logic for the FinishSKU column
+          if (row.Finishes) {
+            // Split by comma to get individual details then by colon to get the parts
+            const splitFinishes = row.Finishes.split(",");
+            splitFinishes.forEach((singleFinish) => {
+              if (singleFinish.trim()) {
+                const [partName, finishDisplayName, finishSkuId] =
+                  singleFinish.split(":");
+
+                // Add the finish details to the FinishDetailsList array
+                row.FinishDetailsList.push({
+                  partName: partName?.trim(),
+                  finishDisplayName: finishDisplayName?.trim(),
+                  finishSkuId: finishSkuId?.trim(),
+                });
+              }
+            });
+          }
+
+          // Custom logic for the FinishSKU column
+          if (row.UpdateFinishes) {
+            // Split by comma to get individual details then by colon to get the parts
+            const splitFinishes = row.UpdateFinishes.split(",");
+            splitFinishes.forEach((singleFinish) => {
+              if (singleFinish.trim()) {
+                const [partName, finishDisplayName, finishSkuId] =
+                  singleFinish.split(":");
+
+                // Add the finish details to the UpdatedFinishDetailsList array
+                row.UpdatedFinishDetailsList.push({
+                  partName: partName?.trim(),
+                  finishDisplayName: finishDisplayName?.trim(),
+                  finishSkuId: finishSkuId?.trim(),
+                });
+              }
+            });
+          }
+
+          return row;
+        });
+
+        console.log("ParsedObjects", allRows);
+        currentCsvRows.current = allRows;
+      },
+    });
+  };
+
   const videoWrapRef = useRef(null);
   const connectingRef = useRef(false);
   const mountedRef = useRef(false);
@@ -572,50 +642,7 @@ export default function Experience() {
             currentCsvHeaders.current = headers;
           }
 
-          // Convert the array of strings into one single CSV block
-          const csvString = msg.csvRows.join("\n");
-
-          // parse and store in the currentCsvRows object
-          Papa.parse(csvString, {
-            header: true,
-            skipEmptyLines: true,
-            transform: (value, column) => {
-              // We only want to transform values as they are assigned to rows
-              return value;
-            },
-            complete: (output) => {
-              const allRows = output.data.map((row) => {
-                // Initialize the array on the row object
-                row.FinishDetailsList = [];
-                // Add empty array for UpdatedFinishDetailsList that will bundled into a single column for UpdatedFinishes later
-                row.UpdatedFinishDetailsList = [];
-
-                // Custom logic for the FinishSKU column
-                if (row.Finishes) {
-                  // Split by comma to get individual details then by colon to get the parts
-                  const splitFinishes = row.Finishes.split(",");
-                  splitFinishes.forEach((singleFinish) => {
-                    if (singleFinish.trim()) {
-                      const [partName, finishDisplayName, finishSkuId] =
-                        singleFinish.split(":");
-
-                      // Add the finish details to the FinishDetailsList array
-                      row.FinishDetailsList.push({
-                        partName: partName?.trim(),
-                        finishDisplayName: finishDisplayName?.trim(),
-                        finishSkuId: finishSkuId?.trim(),
-                      });
-                    }
-                  });
-                }
-
-                return row;
-              });
-
-              console.log("ParsedObjects", allRows);
-              currentCsvRows.current = allRows;
-            },
-          });
+          parseCSVAndUpdateCurrentRows(msg.csvRows);
 
           return;
         }
@@ -944,9 +971,12 @@ export default function Experience() {
             finishSkuId: "AW-ACCENT-43",
           },
         ];
-        currentCsvRows.current[0].UpdatedFinishes = "StaticMeshComponent0:NOT_FOUND:AW-ACCENT-43,";
+        currentCsvRows.current[0].UpdatedFinishes =
+          "StaticMeshComponent0:NOT_FOUND:AW-ACCENT-43,";
 
         // currentCsvRows.current = tempRows;
+
+        // TODO: parseCSVAndUpdateCurrentRows(msg.csvRowsFromBot);
 
         const updatedCsvString = Papa.unparse(currentCsvRows.current, {
           header: true,
@@ -954,8 +984,7 @@ export default function Experience() {
         });
 
         const updatedCsvRows = updatedCsvString.split("\n");
-        
-    
+
         // sendReplacementCsvToUnreal(testCsvRows);
         sendReplacementCsvToUnreal(updatedCsvRows);
         return;
