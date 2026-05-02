@@ -578,6 +578,62 @@ export default function Experience() {
     }
   }, []);
 
+  // ========== ADD CSV FUNCTIONS (NEW) ==========
+    // ========== ADD CSV FUNCTIONS (CRITICAL) ==========
+    useEffect(() => {
+      console.log("\n╔════════════════════════════════════════════════════╗");
+      console.log("║ 📡 SETTING UP CSV BRIDGE: MayaChat ↔ Unreal      ║");
+      console.log("╚════════════════════════════════════════════════════╝\n");
+  
+      // ✅ Function: Receive CSV from MayaChat and forward to Unreal
+      window.sendCSVToExperience = (csvData) => {
+        if (!csvData) {
+          console.error("❌ No csvData provided");
+          return;
+        }
+  
+        console.log("📤 Forwarding filled CSV to Unreal:");
+        console.log("   Rows:", csvData.csvRows?.length || 0);
+  
+        const payload = {
+          msgType: "receivedReplacementCsv",
+          csvRows: csvData.csvRows,
+          metadata: csvData.metadata,
+        };
+  
+        // ========== SEND TO UNREAL ==========
+        try {
+          if (PixelStreamingUiApp?.stream?.emitUIInteraction) {
+            console.log("✅ Sent via PixelStreamingUiApp");
+            PixelStreamingUiApp.stream.emitUIInteraction(payload);
+            return;
+          }
+  
+          if (PixelStreamingApp?.emitUIInteraction) {
+            console.log("✅ Sent via PixelStreamingApp");
+            PixelStreamingApp.emitUIInteraction(payload);
+            return;
+          }
+  
+          console.error("❌ No emitUIInteraction found");
+        } catch (err) {
+          console.error("❌ Error sending to Unreal:", err);
+        }
+      };
+  
+      console.log("✅ CSV bridge is active");
+  
+      const timer = setTimeout(() => {
+        console.log("🚀 AUTO-SENDING getRoomCsv to Unreal");
+        sendConsoleCommandToUnreal("getRoomCsv");
+      }, 2000);
+  
+      return () => {
+        clearTimeout(timer);
+        delete window.sendCSVToExperience;
+      };
+    }, [sendConsoleCommandToUnreal]);
+
   const extractBestImageUrl = (raw) => {
     if (typeof raw !== "string") return "";
     const s = raw.trim();
@@ -643,6 +699,27 @@ export default function Experience() {
           }
 
           parseCSVAndUpdateCurrentRows(msg.csvRows);
+          
+          console.log("📥 CSV FROM UNREAL - FORWARDING TO MAYA");
+          const csvArray = msg.csvRows;
+
+          // Post message to MayaChat
+          if (window.parent) {
+            window.parent.postMessage(
+              {
+                type: "csvFromUnreal",
+                data: csvArray,
+              },
+              "*",
+            );
+          }
+
+          // Also dispatch to window for MayaChat to listen
+          window.dispatchEvent(
+            new CustomEvent("csvFromUnreal", {
+              detail: csvArray,
+            }),
+          );
 
           return;
         }
@@ -1128,7 +1205,7 @@ export default function Experience() {
           willChange: "transform",
         }}
       />
-      <MayaChat />
+      <MayaChat sendReplacementCsvToUnreal={sendReplacementCsvToUnreal} />
     </div>
   );
 }
