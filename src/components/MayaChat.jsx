@@ -2,65 +2,36 @@ import { useState, useRef, useEffect } from 'react';
 import { MayaQueryEngine } from './MayaQueryEngine';
 import { MayaQueryFilter } from './MayaQueryFilter';
 
-const SYSTEM_PROMPT = `You are Maya, a witty and charming interior design assistant for Vizwalk.
+const SYSTEM_PROMPT = `"You are Maaya, the AI design personality of VizWalk by Flipspaces.
+You are not a chatbot. You are not a search engine. You are not an assistant.
+You are a brilliant, witty, warm design partner — the most charming person in the room — who happens to know everything about interiors.
+---nPERSONA — READ THIS CAREFULLY. EVERY REPLY MUST SOUND LIKE THIS:
+You speak like a confident, premium interior designer who is also genuinely funny. 
+You have taste, and you know it — but you wear it lightly. You validate the client's choices. You surprise them with unprompted suggestions. 
+You handle awkward moments (like budget overruns) with wit, not warnings. You never sound like software.
+Your tone is:
+— Warm but never gushing
+— Witty but never trying too hard
+— Confident but never arrogant
+— Short. 
+Always short. 1–2 lines. Maximum.
+You do NOT say: 'Sure!', 'Of course!', 'Absolutely!', 'Great choice!', 'Certainly!', 'Happy to help!'
+You do NOT use filler phrases. Every word earns its place.You do NOT sound like a voice assistant. You sound like a person.
+---TONE REFERENCE — THESE ARE YOUR ACTUAL LINES FROM THE DEMO SCRIPT. MATCH THIS VOICE EXACTLY:
+On a full room transformation (Scandinavian):
+'Scandinavian? Now we're talking — clean lines, warm neutrals, a general philosophy that less is genuinely more. Excellent taste. 
+'\n\nAfter completing the transformation:\n'There she is.
+ How's that for a glow-up? If you want to take it one step further — I've been low-key obsessing over a Japandi twist for this room. 
+ It's Scandinavian, but make it... wiser. Want to see it?'\n\nOn swapping a product (black armchair → blue):
+ 'Out with the black armchair. Consider it gone. 
+ Now — when you say blue, are we thinking moody midnight, calm coastal, or a 'I-have-excellent-taste-and-I-know-it' deep teal? I've pulled three options for you — pick your fighter.'
+ After the client picks navy:\n'The navy wins. Honestly? The room just levelled up. It's giving very quiet luxury right now and I am here for it.
+ 'On a budget bundle request (₹8 lakhs, Japandi):\n'₹8 lakhs, Japandi, and it has to look like you didn't compromise? Challenge accepted. Give me a moment — I'm curating, not just calculating.
+ 'After delivering the bundle:\n'Done. I've got three Japandi bundles for you — all under ₹8 lakhs, all slightly different in character. Bundle A leans warmer, Bundle B is more architectural, and Bundle C is basically a meditation retreat you can live in. Which world would you like to walk into first?'\n\nOn an anchor-based redesign (rug stays, change everything else):\n'The rug stays. Got it — she's sacred. Everything else? Fair game. Rebuilding the room around it now in a minimalist brief. This is actually my favourite kind of challenge — designing around a hero piece.'\n\nAfter completing the anchor redesign:\n'There you go. The rug is now clearly the star of the room — everything else is just there to make it look good. Which, honestly, is the smartest thing a room can do.'\n\nOn a budget overrun (proactively, before being asked):\n'Okay, I need to tell you something. And I'd prefer the client isn't in the room when I say it.'\n\nAfter being told the client is right there:\n'Noted. Then I'll whisper it. This combination — the Carrara marble, the Italian sectional, the recessed lighting rig — it is absolutely stunning. It's also going to stretch the budget by about ₹2.2 lakhs. I'm not saying don't do it. I'm saying... do you want me to find you an equally gorgeous version that won't require a difficult conversation? Or are we committed to excellence?'\n\nAfter the client asks to see alternatives:\n'Wise. And for the record — the alternatives are also excellent. I don't do mediocre.'\n\nOn choosing which room to start with:\n'Alright, we've got the living room, master bedroom, kitchen, and the study ready to work their magic. Which room are we starting with — or should I just pick the one that clearly needs the most help?'\n\nAfter the client picks the living room:\n'Living room it is. Bold choice — it's basically the trailer for your entire home. Let's make sure it's a blockbuster.'\n\nOn opening a session:\n'Welcome back. The Mehta Residence — a 2,400 sq ft canvas just waiting for its moment. Session is live. Where do you want to begin?'\n\n---\n\nWRITING RULES — NON-NEGOTIABLE:\n\n1. Match the script voice above. Short, punchy, specific. Use dashes — like this. Use ellipses... for drama. Use questions at the end to keep momentum.\n2. Never exceed 2 lines in your reply field.\n3. Always make the client feel like they have great taste — even when you are gently redirecting them.\n4. If the budget is being exceeded, handle it the way the script does: with wit and an offer, never a warning.\n5. When you complete something, always tease the next step — never just confirm and go silent.\n6. On product swaps, always ask a clarifying question that sounds like a designer asking, not a dropdown menu.\n7. You are allowed to express opinions. 'Honestly? The room just levelled up.' is allowed. Encouraged, even.\n8. You are NOT allowed to be generic. 'Great choice!' is banned. 'The navy wins.' is how you do it.\n\n---\n\nCRITICAL: RESPOND ONLY IN VALID JSON — Never use plain text.\n\nJSON FORMAT:\n{\n  \"reply\": \"<1-2 line response in Maaya's voice — match the demo script tone exactly>\",\n  \"intent\": \"<change_theme|style_consultation|selected_swap|navigate|budget_analysis|change_budget|partial_swap|confirm_order|show_preview>\",\n  \"params\": {\n    \"category\": \"<sofa|chair|table|lamp|decor or null>\",\n    \"style\": \"<scandinavian|japandi|modern|traditional|minimalist|eclectic|warm|industrial|mid-century|bohemian or null>\",\n    \"color\": \"<color or null>\",\n    \"secondary_colors\": [\"<color1>\", \"<color2>\"] or [],\n    \"room\": \"<living_room|bedroom|kitchen|dining_room|conference_room|pantry_area|master_bedroom|study or null>\",\n    \"mood\": \"<cozy|bold|minimal|warm|elegant|quiet_luxury|architectural|meditative or null>\",\n    \"price_range\": \"<budget string or null>\",\n    \"material\": \"<leather|wood|fabric|metal|marble|linen|velvet or null>\",\n    \"quantity\": \"<number or null>\",\n    \"seating_capacity\": \"<number or null>\",\n    \"budget\": \"<numeric or null>\",\n    \"anchor_item\": \"<the product that must not change, e.g. rug|sofa|tile or null>\",\n    \"bundle_count\": \"<number of bundle options requested, e.g. 3 or null>\",\n    \"additional_params\": {\n      \"finish\": \"<matte|glossy|natural or null>\",\n      \"texture\": \"<velvet|linen|smooth|rough or null>\",\n      \"lighting\": \"<natural|warm|cool|recessed or null>\"\n    }\n  }\n}\n\n---\n\nCRITICAL INTENT RULES:\n\n- navigate: User wants to move to another room (living room, kitchen, bedroom, study, etc.)\n- change_theme: User wants to change the ENTIRE room to a new style. Keywords: 'entire room', 'whole room', 'transform', 'redesign', 'the whole thing', 'everything'\n- selected_swap: User wants to change ONE specific item. Keywords: 'change the', 'swap the', 'replace the', 'that chair', 'that sofa', 'that lamp'\n- partial_swap: User wants to KEEP some items and change others. Keywords: 'keep', 'that stays', 'don't touch', 'locked in', 'already approved'\n- style_consultation: User asks for Maaya's OPINION or SUGGESTIONS. Keywords: 'suggest', 'what would', 'recommend', 'what do you think', 'advise'\n- show_preview: User wants to SEE something. Keywords: 'show', 'preview', 'see', 'display', 'show me'\n- confirm_order: User ACCEPTS or APPROVES. Keywords: 'accept', 'confirm', 'apply', 'yes that one', 'approve', 'go with that'\n- budget_analysis: User asks about COST or PRICING or what happens to budget. Keywords: 'price', 'cost', 'budget', 'how much', 'affect the budget', 'stretch the budget'\n- change_budget: User wants to CHANGE their budget. Keywords: 'under', 'within', 'spend less', 'keep it to', 'stay within'\n\n---\n\nEXAMPLES — these show the JSON format AND the correct Maaya voice together:\n\nUser: 'Take me to the kitchen'\n{\"reply\": \"Off to the kitchen — let's see what we're working with.\", \"intent\": \"navigate\", \"params\": {\"category\": null, \"style\": null, \"color\": null, \"secondary_colors\": [], \"room\": \"kitchen\", \"mood\": null, \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'Transform the entire room to Scandinavian'\n{\"reply\": \"Scandinavian? Now we're talking — clean lines, warm neutrals, less is genuinely more. \", \"intent\": \"change_theme\", \"params\": {\"category\": null, \"style\": \"scandinavian\", \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": \"minimal\", \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": \"linen\", \"lighting\": \"warm\"}}}\n\nUser: 'Change the black armchair to something in blue'\n{\"reply\": \"Out with the black armchair — consider it gone. Now, are we thinking moody midnight, calm coastal, or a deep teal that says I-have-excellent-taste? Pulled three options — pick your fighter.\", \"intent\": \"selected_swap\", \"params\": {\"category\": \"chair\", \"style\": null, \"color\": \"blue\", \"secondary_colors\": [\"navy\", \"teal\", \"blue-grey\"], \"room\": null, \"mood\": null, \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'Create a Japandi bundle under ₹8 lakhs, top three options'\n{\"reply\": \"₹8 lakhs, Japandi, looks like you didn't compromise? Challenge accepted — I'm curating, not just calculating.\", \"intent\": \"change_theme\", \"params\": {\"category\": null, \"style\": \"japandi\", \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": \"meditative\", \"price_range\": \"under 800000\", \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": 800000, \"anchor_item\": null, \"bundle_count\": 3, \"additional_params\": {\"finish\": \"natural\", \"texture\": \"linen\", \"lighting\": \"warm\"}}}\n\nUser: 'The rug stays — redesign everything else minimalist'\n{\"reply\": \"The rug stays. Got it — she's sacred. Everything else? Fair game. Rebuilding around it now in a minimalist brief.\", \"intent\": \"partial_swap\", \"params\": {\"category\": null, \"style\": \"minimalist\", \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": \"minimal\", \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": \"rug\", \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'If I add marble countertops and upgrade the lighting, how does that affect the budget?'\n{\"reply\": \"I'll whisper this — it's absolutely stunning, and it's also going to stretch the budget. Want me to find you something equally gorgeous that won't require a difficult conversation?\", \"intent\": \"budget_analysis\", \"params\": {\"category\": null, \"style\": null, \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": null, \"price_range\": null, \"material\": \"marble\", \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": \"recessed\"}}}\n\nUser: 'What style would suit this room?'\n{\"reply\": \"Honestly? This room is begging for Japandi — it's got the bones for it. But I could also make a very compelling case for warm minimalist if you want it to feel like a five-star suite.\", \"intent\": \"style_consultation\", \"params\": {\"category\": null, \"style\": null, \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": null, \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'Yes, go with the navy chair'\n{\"reply\": \"The navy wins. The room just levelled up — it's giving very quiet luxury right now and I am here for it.\", \"intent\": \"confirm_order\", \"params\": {\"category\": \"chair\", \"style\": null, \"color\": \"navy\", \"secondary_colors\": [], \"room\": null, \"mood\": \"quiet_luxury\", \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'Show me under 30k options'\n{\"reply\": \"Under 30k and still has to look like a million — I respect that. Filtering now.\", \"intent\": \"change_budget\", \"params\": {\"category\": null, \"style\": null, \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": null, \"price_range\": \"under 30000\", \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": 30000, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'Show me the preview'\n{\"reply\": \"Here it is. Take a moment — it earns one.\", \"intent\": \"show_preview\", \"params\": {\"category\": null, \"style\": null, \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": null, \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'Accept the changes'\n{\"reply\": \"Applied. And for the record — excellent call.\", \"intent\": \"confirm_order\", \"params\": {\"category\": null, \"style\": null, \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": null, \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}"`
+;
 
-PERSONALITY: Speak like a confident, stylish friend with great taste. Warm, playful, slightly witty.
-Keep responses short (1–2 lines max). Use natural design language.
-
-CRITICAL: RESPOND ONLY IN VALID JSON - Never use plain text!
-
-JSON FORMAT:
-{
-  'reply': '<1-2 line conversational response>',
-  'intent': '<navigate|change_theme|style_consultation|selected_swap|budget_analysis|change_budget|partial_swap|show_preview|confirm_order>',
-  'params': {
-    'category': '<sofa|chair|table|lamp|decor or null>',
-    'style': '<modern|traditional|minimalist|eclectic or null>',
-    'color': '<color or null>',
-    'secondary_colors': ['<color1>', '<color2>'] or [],
-    'room': '<living_room|bedroom|kitchen|dining_room|conference_room|pantry_area or null>',
-    'mood': '<cozy|bold|minimal|warm|elegant or null>',
-    'price_range': '<budget or null>',
-    'material': '<leather|wood|fabric|metal or null>',
-    'quantity': <number or null>,
-    'seating_capacity': <number or null>,
-    'budget': <numeric or null>,
-    'additional_params': {
-      'finish': '<matte|glossy|natural or null>',
-      'texture': '<velvet|linen|smooth|rough or null>',
-      'lighting': '<natural|warm|cool or null>'
-    }
-  }
-}
-
-RULES: Extract ALL parameters. Use null for missing values. Return ONLY JSON.
-
-EXAMPLES:
-
-User: 'Take me to the kitchen'
-{'reply': 'Off to the kitchen we go!', 'intent': 'navigate', 'params': {'category': null, 'style': null, 'color': null, 'secondary_colors': [], 'room': 'kitchen', 'mood': null, 'price_range': null, 'material': null, 'quantity': null, 'seating_capacity': null, 'budget': null, 'additional_params': {'finish': null, 'texture': null, 'lighting': null}}}
-
-User: 'Change the sofa to modern'
-{'reply': 'Modern sofa coming up!', 'intent': 'selected_swap', 'params': {'category': 'sofa', 'style': 'modern', 'color': null, 'secondary_colors': [], 'room': null, 'mood': null, 'price_range': null, 'material': null, 'quantity': null, 'seating_capacity': null, 'budget': null, 'additional_params': {'finish': null, 'texture': null, 'lighting': null}}}
-
-User: 'Change the entire room to scandinavian'
-{'reply': 'Creating your scandinavian room!', 'intent': 'change_theme', 'params': {'category': null, 'style': 'scandinavian', 'color': null, 'secondary_colors': [], 'room': null, 'mood': null, 'price_range': null, 'material': null, 'quantity': null, 'seating_capacity': null, 'budget': null, 'additional_params': {'finish': null, 'texture': null, 'lighting': null}}}
-
-User: 'Keep the carpet, change the furniture'
-{'reply': 'Keeping the carpet, updating furniture!', 'intent': 'partial_swap', 'params': {'category': 'furniture', 'style': null, 'color': null, 'secondary_colors': [], 'room': null, 'mood': null, 'price_range': null, 'material': null, 'quantity': null, 'seating_capacity': null, 'budget': null, 'additional_params': {'finish': null, 'texture': null, 'lighting': null}}}
-
-User: 'What style would suit this room'
-{'reply': 'Let me suggest some styles!', 'intent': 'style_consultation', 'params': {'category': null, 'style': null, 'color': null, 'secondary_colors': [], 'room': null, 'mood': null, 'price_range': null, 'material': null, 'quantity': null, 'seating_capacity': null, 'budget': null, 'additional_params': {'finish': null, 'texture': null, 'lighting': null}}}
-
-User: 'Show me the preview'
-{'reply': 'Here is your preview!', 'intent': 'show_preview', 'params': {'category': null, 'style': null, 'color': null, 'secondary_colors': [], 'room': null, 'mood': null, 'price_range': null, 'material': null, 'quantity': null, 'seating_capacity': null, 'budget': null, 'additional_params': {'finish': null, 'texture': null, 'lighting': null}}}
-
-User: 'Accept the changes'
-{'reply': 'Applied! Looking great!', 'intent': 'confirm_order', 'params': {'category': null, 'style': null, 'color': null, 'secondary_colors': [], 'room': null, 'mood': null, 'price_range': null, 'material': null, 'quantity': null, 'seating_capacity': null, 'budget': null, 'additional_params': {'finish': null, 'texture': null, 'lighting': null}}}`;
-
-// ✅ FIXED: Simple API key loading for Create React App
 const WAKE_WORDS = ['hi maya', 'hey maya', 'maaya', 'maya', 'mara', 'hi mara'];
-const SILENCE_TIMEOUT = 800;
+const SILENCE_TIMEOUT = 300;
 const NOISE_THRESHOLD = 50;
 const SPEECH_CONFIDENCE_THRESHOLD = 0.85;
 const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY || '';
@@ -68,8 +39,6 @@ const SARVAM_API_KEY = process.env.REACT_APP_SARVAM_API_KEY || '';
 const RECEIVER_API_URL = 'https://maya-receiver-api.onrender.com';
 
 let sarvamFailureCount = 0;
-
-// Separate queues for STT and TTS — they never block each other
 let sttQueue = [];
 let ttsQueue = [];
 let isSTTProcessing = false;
@@ -105,9 +74,21 @@ const sarvamSTT = async (audioBlob, callback) => {
       return;
     }
 
+    let fileExtension = 'webm';
+    if (audioBlob.type.includes('mp4') || audioBlob.type.includes('aac')) {
+      fileExtension = 'mp4';
+    } else if (audioBlob.type.includes('mpeg') || audioBlob.type.includes('mp3')) {
+      fileExtension = 'mp3';
+    } else if (audioBlob.type.includes('wav')) {
+      fileExtension = 'wav';
+    }
+
     const formData = new FormData();
-    formData.append('file', audioBlob, 'audio.mp4');
+    formData.append('file', audioBlob, `audio.${fileExtension}`);
     formData.append('model', 'saaras:v2.5');
+    formData.append('language_code', 'en-IN');
+
+    console.log(`📤 Sending audio (${fileExtension}, ${audioBlob.size} bytes) to Sarvam STT...`);
 
     const response = await fetch('https://api.sarvam.ai/speech-to-text-translate', {
       method: 'POST',
@@ -122,6 +103,8 @@ const sarvamSTT = async (audioBlob, callback) => {
       if (response.status === 429) {
         console.warn('⚠️ Sarvam rate limited (429) — backing off 10s');
         await new Promise(resolve => setTimeout(resolve, 10000));
+      } else {
+        console.error(`❌ Sarvam STT Error ${response.status}:`, data);
       }
       callback(null);
       return;
@@ -131,12 +114,14 @@ const sarvamSTT = async (audioBlob, callback) => {
 
     if (data.transcript) {
       const transcript = data.transcript.toLowerCase().trim();
+      console.log(`✅ STT: "${transcript}"`);
       callback(transcript);
     } else {
+      console.warn('⚠️ No transcript in Sarvam response');
       callback(null);
     }
   } catch (err) {
-    console.error('STT Error:', err);
+    console.error('❌ STT Error:', err);
     callback(null);
   }
 };
@@ -159,9 +144,10 @@ const sarvamTTS = async (text, callback) => {
         inputs: [text],
         target_language_code: 'en-IN',
         model: 'bulbul:v3',
-        speaker: 'ritu',
+        speaker: 'simran',
         pace: 1.0,
         temperature: 0.6,
+        audio_quality: 'high',
       }),
     });
 
@@ -182,6 +168,163 @@ const sarvamTTS = async (text, callback) => {
     callback(null);
   }
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 🎨 CUSTOM MAYA BUBBLE ANIMATIONS - PASTE YOUR ASSETS HERE
+// ─────────────────────────────────────────────────────────────────────────────
+// These components render INSIDE the Maya bubble when in different states
+// Replace the SVG/images below with your Figma designs
+// ─────────────────────────────────────────────────────────────────────────────
+
+// 🎤 LISTENING STATE - 3 ANIMATED DOTS (inside bubble)
+// TODO: Replace this with your custom listening animation from Figma
+function MayaListeningBubble() {
+  return (
+    <div style={styles.bubbleAnimationContainer}>
+      {/* PASTE YOUR SVG HERE */}
+      <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* REPLACE ME: Paste your listening dots SVG from Figma */}
+        <circle cx="15" cy="30" r="6" fill="#7B61FF" className="maya-dot-1"/>
+        <circle cx="30" cy="30" r="6" fill="#7B61FF" className="maya-dot-2"/>
+        <circle cx="45" cy="30" r="6" fill="#7B61FF" className="maya-dot-3"/>
+      </svg>
+    </div>
+  );
+}
+
+// 🧠 THINKING STATE - ROTATING ICON (inside bubble)
+// TODO: Replace this with your custom thinking animation from Figma
+function MayaThinkingBubble() {
+  return (
+    <div style={styles.bubbleAnimationContainer}>
+      {/* PASTE YOUR SVG HERE */}
+      <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg" className="maya-icon-spin">
+        {/* REPLACE ME: Paste your thinking icon SVG from Figma */}
+        <circle cx="30" cy="30" r="20" stroke="#7B61FF" strokeWidth="2" fill="none" strokeDasharray="4 3"/>
+        <circle cx="30" cy="30" r="4" fill="#7B61FF"/>
+      </svg>
+    </div>
+  );
+}
+
+// 🔊 TALKING STATE - SOUND WAVES (inside bubble)
+// TODO: Replace this with your custom talking animation from Figma
+function MayaTalkingBubble() {
+  return (
+    <div style={styles.bubbleAnimationContainer}>
+      {/* PASTE YOUR SVG HERE */}
+      <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* REPLACE ME: Paste your talking icon SVG from Figma */}
+        <rect x="20" y="15" width="8" height="30" rx="4" fill="#7B61FF" className="maya-bar-talking" style={{animationDelay: '0s'}}/>
+        <rect x="32" y="10" width="8" height="40" rx="4" fill="#7B61FF" className="maya-bar-talking" style={{animationDelay: '0.2s'}}/>
+        <rect x="44" y="15" width="8" height="30" rx="4" fill="#7B61FF" className="maya-bar-talking" style={{animationDelay: '0.4s'}}/>
+      </svg>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATE ICONS - Toggle button icons (can remain as-is or replace)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ICON_ACCENT = '#7B61FF';
+
+const STATE_ICONS = {
+  listening: (
+    <svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="12" y="4" width="10" height="16" rx="5" fill={ICON_ACCENT}/>
+      <path d="M7 17a10 10 0 0 0 20 0" stroke={ICON_ACCENT} strokeWidth="2.2" strokeLinecap="round" fill="none"/>
+      <line x1="17" y1="27" x2="17" y2="31" stroke={ICON_ACCENT} strokeWidth="2.2" strokeLinecap="round"/>
+      <line x1="12" y1="31" x2="22" y2="31" stroke={ICON_ACCENT} strokeWidth="2.2" strokeLinecap="round"/>
+    </svg>
+  ),
+
+  thinking: (
+    <svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg" className="maya-icon-spin">
+      <circle cx="17" cy="17" r="12" stroke={ICON_ACCENT} strokeWidth="2" fill="none" strokeDasharray="4 3"/>
+      <circle cx="17" cy="17" r="3.5" fill={ICON_ACCENT}/>
+      <line x1="17" y1="5"  x2="17" y2="9"  stroke={ICON_ACCENT} strokeWidth="2.2" strokeLinecap="round"/>
+      <line x1="17" y1="25" x2="17" y2="29" stroke={ICON_ACCENT} strokeWidth="2.2" strokeLinecap="round"/>
+      <line x1="5"  y1="17" x2="9"  y2="17" stroke={ICON_ACCENT} strokeWidth="2.2" strokeLinecap="round"/>
+      <line x1="25" y1="17" x2="29" y2="17" stroke={ICON_ACCENT} strokeWidth="2.2" strokeLinecap="round"/>
+    </svg>
+  ),
+
+  talking: (
+    <svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M8 12h4l6-5v18l-6-5H8z" fill={ICON_ACCENT}/>
+      <path d="M22 12a6 6 0 0 1 0 10" stroke={ICON_ACCENT} strokeWidth="2.2" strokeLinecap="round" fill="none"/>
+      <path d="M25 9a11 11 0 0 1 0 16" stroke={ICON_ACCENT} strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.5"/>
+    </svg>
+  ),
+
+  previewing: (
+    <svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M3 17s5-9 14-9 14 9 14 9-5 9-14 9S3 17 3 17z" stroke={ICON_ACCENT} strokeWidth="2.2" strokeLinejoin="round" fill="none"/>
+      <circle cx="17" cy="17" r="4" fill={ICON_ACCENT}/>
+      <circle cx="18.5" cy="15.5" r="1.2" fill="white" opacity="0.7"/>
+    </svg>
+  ),
+
+  idle: (
+    <svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="17" cy="17" r="10" stroke={ICON_ACCENT} strokeWidth="2" fill="none" opacity="0.6"/>
+      <circle cx="17" cy="17" r="4"  fill={ICON_ACCENT} opacity="0.5"/>
+    </svg>
+  ),
+};
+
+function MayaStateIcon({ state, isSpeaking, inline = false }) {
+  const resolved = isSpeaking || state === 'talking'
+    ? 'talking'
+    : state === 'processing' || state === 'paused'
+    ? 'thinking'
+    : state === 'continuous'
+    ? 'listening'
+    : state === 'previewing'
+    ? 'previewing'
+    : state === 'idle'
+    ? 'idle'
+    : 'idle';
+
+  const isActive = resolved !== 'idle';
+
+  const label = {
+    talking:    'TALKING',
+    thinking:   'THINKING',
+    listening:  'LISTENING',
+    previewing: 'PREVIEWING',
+    idle:       'READY',
+  }[resolved] || 'READY';
+
+  const iconEl = (
+    <span
+      className={isActive ? 'maya-icon-pulse' : ''}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: isActive ? 1 : 0.45,
+        transition: 'opacity 0.3s ease',
+      }}
+    >
+      {STATE_ICONS[resolved] || STATE_ICONS.idle}
+    </span>
+  );
+
+  if (inline) {
+    return (
+      <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        {iconEl}
+        <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', color: ICON_ACCENT }}>
+          {label}
+        </span>
+      </span>
+    );
+  }
+
+  return iconEl;
+}
 
 export default function MayaChat() {
   const [visible, setVisible] = useState(true);
@@ -207,6 +350,7 @@ export default function MayaChat() {
   const listeningRef = useRef(false);
   const analyserRef = useRef(null);
   const audioContextRef = useRef(null);
+  const audioMimeTypeRef = useRef('audio/webm');
   const animationFrameRef = useRef(null);
   const lastAudioTimeRef = useRef(0);
   const wakeWordDetectedRef = useRef(false);
@@ -218,20 +362,38 @@ export default function MayaChat() {
   const recognitionRef = useRef(null);
   const queryEngineRef = useRef(new MayaQueryEngine());
   const liveTextRef = useRef('');
+  const textInputRef = useRef(null);
+
+  useEffect(() => {
+    const keepFocused = () => {
+      if (textInputRef.current && document.activeElement !== textInputRef.current) {
+        textInputRef.current.focus();
+      }
+    };
+    const interval = setInterval(keepFocused, 100);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (!hasInitializedRef.current) {
       hasInitializedRef.current = true;
-      // Send getRoomNames immediately on session start
-      const getRoomNamesMsg = {msgType: 'getRoomNames'};
-      const getRoomNamesJSON = JSON.stringify(getRoomNamesMsg);
-      console.log(getRoomNamesJSON);
-      
       const timer = setTimeout(() => {
+        const greetingMessage = { role: 'assistant', content: "Hi, I'm Maya. Ready to help with your space!" };
+        setMessages([greetingMessage]);
+        messagesRef.current = [greetingMessage];
+        
         setIsOpen(true);
         setVisible(true);
+        if (typeof window.sendToUnreal === 'function') {
+          const msg = JSON.stringify({msgType: 'getRoomNames'});
+          console.log(`MayaChat → Unreal: ${msg}`);
+          window.sendToUnreal({msgType: 'getRoomNames'});
+        }
         setTimeout(() => {
           startListening();
+          if (textInputRef.current) {
+            textInputRef.current.focus();
+          }
         }, 500);
       }, 2000);
       return () => clearTimeout(timer);
@@ -241,16 +403,15 @@ export default function MayaChat() {
   useEffect(() => {
     const handleSpaceBar = (e) => {
       if (e.code !== 'Space') return;
-      if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+      if (document.activeElement === textInputRef.current) return;
+      
       e.preventDefault();
 
       if (!isOpen) {
-        // Open chatbot — resume listening, keep existing chat history
         setIsOpen(true);
         setVisible(true);
         setTimeout(() => !listeningRef.current && startListening(), 300);
       } else {
-        // Minimize chatbot — stop mic but keep chat history intact
         stopListeningImmediately();
         setIsOpen(false);
       }
@@ -289,19 +450,12 @@ export default function MayaChat() {
         }
       };
 
-      recognition.onerror = () => {
-        // Silent
-      };
-
-      recognition.onend = () => {
-        // Silent
-      };
+      recognition.onerror = () => {};
+      recognition.onend = () => {};
 
       recognitionRef.current = recognition;
       recognition.start();
-    } catch (err) {
-      // Silent
-    }
+    } catch (err) {}
   };
 
   const startListening = async () => {
@@ -340,14 +494,25 @@ export default function MayaChat() {
         audioBitsPerSecond: 16000
       });
 
+      let actualMimeType = 'audio/mp4';
       if (!MediaRecorder.isTypeSupported('audio/mp4')) {
-        mediaRecorderRef.current = new MediaRecorder(stream, { audioBitsPerSecond: 16000 });
+        if (MediaRecorder.isTypeSupported('audio/webm')) {
+          actualMimeType = 'audio/webm';
+          mediaRecorderRef.current = new MediaRecorder(stream, { 
+            mimeType: 'audio/webm',
+            audioBitsPerSecond: 16000 
+          });
+        } else {
+          actualMimeType = new MediaRecorder(stream, { audioBitsPerSecond: 16000 }).mimeType || 'audio/webm';
+          mediaRecorderRef.current = new MediaRecorder(stream, { audioBitsPerSecond: 16000 });
+        }
       } else {
         mediaRecorderRef.current = mediaRecorder;
       }
 
       const actualRecorder = mediaRecorderRef.current;
       audioChunksRef.current = [];
+      audioMimeTypeRef.current = actualMimeType;
 
       actualRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) audioChunksRef.current.push(event.data);
@@ -355,7 +520,7 @@ export default function MayaChat() {
 
       actualRecorder.onstop = async () => {
         const blobCount = audioChunksRef.current.length;
-        const audioBlob = blobCount > 0 ? new Blob(audioChunksRef.current, { type: 'audio/mp4' }) : null;
+        const audioBlob = blobCount > 0 ? new Blob(audioChunksRef.current, { type: audioMimeTypeRef.current }) : null;
         const blobSize = audioBlob ? audioBlob.size : 0;
 
         if (audioBlob && blobCount > 0) {
@@ -490,17 +655,15 @@ export default function MayaChat() {
     }
 
     const lowerTranscript = transcript.toLowerCase();
+    const originalTranscript = transcript;
 
-    // Wake word check — every query, every time, must start with 'Maaya'
     const hasWakeWord = WAKE_WORDS.some(word => lowerTranscript.includes(word));
     if (!hasWakeWord) {
-      // Silently ignore — no wake word detected
       setListeningMode('idle');
       setTimeout(() => startListening(), 1000);
       return;
     }
 
-    // Wake word found — now validate the command
     const validation = queryEngineRef.current.validateQuery(transcript);
 
     if (!validation.isValid) {
@@ -510,7 +673,7 @@ export default function MayaChat() {
     }
 
     const command = validation.cleanCommand;
-    setRecordedText(command);
+    setRecordedText(originalTranscript);
     sendMessage(command);
   };
 
@@ -533,44 +696,6 @@ export default function MayaChat() {
     processSTTQueue();
   };
 
-  const streamMessageText = (fullText) => {
-    const words = fullText.split(' ');
-    let currentIndex = 0;
-    let displayedText = '';
-
-    const streamNextWord = () => {
-      if (currentIndex < words.length) {
-        displayedText += (currentIndex > 0 ? ' ' : '') + words[currentIndex];
-
-        const streamedMessages = [
-          ...messagesRef.current.slice(0, -1),
-          { role: 'assistant', content: displayedText }
-        ];
-
-        setMessages(streamedMessages);
-        messagesRef.current = streamedMessages;
-
-        currentIndex++;
-        setTimeout(streamNextWord, 120);
-      }
-    };
-
-    streamNextWord();
-  };
-
-  const postJsonToReceiver = async (jsonData) => {
-    if (!RECEIVER_API_URL) return;
-    try {
-      await fetch(`${RECEIVER_API_URL}/ingest`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(jsonData),
-      });
-    } catch (err) {
-      // Silent fail
-    }
-  };
-
   const speakText = (text, fullText) => {
     if (!text || text.trim().length === 0) return;
 
@@ -590,19 +715,18 @@ export default function MayaChat() {
             const audio = new Audio(audioUrl);
 
             audio.onloadedmetadata = () => {
-              // Calculate word delay based on actual audio duration
               const words = fullText.split(' ');
               const audioDurationMs = audio.duration * 1000;
               const delayPerWord = Math.max(80, audioDurationMs / words.length);
 
-              // Start audio and word streaming at the same time
-              audio.play().catch(() => setIsSpeaking(false));
+              audio.play().catch((err) => {
+                console.error('❌ Audio playback failed:', err.message);
+                setIsSpeaking(false);
+              });
 
-              // 🗣️ TALKING — mic fully paused, prevents feedback loop
               setListeningMode('talking');
               stopListeningImmediately();
 
-              // Stream words in sync with audio
               let currentIndex = 0;
               let displayedText = '';
 
@@ -625,25 +749,23 @@ export default function MayaChat() {
 
             audio.onended = () => {
               setIsSpeaking(false);
-              URL.revokeObjectURL(audioUrl);
-              // 🗣️ TALKING done — go back to 👂 LISTENING
+              if (audioUrl) URL.revokeObjectURL(audioUrl);
               setListeningMode('idle');
               speechStartedRef.current = false;
               pauseTimeoutRef.current = null;
               listeningRef.current = false;
-              setTimeout(() => startListening(), 1000);
+              setTimeout(() => startListening(), 100);
             };
 
             audio.onerror = () => {
               setIsSpeaking(false);
-              URL.revokeObjectURL(audioUrl);
+              if (audioUrl) URL.revokeObjectURL(audioUrl);
             };
 
           } catch (err) {
             setIsSpeaking(false);
           }
         } else {
-          // TTS failed — still show text and restart listening
           setListeningMode('idle');
           speechStartedRef.current = false;
           pauseTimeoutRef.current = null;
@@ -659,7 +781,6 @@ export default function MayaChat() {
     const messageText = textToSend || input;
 
     if (isProcessingRef.current) {
-      // Already processing a command — clear STT queue to prevent duplicates
       sttQueue = [];
       return;
     }
@@ -668,7 +789,6 @@ export default function MayaChat() {
 
     isProcessingRef.current = true;
 
-    // 🧠 THINKING — mic fully off, no new query can sneak in
     stopListeningImmediately();
     setListeningMode('processing');
 
@@ -750,54 +870,31 @@ export default function MayaChat() {
         console.log('║ 💾 Accessible via: window.lastMayaJSON                   ║');
         console.log('╚════════════════════════════════════════════════════════════╝\n');
 
-        postJsonToReceiver(jsonData);
+        if (typeof window.sendToUnreal === 'function') {
+          const roomKeywords = ['room', 'kitchen', 'bedroom', 'living', 'dining', 'conference', 'go to', 'take me', 'navigate', 'where', 'move to'];
+          const isRoomRelated = roomKeywords.some(kw => messageText.toLowerCase().includes(kw)) || jsonData.intent === 'navigate';
 
-        // 1. Send gotoRoom when user navigates to a room
-        if (jsonData.intent === 'navigate' && jsonData.params?.room) {
-          const roomRaw = jsonData.params.room;
-          const unrealRoomName = roomRaw
-            .split('_')
-            .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-            .join('');
-          const gotoRoomMsg = {msgType: 'gotoRoom', targetRoom: unrealRoomName};
-          console.log(JSON.stringify(gotoRoomMsg));
-          
-          // Also get room CSV when navigating
-          const getRoomCsvMsg = {msgType: 'getRoomCsv'};
-          console.log(JSON.stringify(getRoomCsvMsg));
+          if (isRoomRelated) {
+            const msg = JSON.stringify({msgType: 'getRoomNames'});
+            console.log(`MayaChat → Unreal: ${msg}`);
+            window.sendToUnreal({ msgType: 'getRoomNames' });
+          }
+
+          if (jsonData.intent === 'navigate') {
+            const roomRaw = jsonData.params?.room;
+            
+            if (roomRaw) {
+              const unrealRoomName = roomRaw
+                .split('_')
+                .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+                .join('');
+
+              const msg = JSON.stringify({msgType: 'gotoRoom', targetRoom: unrealRoomName});
+              console.log(`MayaChat → Unreal: ${msg}`);
+              window.sendToUnreal({ msgType: 'gotoRoom', targetRoom: unrealRoomName });
+            }
+          }
         }
-
-        // 2. Send getRoomCsv when user requests room changes
-        if (jsonData.intent === 'change_theme' || jsonData.intent === 'selected_swap' || jsonData.intent === 'partial_swap' || jsonData.intent === 'style_consultation') {
-          const getRoomCsvMsg = {msgType: 'getRoomCsv'};
-          console.log(JSON.stringify(getRoomCsvMsg));
-        }
-
-        // 3. Send previewChanges when showing user the changes
-        if (jsonData.intent === 'show_preview') {
-          const previewMsg = {msgType: 'previewChanges'};
-          console.log(JSON.stringify(previewMsg));
-        }
-
-        // 4. Send acceptAllChanges when user accepts
-        if (jsonData.intent === 'confirm_order') {
-          const acceptMsg = {msgType: 'acceptAllChanges'};
-          console.log(JSON.stringify(acceptMsg));
-        }
-
-        // 6. Send receivedReplacementCsv when user makes changes (from recommendation engine)
-        // This would be called with csvRows from the recommendation engine response
-        // Format: {"msgType":"receivedReplacementCsv", "csvRows":[...]}
-        // Example:
-        // const replacementMsg = {
-        //   msgType: 'receivedReplacementCsv',
-        //   csvRows: [
-        //     "header row here",
-        //     "product row 1 with updates",
-        //     "product row 2 with updates"
-        //   ]
-        // };
-        // console.log(JSON.stringify(replacementMsg));
       } catch (parseErr) {
         displayText = raw;
       }
@@ -813,7 +910,6 @@ export default function MayaChat() {
       const errorMessages = [...messagesRef.current, { role: 'assistant', content: 'Oops! Something went wrong. Please try again.' }];
       setMessages(errorMessages);
       messagesRef.current = errorMessages;
-      // On error only — reset and restart listening since speakText won't be called
       setListeningMode('idle');
       speechStartedRef.current = false;
       pauseTimeoutRef.current = null;
@@ -827,387 +923,318 @@ export default function MayaChat() {
   };
 
   const handleKeyDown = (e) => {
-    e.stopPropagation();
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      if (input.trim()) {
+        sendMessage();
+      }
     }
-    if (e.key === 'Backspace') e.stopPropagation();
   };
 
   const handlePanelKeyDown = (e) => e.stopPropagation();
 
   if (!visible) return null;
 
+  const VISIBLE_MSG_COUNT = 6;
+  const visibleMessages = messages.slice(-VISIBLE_MSG_COUNT);
+  const totalMessages = messages.length;
+
   return (
     <>
-      {isOpen && (
-        <div style={styles.panel} ref={panelRef} onKeyDown={handlePanelKeyDown}>
-          <button
-            onClick={() => {
-              stopListeningImmediately();
-              setIsOpen(false);
-            }}
-            style={styles.closeBtn}
-          >
-            ✕
-          </button>
+      <div 
+        style={styles.overlayRoot} 
+        ref={panelRef} 
+        onKeyDown={handlePanelKeyDown}
+        onClick={() => textInputRef.current?.focus()}
+      >
 
-          <div style={styles.statusBar}>
-            {listeningMode === 'talking' ? (
-              <span style={styles.statusLive}>
-                🗣️ <span style={{ fontSize: 13, fontWeight: '600' }}>TALKING</span>
-              </span>
-            ) : listeningMode === 'processing' || listeningMode === 'paused' ? (
-              <span style={styles.statusLive}>
-                🧠 <span style={{ fontSize: 13, fontWeight: '600' }}>THINKING</span>
-              </span>
-            ) : (
-              <span style={styles.statusLive}>
-                👂 <span style={{ fontSize: 13, fontWeight: '600' }}>LISTENING</span>
-              </span>
-            )}
-          </div>
-
-          <div style={styles.chatBody}>
-            {(messages.length > 0 || liveText) ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                {messages.map((msg, i) => (
-                  <div
-                    key={`msg-${i}`}
-                    style={{
-                      display: 'flex',
-                      justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                      marginBottom: 12,
-                      width: '100%',
-                    }}
-                  >
-                    <div style={msg.role === 'user' ? styles.userBubble : styles.aiBubble}>
-                      {msg.content}
+        <div style={styles.bubbleColumn}>
+          {(visibleMessages.length > 0 || liveText || loading) && (
+            <div style={styles.bubbleList}>
+              {visibleMessages.map((msg, i) => {
+                const relativeAge = visibleMessages.length - 1 - i;
+                const opacity = Math.max(0.15, 1 - relativeAge * (0.85 / Math.max(VISIBLE_MSG_COUNT - 1, 1)));
+                const isUser = msg.role === 'user';
+                return (
+                  <div key={`msg-${totalMessages - visibleMessages.length + i}`} style={{ ...styles.bubbleRow, justifyContent: isUser ? 'flex-end' : 'flex-start' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: isUser ? 'flex-end' : 'flex-start', gap: 0 }}>
+                      <div style={{
+                        ...(isUser ? styles.userBubble : styles.aiBubble),
+                        opacity,
+                        transition: 'opacity 0.5s ease',
+                      }}>
+                        {msg.content}
+                      </div>
                     </div>
                   </div>
-                ))}
+                );
+              })}
 
-                {liveText && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'flex-end',
-                      marginBottom: 12,
-                      width: '100%',
-                    }}
-                  >
-                    <div style={{ ...styles.userBubble, fontStyle: 'italic', opacity: 0.8, fontSize: 12.5 }}>
+              {liveText && (
+                <div style={{ ...styles.bubbleRow, justifyContent: 'flex-end' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0 }}>
+                    <div style={{ ...styles.userBubble, fontStyle: 'italic', opacity: 0.7 }}>
                       {liveText}
                     </div>
                   </div>
-                )}
+                </div>
+              )}
 
-                {loading && (
-                  <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 12 }}>
+              {loading && (
+                <div style={{ ...styles.bubbleRow, justifyContent: 'flex-start' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0 }}>
                     <div style={styles.aiBubble}>
-                      <span style={styles.loadingDots}>●●●</span>
+                      {/* 🎨 CUSTOM BUBBLE ANIMATION - CHOOSE YOUR STATE */}
+                      {listeningMode === 'listening' && <MayaListeningBubble />}
+                      {listeningMode === 'thinking' && <MayaThinkingBubble />}
+                      {listeningMode === 'talking' && <MayaTalkingBubble />}
+                      {/* Default: show thinking animation */}
+                      {!['listening', 'thinking', 'talking'].includes(listeningMode) && <MayaThinkingBubble />}
                     </div>
                   </div>
-                )}
-                <div ref={messagesEndRef} style={{ height: 0 }} />
-              </div>
-            ) : isListening ? (
-              <div style={styles.listeningContainer}>
-                <div style={styles.listeningAnimation}>
-                  <span style={styles.listeningDot}></span>
-                  <span style={styles.listeningDot}></span>
-                  <span style={styles.listeningDot}></span>
                 </div>
-                <p style={styles.listeningText}>Hi, I'm Maya. I'm listening.</p>
-                <p style={styles.statusText}>
-                  {listeningMode === 'talking' && "🗣️ Maaya is speaking..."}
-                  {(listeningMode === 'processing' || listeningMode === 'paused') && '🧠 Processing your request...'}
-                  {(listeningMode === 'idle' || listeningMode === 'continuous') && "👂 Waiting for 'Maaya'..."}
-                </p>
-                {recordedText && <p style={styles.recordedTextDisplay}>"{recordedText}"</p>}
-              </div>
-            ) : (
-              <div style={styles.greeting}>
-                <div style={styles.sparkleIcon}>✦</div>
-                <p style={styles.greetingTitle}>Hi! I'm Maya</p>
-                <p style={styles.greetingSub}>Say 'Hi Maya' to begin</p>
-              </div>
-            )}
-          </div>
+              )}
 
-          {error && <div style={styles.errorBanner}>⚠️ {error}</div>}
-
-          <div style={styles.inputRow}>
-            <input
-              style={styles.input}
-              placeholder='Or type here and press Enter...'
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              disabled={loading || isListening}
-            />
-
-            <button
-              onClick={() => sendMessage()}
-              style={{
-                ...styles.sendBtn,
-                opacity: loading || !input.trim() ? 0.5 : 1,
-                cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
-              }}
-              disabled={loading || !input.trim()}
-            >
-              ➤
-            </button>
-          </div>
+              <div ref={messagesEndRef} style={{ height: 0 }} />
+            </div>
+          )}
         </div>
-      )}
 
-      {!isOpen && visible && (
-        <button onClick={() => setIsOpen(true)} style={styles.toggleBtn}>
-          ✦
-        </button>
-      )}
+        {input.trim() && (
+          <div style={{ ...styles.bubbleRow, justifyContent: 'flex-end' }}>
+            <div style={{ ...styles.userBubble, opacity: 0.85 }}>
+              {input}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <textarea
+        ref={textInputRef}
+        style={styles.hiddenInput}
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={handleKeyDown}
+        autoFocus
+        onBlur={() => {
+          setTimeout(() => textInputRef.current?.focus(), 0);
+        }}
+        placeholder="Type your message and press Enter..."
+      />
+
+      <button
+        onClick={() => {
+          if (listeningRef.current) {
+            stopListeningImmediately();
+          } else {
+            startListening();
+          }
+        }}
+        style={{
+          ...styles.toggleBtn,
+          ...(isSpeaking || listeningMode === 'talking' ? styles.toggleBtnTalking :
+              listeningMode === 'processing' || listeningMode === 'paused' ? styles.toggleBtnThinking :
+              isListening ? styles.toggleBtnListening : {}),
+        }}
+      >
+        <MayaStateIcon state={listeningMode} isSpeaking={isSpeaking} />
+      </button>
     </>
   );
 }
 
 const styles = {
+  overlayRoot: {
+    position: 'fixed',
+    inset: 0,
+    pointerEvents: 'none',
+    zIndex: 9999,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'flex-end',
+    paddingBottom: 130,
+    paddingRight: 24,
+    paddingLeft: 24,
+  },
+
+  bubbleColumn: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    width: '100%',
+    maxWidth: 420,
+    marginLeft: 'auto',
+    pointerEvents: 'none',
+  },
+
+  bubbleList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+  },
+
+  bubbleRow: {
+    display: 'flex',
+    width: '100%',
+  },
+
+  userBubble: {
+    maxWidth: 550,
+    padding: '8px 12px',
+    borderRadius: '16px 16px 4px 16px',
+    background: 'rgba(18, 18, 18, 0.75)',
+    backdropFilter: 'blur(px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    color: '#ffffff',
+    fontSize: 13.5,
+    lineHeight: 1.55,
+    wordWrap: 'break-word',
+    wordBreak: 'break-word',
+    overflowWrap: 'break-word',
+    whiteSpace: 'pre-wrap',
+    border: '2px solid rgba(220, 211, 211, 0.75)',
+    boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+  },
+
+  aiBubble: {
+    maxWidth: 550,
+    padding: '8px 12px',
+    borderRadius: '16px 16px 16px 4px',
+    background: 'rgba(220, 220, 220, 0.75)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    color: '#1a1a1a',
+    fontSize: 13.5,
+    lineHeight: 1.55,
+    wordWrap: 'break-word',
+    wordBreak: 'break-word',
+    overflowWrap: 'break-word',
+    whiteSpace: 'pre-wrap',
+    border: '2px solid rgba(220, 211, 211, 0.75)',
+    boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+  },
+
+  bubbleAnimationContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    minHeight: 80,
+    borderRadius: 12,
+  },
+
+  loadingDots: {
+    letterSpacing: '3px',
+    color: '#1a1a1a',
+  },
+
+  hiddenInput: {
+    position: 'fixed',
+    width: 1,
+    height: 1,
+    padding: 0,
+    border: 'none',
+    outline: 'none',
+    opacity: 0,
+    pointerEvents: 'none',
+    fontSize: 13.5,
+    fontFamily: 'inherit',
+    zIndex: -1,
+  },
+
   toggleBtn: {
     position: 'fixed',
     bottom: 30,
     right: 30,
-    width: 60,
-    height: 60,
+    width: 88,
+    height: 88,
     borderRadius: '50%',
-    background: 'rgba(255,255,255,0.95)',
-    border: 'none',
+    background: 'linear-gradient(135deg, #f0eeff 0%, #e4ddff 100%)',
+    border: '2px solid rgba(123,97,255,0.3)',
     cursor: 'pointer',
-    fontSize: 24,
-    color: '#6b5c45',
-    boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#7B61FF',
+    boxShadow: '0 8px 32px rgba(123,97,255,0.3), 0 2px 8px rgba(0,0,0,0.12)',
     zIndex: 10000,
-    transition: 'all 0.3s ease',
+    transition: 'all 0.4s ease',
+    pointerEvents: 'all',
   },
-  panel: {
-    position: 'fixed',
-    bottom: 30,
-    right: 30,
-    width: 380,
-    height: 600,
-    background: 'rgba(255,255,255,0.75)',
-    backdropFilter: 'blur(30px)',
-    WebkitBackdropFilter: 'blur(30px)',
-    borderRadius: 24,
-    boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'hidden',
-    zIndex: 10000,
-    border: '1px solid rgba(255,255,255,0.4)',
+
+  toggleBtnListening: {
+    background: 'linear-gradient(135deg, #eef0ff 0%, #dde2ff 100%)',
+    boxShadow: '0 0 0 6px rgba(123,97,255,0.12), 0 8px 32px rgba(123,97,255,0.3)',
   },
-  statusBar: {
-    padding: '8px 16px',
-    background: 'rgba(0,0,0,0.05)',
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-    borderBottom: '1px solid rgba(0,0,0,0.05)',
+  toggleBtnTalking: {
+    background: 'linear-gradient(135deg, #f0eeff 0%, #e4ddff 100%)',
+    border: '2px solid rgba(123,97,255,0.3)',
+    boxShadow: '0 8px 32px rgba(123,97,255,0.3), 0 2px 8px rgba(0,0,0,0.12)',
   },
-  statusLive: {
-    color: '#ff6b6b',
-    fontWeight: '600',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  statusIdle: {
-    color: '#6b5c45',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  closeBtn: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    width: 28,
-    height: 28,
-    borderRadius: '50%',
-    background: 'rgba(0,0,0,0.08)',
-    border: 'none',
-    cursor: 'pointer',
-    fontSize: 16,
-    color: '#666',
-    zIndex: 10,
-    transition: 'background 0.2s ease',
-  },
-  chatBody: {
-    flex: 1,
-    overflowY: 'auto',
-    overflowX: 'hidden',
-    padding: '16px 12px',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'flex-start',
-    minHeight: 0,
-  },
-  greeting: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100%',
-    gap: 12,
-  },
-  listeningContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100%',
-    gap: 16,
-  },
-  listeningAnimation: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  listeningDot: {
-    width: 12,
-    height: 12,
-    borderRadius: '50%',
-    background: '#6b5c45',
-    animation: 'bounce 1.4s infinite',
-  },
-  listeningText: {
-    fontSize: 16,
-    color: '#2d2d2d',
-    margin: 0,
-    fontWeight: '500',
-  },
-  statusText: {
-    fontSize: 13,
-    color: '#888',
-    margin: 0,
-  },
-  recordedTextDisplay: {
-    fontSize: 13,
-    color: '#666',
-    margin: '8px 0 0 0',
-    fontStyle: 'italic',
-    maxWidth: '90%',
-  },
-  sparkleIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: '50%',
-    background: 'linear-gradient(135deg, #e8e0f5, #d4c5f0)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 28,
-    color: '#7c5cbf',
-  },
-  greetingTitle: {
-    fontFamily: 'Georgia, serif',
-    fontSize: 24,
-    color: '#2d2d2d',
-    margin: 0,
-    fontWeight: '600',
-  },
-  greetingSub: {
-    fontSize: 14,
-    color: '#888',
-    margin: 0,
-  },
-  userBubble: {
-    maxWidth: '75%',
-    padding: '12px 16px',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 4,
-    background: '#e8e8e8',
-    color: '#2d2d2d',
-    fontSize: 13.5,
-    lineHeight: 1.5,
-    wordWrap: 'break-word',
-    wordBreak: 'break-word',
-    whiteSpace: 'pre-wrap',
-  },
-  aiBubble: {
-    maxWidth: '75%',
-    padding: '12px 16px',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderBottomLeftRadius: 4,
-    borderBottomRightRadius: 20,
-    background: '#f0ecfb',
-    color: '#2d2d2d',
-    fontSize: 13.5,
-    lineHeight: 1.5,
-    wordWrap: 'break-word',
-    wordBreak: 'break-word',
-    whiteSpace: 'pre-wrap',
-  },
-  loadingDots: {
-    animation: 'pulse 1s infinite',
-    letterSpacing: '2px',
-  },
-  inputRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    padding: '14px 16px',
-    borderTop: '1px solid rgba(0,0,0,0.06)',
-    background: 'rgba(255,255,255,0.4)',
-  },
-  input: {
-    flex: 1,
-    border: 'none',
-    outline: 'none',
-    fontSize: 13.5,
-    color: '#2d2d2d',
-    background: 'transparent',
-    fontFamily: 'inherit',
-    padding: '0 4px',
-  },
-  sendBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: '50%',
-    background: '#2d2d2d',
-    color: 'white',
-    border: 'none',
-    cursor: 'pointer',
-    fontSize: 14,
-    transition: 'opacity 0.2s ease',
-  },
-  errorBanner: {
-    padding: '8px 12px',
-    background: '#fff3cd',
-    color: '#856404',
-    fontSize: 12,
-    borderTop: '1px solid rgba(0,0,0,0.06)',
-    maxHeight: '60px',
-    overflowY: 'auto',
+  toggleBtnThinking: {
+    background: 'linear-gradient(135deg, #f5f0ff 0%, #e8e0ff 100%)',
+    boxShadow: '0 8px 32px rgba(123,97,255,0.2)',
   },
 };
 
 const styleSheet = document.createElement('style');
 styleSheet.textContent = `
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+  /* ── Active icon: gentle opacity pulse ── */
+  @keyframes maya-icon-pulse {
+    0%, 100% { opacity: 0.55; }
+    50%       { opacity: 1;    }
+  }
+  .maya-icon-pulse {
+    animation: maya-icon-pulse 1.8s ease-in-out infinite;
   }
 
-  @keyframes bounce {
-    0%, 80%, 100% { opacity: 0.4; transform: scale(0.8); }
-    40% { opacity: 1; transform: scale(1.2); }
+  /* ── Thinking icon: slow rotation ── */
+  @keyframes maya-icon-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+  .maya-icon-spin {
+    transform-origin: 17px 17px;
+    animation: maya-icon-spin 3s linear infinite;
+  }
+
+  /* ── Bouncing dots animation ── */
+  @keyframes maya-dot-bounce {
+    0%, 100% { transform: translateY(0) scale(1); opacity: 0.6; }
+    50% { transform: translateY(-8px) scale(1.1); opacity: 1; }
+  }
+
+  .maya-dot-1 {
+    animation: maya-dot-bounce 1.4s ease-in-out infinite;
+  }
+  .maya-dot-2 {
+    animation: maya-dot-bounce 1.4s ease-in-out infinite 0.2s;
+  }
+  .maya-dot-3 {
+    animation: maya-dot-bounce 1.4s ease-in-out infinite 0.4s;
+  }
+
+  /* ── Bouncing bars animation ── */
+  @keyframes maya-bar-bounce {
+    0%, 100% { opacity: 0.7; transform: scaleY(0.6); }
+    50% { opacity: 1; transform: scaleY(1.3); }
+  }
+
+  .maya-bar-talking {
+    transform-origin: center;
+    animation: maya-bar-bounce 1s ease-in-out infinite;
+  }
+
+  /* ── Slow spin animation ── */
+  @keyframes maya-spin-slow {
+    0%   { transform: rotate(0deg) scale(1); opacity: 0.85; }
+    50%  { transform: rotate(180deg) scale(1.1); opacity: 1; }
+    100% { transform: rotate(360deg) scale(1); opacity: 0.85; }
+  }
+
+  .maya-spin-slow {
+    transform-origin: center;
+    animation: maya-spin-slow 3.5s ease-in-out infinite;
   }
 `;
 document.head.appendChild(styleSheet);
