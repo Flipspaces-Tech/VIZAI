@@ -7,7 +7,7 @@ export class MayaQueryEngine {
     this.filter = new MayaQueryFilter();
     this.SILENCE_TIMEOUT = 2000; // 2 seconds
     this.MIN_COMMAND_LENGTH = 2; // CHANGED: 4 → 2 (allow shorter queries like "green sofas")
-    this.WAKE_WORDS = ["hi maya", "hey maya", "maaya", "maya", "mara", "hi mara"];
+    this.WAKE_WORDS = ["hi maya", "hey maya", "maaya"];
     this.accumulatedQuery = "";
   }
 
@@ -16,7 +16,8 @@ export class MayaQueryEngine {
     let command = transcript;
 
     for (const word of this.WAKE_WORDS) {
-      const regex = new RegExp(`\\b${word}\\b\\s*`, "i");
+      // Match wake word with optional punctuation after it, then optional spaces
+      const regex = new RegExp(`^\\s*${word}[,\\s]*`, "i");
       command = command.replace(regex, "").trim();
     }
 
@@ -59,7 +60,8 @@ export class MayaQueryEngine {
 
     return {
       isValid: true,
-      cleanCommand: command
+      cleanCommand: command,
+      originalCommand: transcript  // ← Include original for display
     };
   }
 }
