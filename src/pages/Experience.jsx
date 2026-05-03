@@ -1,8 +1,16 @@
 // src/pages/experience/Experience.jsx
-import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+  useMemo,
+  useCallback,
+} from "react";
 
 // import for maya(chatbot)
 import MayaChat from "../components/MayaChat";
+
+import Papa from "papaparse";
 
 // ====== Apps Script Web App (must end with /exec) ======
 const GDRIVE_API_URL =
@@ -15,7 +23,10 @@ function getQuery(key, def = "") {
 
 // ✅ phase-specific text (defaults match your dashboard)
 const LOADER_TEXT = {
-  connecting: getQuery("msg1", "Starting connection to Vizwalk server, please wait"),
+  connecting: getQuery(
+    "msg1",
+    "Starting connection to Vizwalk server, please wait",
+  ),
   launching: getQuery("msg2", "Almost there, hold tight—awesomeness loading"),
   finalizing: getQuery("msg3", "Sharpening pixels and buffing the details…"),
 };
@@ -59,7 +70,7 @@ async function getJsonVerbose(url, params = {}) {
   } catch {
     text = await resp.text().catch(() => "");
     throw new Error(
-      `Expected JSON from Apps Script but got: ${text?.slice(0, 300) || "(no body)"} (HTTP ${resp?.status})`
+      `Expected JSON from Apps Script but got: ${text?.slice(0, 300) || "(no body)"} (HTTP ${resp?.status})`,
     );
   }
 }
@@ -120,8 +131,8 @@ function LoaderOverlay({ phase }) {
     phase === "connecting"
       ? "/gifs/conn.png"
       : phase === "launching"
-      ? "/gifs/conn.png"
-      : "/gifs/conn.png";
+        ? "/gifs/conn.png"
+        : "/gifs/conn.png";
 
   return (
     <div
@@ -216,6 +227,93 @@ let PixelStreamingUiApp;
 let UIControlApp;
 
 export default function Experience() {
+  const currentCsvHeaders = useRef(null);
+  const currentCsvRows = useRef(null); // contains parsed rows from Unreal
+  // const [currentRoomName, setCurrentRoomName] = useState(""); // contains the current room name
+
+  const parseCSVAndUpdateCurrentRows = (csvRows) => {
+    // Convert the array of strings into one single CSV block
+    const csvString = csvRows.join("\n");
+
+    // parse and store in the currentCsvRows object
+    Papa.parse(csvString, {
+      header: true,
+      skipEmptyLines: true,
+      transform: (value, column) => {
+        // We only want to transform values as they are assigned to rows
+        return value;
+      },
+      complete: (output) => {
+        const allRows = output.data.map((row) => {
+          // Initialize the array on the row object
+          if (!row.FinishDetailsList) {
+            row.FinishDetailsList = [];
+          }
+          // Add empty array for UpdatedFinishDetailsList that will bundled into a single column for UpdatedFinishes later
+          if (!row.UpdatedFinishDetailsList) {
+            row.UpdatedFinishDetailsList = [];
+          }
+
+          // Custom logic for the FinishSKU column
+          if (row.Finishes) {
+            // Split by comma to get individual details then by colon to get the parts
+            const splitFinishes = row.Finishes.split(",");
+            splitFinishes.forEach((singleFinish) => {
+              if (singleFinish.trim()) {
+                const [partName, finishDisplayName, finishSkuId] =
+                  singleFinish.split(":");
+
+                // Add the finish details to the FinishDetailsList array
+                row.FinishDetailsList.push({
+                  partName: partName?.trim(),
+                  finishDisplayName: finishDisplayName?.trim(),
+                  finishSkuId: finishSkuId?.trim(),
+                });
+              }
+            });
+          }
+
+          // Custom logic for the FinishSKU column
+          if (row.UpdateFinishes) {
+            // Split by comma to get individual details then by colon to get the parts
+            const splitFinishes = row.UpdateFinishes.split(",");
+            splitFinishes.forEach((singleFinish) => {
+              if (singleFinish.trim()) {
+                const [partName, finishDisplayName, finishSkuId] =
+                  singleFinish.split(":");
+
+                // Add the finish details to the UpdatedFinishDetailsList array
+                row.UpdatedFinishDetailsList.push({
+                  partName: partName?.trim(),
+                  finishDisplayName: finishDisplayName?.trim(),
+                  finishSkuId: finishSkuId?.trim(),
+                });
+              }
+            });
+          }
+
+          return row;
+        });
+
+        console.log("ParsedObjects", allRows);
+        currentCsvRows.current = allRows;
+      },
+    });
+  };
+
+  /// Called from MayaChat
+  const sendUpdatedCSVRowsToUnreal = (csvRows) => {
+    parseCSVAndUpdateCurrentRows(csvRows);
+
+    const updatedCsvString = Papa.unparse(currentCsvRows.current, {
+      header: true,
+      columns: currentCsvHeaders.current,
+    });
+
+    const updatedCsvRows = updatedCsvString.split("\n");
+    sendReplacementCsvToUnreal(updatedCsvRows);
+  };
+
   const videoWrapRef = useRef(null);
   const connectingRef = useRef(false);
   const mountedRef = useRef(false);
@@ -232,7 +330,10 @@ export default function Experience() {
   const [appIdError, setAppIdError] = useState("");
   const [resolvedAppIdPreview, setResolvedAppIdPreview] = useState("");
 
-  const sessionId = useMemo(() => getQuery("session", "session-" + Date.now()), []);
+  const sessionId = useMemo(
+    () => getQuery("session", "session-" + Date.now()),
+    [],
+  );
 
   const buildName = useMemo(() => getQuery("build", "Build"), []);
   const buildVersion = useMemo(() => getQuery("ver", ""), []);
@@ -419,71 +520,132 @@ export default function Experience() {
 
   // ✅ NEW: send command to Unreal
   const sendConsoleCommandToUnreal = useCallback((command) => {
-  try {
-    const payload = { msgType: command };
+    try {
+      const payload = { msgType: command };
 
-    console.log("Sending UI interaction to Unreal:", payload);
+      console.log("Sending UI interaction to Unreal:", payload);
 
-    // Try StreamPixel stream object first
-    if (typeof PixelStreamingUiApp?.stream?.emitUIInteraction === "function") {
-      PixelStreamingUiApp.stream.emitUIInteraction(payload);
-      return;
+      // Try StreamPixel stream object first
+      if (
+        typeof PixelStreamingUiApp?.stream?.emitUIInteraction === "function"
+      ) {
+        PixelStreamingUiApp.stream.emitUIInteraction(payload); // this is the one that works
+        return;
+      }
+
+      // Try pixel streaming instance
+      if (typeof PixelStreamingApp?.emitUIInteraction === "function") {
+        PixelStreamingApp.emitUIInteraction(payload);
+        return;
+      }
+
+      // Browser global fallback
+      if (typeof window.pixelStreaming?.emitUIInteraction === "function") {
+        window.pixelStreaming.emitUIInteraction(payload);
+        return;
+      }
+
+      console.warn(
+        "emitUIInteraction not found on any Pixel Streaming object.",
+      );
+    } catch (err) {
+      console.error("Failed to send UI interaction to Unreal:", err);
     }
+  }, []);
 
-    // Try pixel streaming instance
-    if (typeof PixelStreamingApp?.emitUIInteraction === "function") {
-      PixelStreamingApp.emitUIInteraction(payload);
-      return;
+  const sendReplacementCsvToUnreal = useCallback((csvRows) => {
+    try {
+      // const rowsArray = Array.isArray(csvRows)
+      //   ? csvRows
+      //   : String(csvRows || "")
+      //       .map((r) => r.trim())
+      //       .filter(Boolean);
+
+      const payload = {
+        msgType: "receivedReplacementCsv",
+        csvRows: csvRows,
+      };
+
+      console.log("Sending receivedReplacementCsv to Unreal:", payload);
+
+      if (
+        typeof PixelStreamingUiApp?.stream?.emitUIInteraction === "function"
+      ) {
+        PixelStreamingUiApp.stream.emitUIInteraction(payload);
+        return;
+      }
+
+      if (typeof PixelStreamingApp?.emitUIInteraction === "function") {
+        PixelStreamingApp.emitUIInteraction(payload);
+        return;
+      }
+
+      if (typeof window.pixelStreaming?.emitUIInteraction === "function") {
+        window.pixelStreaming.emitUIInteraction(payload);
+        return;
+      }
+
+      console.warn("emitUIInteraction not found.");
+    } catch (err) {
+      console.error("Failed to send receivedReplacementCsv to Unreal:", err);
     }
+  }, []);
 
-    // Browser global fallback
-    if (typeof window.pixelStreaming?.emitUIInteraction === "function") {
-      window.pixelStreaming.emitUIInteraction(payload);
-      return;
-    }
+  // ========== ADD CSV FUNCTIONS (NEW) ==========
+  // ========== ADD CSV FUNCTIONS (CRITICAL) ==========
+  useEffect(() => {
+    console.log("\n╔════════════════════════════════════════════════════╗");
+    console.log("║ 📡 SETTING UP CSV BRIDGE: MayaChat ↔ Unreal      ║");
+    console.log("╚════════════════════════════════════════════════════╝\n");
 
-    console.warn("emitUIInteraction not found on any Pixel Streaming object.");
-  } catch (err) {
-    console.error("Failed to send UI interaction to Unreal:", err);
-  }
-}, []);
+    // ✅ Function: Receive CSV from MayaChat and forward to Unreal
+    window.sendCSVToExperience = (csvData) => {
+      if (!csvData) {
+        console.error("❌ No csvData provided");
+        return;
+      }
 
-const sendReplacementCsvToUnreal = useCallback((csvRows) => {
-  try {
-    const rowsArray = Array.isArray(csvRows)
-      ? csvRows
-      : String(csvRows || "")
-          .split(";")
-          .map((r) => r.trim())
-          .filter(Boolean);
+      console.log("📤 Forwarding filled CSV to Unreal:");
+      console.log("   Rows:", csvData.csvRows?.length || 0);
 
-    const payload = {
-      msgType: "receivedReplacementCsv",
-      csvRows: rowsArray,
+      const payload = {
+        msgType: "receivedReplacementCsv",
+        csvRows: csvData.csvRows,
+        metadata: csvData.metadata,
+      };
+
+      // ========== SEND TO UNREAL ==========
+      try {
+        if (PixelStreamingUiApp?.stream?.emitUIInteraction) {
+          console.log("✅ Sent via PixelStreamingUiApp");
+          PixelStreamingUiApp.stream.emitUIInteraction(payload);
+          return;
+        }
+
+        if (PixelStreamingApp?.emitUIInteraction) {
+          console.log("✅ Sent via PixelStreamingApp");
+          PixelStreamingApp.emitUIInteraction(payload);
+          return;
+        }
+
+        console.error("❌ No emitUIInteraction found");
+      } catch (err) {
+        console.error("❌ Error sending to Unreal:", err);
+      }
     };
 
-    console.log("Sending receivedReplacementCsv to Unreal:", payload);
+    console.log("✅ CSV bridge is active");
 
-    if (typeof PixelStreamingUiApp?.stream?.emitUIInteraction === "function") {
-      PixelStreamingUiApp.stream.emitUIInteraction(payload);
-      return;
-    }
+    const timer = setTimeout(() => {
+      console.log("🚀 AUTO-SENDING getRoomCsv to Unreal");
+      sendConsoleCommandToUnreal("getRoomCsv");
+    }, 2000);
 
-    if (typeof PixelStreamingApp?.emitUIInteraction === "function") {
-      PixelStreamingApp.emitUIInteraction(payload);
-      return;
-    }
-
-    if (typeof window.pixelStreaming?.emitUIInteraction === "function") {
-      window.pixelStreaming.emitUIInteraction(payload);
-      return;
-    }
-
-    console.warn("emitUIInteraction not found.");
-  } catch (err) {
-    console.error("Failed to send receivedReplacementCsv to Unreal:", err);
-  }
-}, []);
+    return () => {
+      clearTimeout(timer);
+      delete window.sendCSVToExperience;
+    };
+  }, [sendConsoleCommandToUnreal]);
 
   const extractBestImageUrl = (raw) => {
     if (typeof raw !== "string") return "";
@@ -496,7 +658,8 @@ const sendReplacementCsvToUnreal = useCallback((csvRows) => {
       .filter(Boolean);
 
     for (let i = parts.length - 1; i >= 0; i--) {
-      if (/\.(png|jpe?g|jpeg|webp|gif)(\?.*)?$/i.test(parts[i])) return parts[i];
+      if (/\.(png|jpe?g|jpeg|webp|gif)(\?.*)?$/i.test(parts[i]))
+        return parts[i];
     }
 
     return parts[parts.length - 1] || s;
@@ -531,14 +694,48 @@ const sendReplacementCsvToUnreal = useCallback((csvRows) => {
 
         const msg = response;
         if (msg.type === "roomSkuCsv") {
-  console.log("Received roomSkuCsv from Unreal:");
-  console.log(msg.csvRows);
+          console.log("Received roomSkuCsv from Unreal:");
+          console.log(msg.csvRows);
 
-  // optional: keep it globally accessible for testing
-  window.lastRoomSkuCsv = msg.csvRows;
+          // optional: keep it globally accessible for testing
+          window.lastRoomSkuCsv = msg.csvRows;
 
-  return;
-}
+          if (msg.csvRows.length < 2) {
+            console.log("ERROR: Received insufficient CSV rows from Unreal.");
+            return;
+          }
+
+          // store headers separately
+          if (msg.csvRows.length > 0) {
+            const headers = msg.csvRows[0].split(",");
+            currentCsvHeaders.current = headers;
+          }
+
+          parseCSVAndUpdateCurrentRows(msg.csvRows);
+
+          console.log("📥 CSV FROM UNREAL - FORWARDING TO MAYA");
+          const csvArray = msg.csvRows;
+
+          // Post message to MayaChat
+          if (window.parent) {
+            window.parent.postMessage(
+              {
+                type: "csvFromUnreal",
+                data: csvArray,
+              },
+              "*",
+            );
+          }
+
+          // Also dispatch to window for MayaChat to listen
+          window.dispatchEvent(
+            new CustomEvent("csvFromUnreal", {
+              detail: csvArray,
+            }),
+          );
+
+          return;
+        }
 
         // Handle roomNames response from Unreal
         if (msg.type === "roomNames") {
@@ -587,7 +784,8 @@ const sendReplacementCsvToUnreal = useCallback((csvRows) => {
           typeof msg.value === "string"
         ) {
           const raw =
-            (typeof msg.savedScreenshotUrl === "string" && msg.savedScreenshotUrl) ||
+            (typeof msg.savedScreenshotUrl === "string" &&
+              msg.savedScreenshotUrl) ||
             (typeof msg.value === "string" && msg.value) ||
             "";
 
@@ -596,7 +794,8 @@ const sendReplacementCsvToUnreal = useCallback((csvRows) => {
             if (looksLikeHttpImageUrl(val)) {
               await forwardImageUrl(val);
             } else {
-              const urlFilename = val.split("/").pop()?.split("?")[0] || filenameFromUrl(val);
+              const urlFilename =
+                val.split("/").pop()?.split("?")[0] || filenameFromUrl(val);
               await downloadDataUrl(val, urlFilename);
             }
             return;
@@ -608,7 +807,8 @@ const sendReplacementCsvToUnreal = useCallback((csvRows) => {
           if (looksLikeHttpImageUrl(val)) {
             await forwardImageUrl(val);
           } else {
-            const urlFilename = val.split("/").pop()?.split("?")[0] || filenameFromUrl(val);
+            const urlFilename =
+              val.split("/").pop()?.split("?")[0] || filenameFromUrl(val);
             await downloadDataUrl(val, urlFilename);
           }
           return;
@@ -628,14 +828,16 @@ const sendReplacementCsvToUnreal = useCallback((csvRows) => {
           return;
         }
 
-        let data = msg.dataUrl || msg.base64 || msg.imageData || msg.png || msg.jpg;
+        let data =
+          msg.dataUrl || msg.base64 || msg.imageData || msg.png || msg.jpg;
         if (data) {
           if (typeof data === "string" && !data.startsWith("data:image/")) {
             data = "data:image/png;base64," + data;
           }
 
           const filename =
-            msg.filename || `screenshot-${new Date().toISOString().replace(/[:.]/g, "-")}.png`;
+            msg.filename ||
+            `screenshot-${new Date().toISOString().replace(/[:.]/g, "-")}.png`;
           await downloadDataUrl(data, filename);
 
           if (GDRIVE_API_URL && GDRIVE_API_URL.startsWith("http")) {
@@ -655,7 +857,7 @@ const sendReplacementCsvToUnreal = useCallback((csvRows) => {
             if (res?.ok && !firstUploadDone) {
               setFirstUploadDone(true);
               const galleryUrl = `${window.location.origin}/gallery?build=${encodeURIComponent(
-                buildName
+                buildName,
               )}&ver=${encodeURIComponent(buildVersion || "")}&session=${encodeURIComponent(sessionId)}`;
 
               window.open(galleryUrl, "_blank", "noopener,noreferrer");
@@ -678,12 +880,15 @@ const sendReplacementCsvToUnreal = useCallback((csvRows) => {
       firstUploadDone,
       runIKeyClickSequence,
       buildKey,
-    ]
+    ],
   );
 
   const hardDisconnect = useCallback(() => {
     try {
-      PixelStreamingApp?.removeResponseEventListener?.("handle_responses", handleResponseApp);
+      PixelStreamingApp?.removeResponseEventListener?.(
+        "handle_responses",
+        handleResponseApp,
+      );
     } catch {}
     try {
       PixelStreamingUiApp?.stream?.disconnect?.();
@@ -787,7 +992,13 @@ const sendReplacementCsvToUnreal = useCallback((csvRows) => {
     } catch {}
 
     connectingRef.current = false;
-  }, [attachVideoAutoplaySafe, handleResponseApp, hardDisconnect, buildName, buildVersion]);
+  }, [
+    attachVideoAutoplaySafe,
+    handleResponseApp,
+    hardDisconnect,
+    buildName,
+    buildVersion,
+  ]);
 
   const toggleMouseHover = useCallback(() => {
     setHoverEnabled((prev) => {
@@ -802,6 +1013,8 @@ const sendReplacementCsvToUnreal = useCallback((csvRows) => {
     startPlay();
 
     const onKey = (e) => {
+      e.preventDefault();
+
       if (e.code === "Digit0" && e.altKey && !e.repeat) {
         e.preventDefault();
         e.stopPropagation();
@@ -817,7 +1030,7 @@ const sendReplacementCsvToUnreal = useCallback((csvRows) => {
         return;
       }
 
-      // ✅ TEMP TEST: press 7 to send getRoomCsv to Unreal 
+      // ✅ TEMP TEST: press 7 to send getRoomCsv to Unreal
       if (e.code === "Digit7" && !e.repeat) {
         e.preventDefault();
         e.stopPropagation();
@@ -830,10 +1043,40 @@ const sendReplacementCsvToUnreal = useCallback((csvRows) => {
 
         const testCsvRows = [
           "SpaceName,Category,ProductName,ProductSKU,ProductPrice,ProductQuantity,Finishes,UpdatedProductName,UpdatedProductSKU,UpdatedProductPrice,UpdatedProductQuantity,UpdatedFinishes,Area",
-          "Kitchen,Chair,AC130,SKU988,6000,1,\"ArmChair--SKU224--Cushion:NOT_FOUND:WhiteFabric,\",OC1,SKU981,5000,1,\"\",NOT_FOUND"
+          'TestRoom,AccentWall,NOT_FOUND,Wooden,NOT_FOUND,2,"StaticMeshComponent0:NOT_FOUND:AccentWall_38,",NOT_FOUND,Wooden,NOT_FOUND,2,"StaticMeshComponent0:NOT_FOUND:AW-ACCENT-11,",NOT_FOUND',
         ];
 
-        sendReplacementCsvToUnreal(testCsvRows);
+        // 'Kitchen,Chair,AC130,SKU988,6000,1,"ArmChair--SKU224--Cushion:NOT_FOUND:WhiteFabric,",OC1,SKU981,5000,1,"",NOT_FOUND',
+
+        // DUMMY DATA (fill right side cols)
+        // TODO: replace with what chatbot sent back
+        currentCsvRows.current[0].UpdatedProductName = "NOT_FOUND";
+        currentCsvRows.current[0].UpdatedProductSKU = "Wooden";
+        currentCsvRows.current[0].UpdatedProductPrice = "NOT_FOUND";
+        currentCsvRows.current[0].UpdatedProductQuantity = 2;
+        currentCsvRows.current[0].UpdatedFinishDetailsList = [
+          {
+            partName: "StaticMeshComponent0",
+            finishDisplayName: "NOT_FOUND",
+            finishSkuId: "AW-ACCENT-43",
+          },
+        ];
+        currentCsvRows.current[0].UpdatedFinishes =
+          "StaticMeshComponent0:NOT_FOUND:AW-ACCENT-43,";
+
+        // currentCsvRows.current = tempRows;
+
+        // TODO: parseCSVAndUpdateCurrentRows(msg.csvRowsFromBot);
+
+        const updatedCsvString = Papa.unparse(currentCsvRows.current, {
+          header: true,
+          columns: currentCsvHeaders.current,
+        });
+
+        const updatedCsvRows = updatedCsvString.split("\n");
+
+        // sendReplacementCsvToUnreal(testCsvRows);
+        sendReplacementCsvToUnreal(updatedCsvRows);
         return;
       }
     };
@@ -875,7 +1118,9 @@ const sendReplacementCsvToUnreal = useCallback((csvRows) => {
     return () => {
       mountedRef.current = false;
       window.removeEventListener("keydown", onKey, { capture: true });
-      window.removeEventListener("pointerdown", onPointerDown, { capture: true });
+      window.removeEventListener("pointerdown", onPointerDown, {
+        capture: true,
+      });
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("pageshow", onPageShow);
       window.removeEventListener("pagehide", onPageHide);
@@ -888,6 +1133,7 @@ const sendReplacementCsvToUnreal = useCallback((csvRows) => {
     runIKeyClickSequence,
     sendConsoleCommandToUnreal,
     sendReplacementCsvToUnreal,
+    currentCsvRows,
   ]);
 
   // Expose sendToUnreal on window so MayaChat can send complex payloads to Unreal
@@ -895,7 +1141,9 @@ const sendReplacementCsvToUnreal = useCallback((csvRows) => {
     window.sendToUnreal = (payload) => {
       try {
         console.log("MayaChat → Unreal:", payload);
-        if (typeof PixelStreamingUiApp?.stream?.emitUIInteraction === "function") {
+        if (
+          typeof PixelStreamingUiApp?.stream?.emitUIInteraction === "function"
+        ) {
           PixelStreamingUiApp.stream.emitUIInteraction(payload);
           return;
         }
@@ -912,7 +1160,9 @@ const sendReplacementCsvToUnreal = useCallback((csvRows) => {
         console.error("sendToUnreal failed:", err);
       }
     };
-    return () => { delete window.sendToUnreal; };
+    return () => {
+      delete window.sendToUnreal;
+    };
   }, []);
 
   return (
@@ -968,7 +1218,7 @@ const sendReplacementCsvToUnreal = useCallback((csvRows) => {
           willChange: "transform",
         }}
       />
-      <MayaChat />
+      <MayaChat sendUpdatedCSVRowsToUnreal={sendUpdatedCSVRowsToUnreal} />
     </div>
   );
 }
