@@ -283,6 +283,8 @@ export default function MayaChat() {
   const [messages, setMessages] = useState([]);
   const messagesRef = useRef([]);
   const [input, setInput] = useState('');
+  const [isTypingMode, setIsTypingMode] = useState(false);
+  const typingInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [listeningMode, setListeningMode] = useState('idle');
@@ -742,13 +744,28 @@ export default function MayaChat() {
       return;
     }
 
+    // Block long rambling inputs — max 20 words
+    const MAX_WORDS = 20;
+    const wordCount = transcript.trim().split(/\s+/).length;
+    if (wordCount > MAX_WORDS) {
+      console.log(`⚠️ Too long (${wordCount} words) - ignoring: "${transcript}"`);
+      setListeningMode('continuous');
+      setLiveText('');
+      setTimeout(() => startListening(), 1000);
+      return;
+    }
+
     const lowerTranscript = transcript.toLowerCase();
     const originalTranscript = transcript;
 
-    // ✅ CONFIDENCE THRESHOLD: Only process if confidence is above threshold
+    // Check wake word FIRST — if present, skip confidence gate entirely
+    // (Sarvam frequently returns 0.0% on valid commands)
+    const hasWakeWordEarly = WAKE_WORDS.some(word => lowerTranscript.includes(word));
+
+    // CONFIDENCE THRESHOLD: only apply when there is NO wake word
     const CONFIDENCE_THRESHOLD = 0.75;
-    if (confidence < CONFIDENCE_THRESHOLD && confidence > 0) {  // Only check if confidence is provided
-      console.log(`⚠️ Low confidence (${(confidence * 100).toFixed(1)}%) - ignoring: "${transcript}"`);
+    if (!hasWakeWordEarly && confidence < CONFIDENCE_THRESHOLD) {
+      console.log(`⚠️ Low confidence (${(confidence * 100).toFixed(1)}%) no wake word - ignoring: "${transcript}"`);
       setListeningMode('continuous');
       setLiveText('');
       setTimeout(() => startListening(), 1000);
@@ -774,6 +791,7 @@ export default function MayaChat() {
       /travel|flight|hotel|airport|vacation|trip/i,
       /health|medicine|doctor|hospital|sick|disease|covid/i,
       /joke|funny|laugh|comedy|humor/i,
+      /oh my god|oh my|what a disaster|baap re|aap|aapse|disaster|unbelievable|no way|seriously/i,
       /what time|what date|what is your name|who are you|how old/i,
       /(?<!maya\s)(?<!mara\s)(?<!maaya\s)(hello|hi|bye|goodbye|thanks|thank you)(?!.*design)/i,
     ];
@@ -1068,38 +1086,63 @@ export default function MayaChat() {
         console.log('║ 💾 Accessible via: window.lastMayaJSON                   ║');
         console.log('╚════════════════════════════════════════════════════════════╝\n');
 
-        // ✅ ADDED: Send preview command to Unreal
-        if (typeof window.sendToUnreal === 'function') {
-          const msg = JSON.stringify({msgType: 'showPreview'});
-          console.log(`MayaChat → Unreal: ${msg}`);
-          window.sendToUnreal({ msgType: 'showPreview' });
-        }
+        // ─── UNREAL COMMUNICATION (per spec sheet) ───────────────────────
 
         if (typeof window.sendToUnreal === 'function') {
-          const roomKeywords = ['room', 'kitchen', 'bedroom', 'living', 'dining', 'conference', 'go to', 'take me', 'navigate', 'where', 'move to'];
-          const isRoomRelated = roomKeywords.some(kw => messageText.toLowerCase().includes(kw)) || jsonData.intent === 'navigate';
 
-          if (isRoomRelated) {
-            const msg = JSON.stringify({msgType: 'getRoomNames'});
-            console.log(`MayaChat → Unreal: ${msg}`);
-            window.sendToUnreal({ msgType: 'getRoomNames' });
+          // 1. NAVIGATE → gotoRoom + getRoomCsv (fresh CSV for new room)
+          if (jsonData.intent === 'navigate' && jsonData.params?.room) {
+            const unrealRoomName = jsonData.params.room
+              .split('_')
+              .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+              .join('');
+            console.log(`MayaChat → Unreal: ${JSON.stringify({msgType: 'gotoRoom', targetRoom: unrealRoomName})}`);
+            window.sendToUnreal({ msgType: 'gotoRoom', targetRoom: unrealRoomName });
+
+            console.log(`MayaChat → Unreal: ${JSON.stringify({msgType: 'getRoomCsv'})}`);
+            window.sendToUnreal({ msgType: 'getRoomCsv' });
           }
 
-          if (jsonData.intent === 'navigate') {
-            const roomRaw = jsonData.params?.room;
-            
-            if (roomRaw) {
-              const unrealRoomName = roomRaw
-                .split('_')
-                .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-                .join('');
+          // 2. CHANGE INTENTS → disablePreview (clear any active preview) + getRoomCsv
+          if (
+            jsonData.intent === 'change_theme' ||
+            jsonData.intent === 'selected_swap' ||
+            jsonData.intent === 'partial_swap' ||
+            jsonData.intent === 'style_consultation'
+          ) {
+            console.log(`MayaChat → Unreal: ${JSON.stringify({msgType: 'disablePreview'})}`);
+            window.sendToUnreal({ msgType: 'disablePreview' });
 
-              const msg = JSON.stringify({msgType: 'gotoRoom', targetRoom: unrealRoomName});
-              console.log(`MayaChat → Unreal: ${msg}`);
-              window.sendToUnreal({ msgType: 'gotoRoom', targetRoom: unrealRoomName });
-            }
+            window.pendingChange = { intent: jsonData.intent, params: jsonData.params, timestamp: Date.now() };
+            console.log('💾 Stored pending change:', window.pendingChange.intent);
+
+            console.log(`MayaChat → Unreal: ${JSON.stringify({msgType: 'getRoomCsv'})}`);
+            window.sendToUnreal({ msgType: 'getRoomCsv' });
           }
+
+          // 3. SHOW PREVIEW → previewChanges (give Unreal mouse focus so user can click EndPreview)
+          if (jsonData.intent === 'show_preview') {
+            console.log(`MayaChat → Unreal: ${JSON.stringify({msgType: 'previewChanges'})}`);
+            window.sendToUnreal({ msgType: 'previewChanges' });
+          }
+
+          // 4. CONFIRM ORDER → acceptAllChanges + getRoomCsv (next change uses accepted state as base)
+          if (jsonData.intent === 'confirm_order') {
+            console.log(`MayaChat → Unreal: ${JSON.stringify({msgType: 'acceptAllChanges'})}`);
+            window.sendToUnreal({ msgType: 'acceptAllChanges' });
+
+            console.log(`MayaChat → Unreal: ${JSON.stringify({msgType: 'getRoomCsv'})}`);
+            window.sendToUnreal({ msgType: 'getRoomCsv' });
+          }
+
+          // 5. GO BACK TO ORIGINAL → disablePreview
+          if (jsonData.intent === 'go_back_original') {
+            console.log(`MayaChat → Unreal: ${JSON.stringify({msgType: 'disablePreview'})}`);
+            window.sendToUnreal({ msgType: 'disablePreview' });
+          }
+
         }
+
       } catch (parseErr) {
         displayText = raw;
       }
@@ -1130,9 +1173,20 @@ export default function MayaChat() {
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (input.trim()) {
+      if (!isTypingMode) {
+        // Enter pressed outside typing mode → open the bubble input
+        setIsTypingMode(true);
+        stopListeningImmediately();
+        setTimeout(() => typingInputRef.current?.focus(), 50);
+      } else if (input.trim()) {
+        // Enter pressed inside typing mode with text → send
+        setIsTypingMode(false);
         sendMessage();
       }
+    }
+    if (e.key === 'Escape') {
+      setIsTypingMode(false);
+      setInput('');
     }
   };
 
@@ -1199,30 +1253,49 @@ export default function MayaChat() {
               )}
 
               <div ref={messagesEndRef} style={{ height: 0 }} />
+
+              {/* ── Typing mode: live editable user bubble ── */}
+              {isTypingMode && (
+                <div style={{ ...styles.bubbleRow, justifyContent: 'flex-end' }}>
+                  <div
+                    ref={typingInputRef}
+                    contentEditable
+                    suppressContentEditableWarning
+                    onInput={(e) => setInput(e.currentTarget.textContent)}
+                    onKeyDown={(e) => {
+                      e.stopPropagation();
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        const text = e.currentTarget.textContent.trim();
+                        if (text) {
+                          setIsTypingMode(false);
+                          e.currentTarget.textContent = '';
+                          sendMessage(text);
+                        }
+                      }
+                      if (e.key === 'Escape') {
+                        setIsTypingMode(false);
+                        setInput('');
+                        e.currentTarget.textContent = '';
+                      }
+                    }}
+                    style={styles.typingBubbleInput}
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>
-
-        {input.trim() && (
-          <div style={{ ...styles.bubbleRow, justifyContent: 'flex-end' }}>
-            <div style={{ ...styles.userBubble, opacity: 0.85 }}>
-              {input}
-            </div>
-          </div>
-        )}
       </div>
 
+      {/* hidden global keydown catcher so Enter outside the bubble still works */}
       <textarea
         ref={textInputRef}
         style={styles.hiddenInput}
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
         onKeyDown={handleKeyDown}
+        readOnly
         autoFocus
-        onBlur={() => {
-          setTimeout(() => textInputRef.current?.focus(), 0);
-        }}
-        placeholder="Type your message and press Enter..."
+        onBlur={() => { if (!isTypingMode) setTimeout(() => textInputRef.current?.focus(), 0); }}
       />
 
       <button
@@ -1330,6 +1403,28 @@ const styles = {
     fontSize: 13.5,
     fontFamily: 'inherit',
     zIndex: -1,
+  },
+
+  typingBubbleInput: {
+    maxWidth: '75%',
+    minWidth: 40,
+    padding: '10px 16px',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 4,
+    background: 'rgba(255,255,255,0.55)',
+    color: '#2d2d2d',
+    fontSize: 13.5,
+    lineHeight: 1.5,
+    border: '1.5px solid rgba(107,92,69,0.5)',
+    outline: 'none',
+    fontFamily: 'inherit',
+    wordBreak: 'break-word',
+    whiteSpace: 'pre-wrap',
+    cursor: 'text',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
   },
 
   toggleBtn: {
