@@ -1,313 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { MayaQueryEngine } from './MayaQueryEngine';
 import { MayaQueryFilter } from './MayaQueryFilter';
-import Papa from "papaparse";
-
-// ============================================================================
-// CSV STORAGE SYSTEM
-// ============================================================================
-
-let csvStorage = {
-  sessionId: `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-  original: null,
-  recommendations: null,
-  queryContext: null,
-  current: null,
-  currentState: 'idle',
-  completionPercent: 0
-};
-
-let queryQueue = [];
-let apiResults = {}; 
-
-// ============================================================================
-// GOOGLE SHEETS CONFIGURATION
-// ============================================================================
-const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbw_elUc3irWx6yy3X9JfF9AR7Z2sxoA3j9eZYRZdK_ty0b4iDis8OQpm0vo2AQN3Q9m/exec";
-
-// ============================================================================
-// RECEIVER API CONFIGURATION
-// ============================================================================
-// const RECEIVER_API_URL = "http://localhost:8000"; 
-
-const RECEIVER_API_URL = "https://maya-receiver-api.onrender.com";
-
-// ============================================================================
-// CSV STORAGE FUNCTIONS
-// ============================================================================
-
-function storeRoomCSV(parsedRows) {
-  console.log('\n╔════════════════════════════════════════╗');
-  console.log('║ 📥 CSV RECEIVED FROM UNREAL            ║');
-  console.log('╚════════════════════════════════════════╝\n');
-
-  if (!Array.isArray(parsedRows) || parsedRows.length === 0) {
-    console.error('❌ Invalid parsed rows');
-    return false;
-  }
-
-  csvStorage.original = parsedRows;
-  csvStorage.current = parsedRows;
-  csvStorage.currentState = 'received';
-  csvStorage.completionPercent = 0;
-
-  window.csvStorage = csvStorage;
-
-  console.log(`✅ CSV Stored Successfully: ${csvStorage.original.length} data rows\n`);
-
-  const exported = {
-    csvRows: csvStorage.current,
-    metadata: {
-      sessionId: csvStorage.sessionId,
-      status: csvStorage.currentState,
-      completionPercent: csvStorage.completionPercent,
-      exportedAt: new Date().toISOString()
-    }
-  };
-
-  window.lastExportedCSV = exported;
-
-  if (GOOGLE_SHEET_URL) {
-    saveToGoogleSheet(exported);
-  } else {
-    console.warn('⚠️ Google Sheet URL not configured');
-  }
-
-  return true;
-}
-
-// ============================================================================
-// FIXED: populateRecommendations() - NO DOUBLE ESCAPING
-// ============================================================================
-
-function populateRecommendations(apiResponse, sendUpdatedCSVRowsToUnreal) {
-  console.log("\n╔════════════════════════════════════════════════════╗");
-  console.log("║ 🎯 POPULATING RECOMMENDATIONS FROM API             ║");
-  console.log("╚════════════════════════════════════════════════════╝\n");
-
-  // ========== VALIDATION ==========
-  if (!apiResponse || !apiResponse.categories) {
-    console.error("❌ No categories in API response");
-    return;
-  }
-
-  if (!csvStorage.original || csvStorage.original.length === 0) {
-    console.error("❌ No original CSV stored");
-    return;
-  }
-
-  // ========== ITERATE OVER EACH ROW FROM UNREAL ==========
-  let updatedRows = csvStorage.original.map((row, index) => {
-    console.log(`\n📍 Processing row ${index}:`);
-    console.log(`   Category: ${row.Category}`);
-    console.log(`   ProductSKU: ${row.ProductSKU}`);
-
-    // ========== GET ORIGINAL VALUES (DON'T CHANGE) ==========
-    const spaceName = row.SpaceName;
-    const category = row.Category;
-    const productName = row.ProductName;
-    const productSku = row.ProductSKU;
-    const productPrice = row.ProductPrice;
-    const productQuantity = row.ProductQuantity;
-    const finishes = row.Finishes;
-
-    // ========== INITIALIZE UPDATED COLUMNS ==========
-    let updatedProductName = "";
-    let updatedProductSKU = "";
-    let updatedProductPrice = productPrice;
-    let updatedProductQuantity = productQuantity;
-    let updatedFinishes = "";
-
-    // ========== FIND MATCHING CATEGORY IN API RESPONSE ==========
-    const apiCategory = apiResponse.categories.find(c =>
-      c.category.toUpperCase() === (category || "").toUpperCase()
-    );
-
-    console.log(`   API Match: ${apiCategory ? "✅ FOUND" : "❌ NOT FOUND"}`);
-
-    // ========== RULES ==========
-    //
-    // UpdatedProductName    → always copy ProductName as-is
-    // UpdatedProductSKU     → always copy ProductSKU as-is
-    // UpdatedProductPrice   → always copy ProductPrice as-is
-    // UpdatedProductQuantity→ always copy ProductQuantity as-is
-    // UpdatedFinishes       →
-    //   - If API match found AND finish part starts with "StaticMeshComponent0":
-    //       replace SKU segment (3rd colon part) with top API SKU
-    //       e.g. "StaticMeshComponent0:NOT_FOUND:OldSKU" → "StaticMeshComponent0:NOT_FOUND:AW-ACCENT-43"
-    //   - If finish part starts with anything else (FAbric, BodyFabric, TableTop, etc.):
-    //       copy that part as-is (no change)
-    //   - If no API match: copy entire Finishes as-is
-
-    // ✅ Cols 7,9,10 — always copy originals
-    updatedProductName = productName;
-    updatedProductPrice = productPrice;
-    updatedProductQuantity = productQuantity;
-
-    // ========== DETECT FINISH TYPE ==========
-    // Check if the FIRST finish part starts with StaticMeshComponent0
-    const firstFinishPart = (finishes || "").trim().split(",")[0] || "";
-    const firstPartName = firstFinishPart.split(":")[0]?.trim() || "";
-    const isStaticMesh = firstPartName.toLowerCase().startsWith("staticmeshcomponent");
-
-    console.log(`   Finish type: ${isStaticMesh ? "StaticMesh" : "Non-StaticMesh (FAbric/BodyFabric/etc)"}`);
-
-    if (apiCategory && apiCategory.skus && apiCategory.skus.length > 0) {
-      const apiSku = apiCategory.skus[0];
-      console.log(`   → Top API SKU: "${apiSku}"`);
-
-      if (isStaticMesh) {
-        // ✅ StaticMeshComponent0 rows: UpdatedProductSKU = original ProductSKU
-        updatedProductSKU = productSku;
-        console.log(`   → UpdatedProductSKU: "${updatedProductSKU}" (original, StaticMesh row)`);
-      } else {
-        // ✅ Non-StaticMesh rows (FAbric, BodyFabric, TableTop, etc.): UpdatedProductSKU = top API SKU
-        updatedProductSKU = apiSku;
-        console.log(`   → UpdatedProductSKU: "${updatedProductSKU}" (API SKU, non-StaticMesh row)`);
-      }
-
-      if (finishes && finishes.trim()) {
-        const finishParts = finishes.split(",");
-
-        console.log(`   Original Finishes: "${finishes}"`);
-        console.log(`   Finish parts: [${finishParts.map(p => `"${p}"`).join(", ")}]`);
-
-        const formattedParts = finishParts.map((part) => {
-          if (!part.trim()) return "";
-
-          const segments = part.split(":");
-          const partName = segments[0]?.trim();
-
-          if (!partName) return "";
-
-          if (partName.toLowerCase().startsWith("staticmeshcomponent")) {
-            // ✅ StaticMesh parts → replace SKU with top API SKU
-            const rebuilt = `${partName}:NOT_FOUND:${apiSku}`;
-            console.log(`   Part "${part.trim()}" → "${rebuilt}" (StaticMesh → API SKU)`);
-            return rebuilt;
-          }
-
-          // ✅ Non-StaticMesh parts (FAbric, BodyFabric, TableTop, etc.) → copy as-is
-          console.log(`   Part "${part.trim()}" → kept as-is (non-StaticMesh)`);
-          return part.trim();
-        });
-
-        updatedFinishes = formattedParts.filter((p) => p).join(",");
-
-        if (updatedFinishes) {
-          updatedFinishes += ",";
-        }
-
-        console.log(`   → UpdatedFinishes: "${updatedFinishes}"`);
-      } else {
-        updatedFinishes = finishes || "";
-      }
-
-    } else {
-      // ❌ No API match — copy everything as-is
-      updatedProductSKU = productSku;
-      updatedFinishes = finishes || "";
-      console.log(`   → NO API MATCH - all values copied as-is`);
-    }
-
-    console.log(`   → UpdatedProductName: "${updatedProductName}"`);
-    console.log(`   → UpdatedProductSKU: "${updatedProductSKU}"`);
-    console.log(`   → UpdatedProductPrice: "${updatedProductPrice}"`);
-    console.log(`   → UpdatedProductQuantity: "${updatedProductQuantity}"`)
-
-    // ========== BUILD UPDATED ROW OBJECT ==========
-    const updatedRow = {
-      SpaceName: spaceName,
-      Category: category,
-      ProductName: productName,
-      ProductSKU: productSku,
-      ProductPrice: productPrice,
-      ProductQuantity: productQuantity,
-      Finishes: finishes,
-      UpdatedProductName: updatedProductName,
-      UpdatedProductSKU: updatedProductSKU,
-      UpdatedProductPrice: updatedProductPrice,
-      UpdatedProductQuantity: updatedProductQuantity,
-      UpdatedFinishes: updatedFinishes,
-      Area: row.Area || "",
-    };
-
-    return updatedRow;
-  });
-
-  // ========== FILTER: ONLY SEND ROWS WHOSE CATEGORY MATCHED THE API ==========
-  const matchedCategories = new Set(
-    apiResponse.categories.map(c => c.category.toUpperCase())
-  );
-
-  const rowsToSend = updatedRows.filter((row) => {
-    const matched = matchedCategories.has((row.Category || "").toUpperCase());
-    if (matched) {
-      console.log(`   ✅ Sending: [${row.Category}] ${row.ProductSKU}`);
-    } else {
-      console.log(`   ⏭️  Skipping (no API match): [${row.Category}] ${row.ProductSKU}`);
-    }
-    return matched;
-  });
-
-  console.log(`\n✅ Sending ${rowsToSend.length} of ${updatedRows.length} rows to Unreal...\n`);
-
-  if (rowsToSend.length === 0) {
-    console.warn("⚠️ No matching rows to send.");
-    return;
-  }
-
-  // ========== CONVERT BACK TO CSV (matched rows only) ==========
-  const csvString = Papa.unparse(rowsToSend, { header: true });
-  const csvRowsArray = csvString.split("\n");
-
-  console.log(`📤 Sending ${csvRowsArray.length} rows (header + ${rowsToSend.length} data rows) to Unreal`);
-  console.log(csvRowsArray.slice(0, 3));
-
-  // ========== SEND TO UNREAL VIA EXPERIENCE.JSX ==========
-  sendUpdatedCSVRowsToUnreal(csvRowsArray);
-}
-
-function getCsvStatus() {
-  return {
-    hasCSV: csvStorage.current !== null,
-    status: csvStorage.currentState,
-    rowsCount: csvStorage.current?.length || 0,
-    completionPercent: csvStorage.completionPercent,
-    totalQueries: queryQueue.length,
-    timestamp: new Date().toISOString()
-  };
-}
-
-async function saveToGoogleSheet(csvData) {
-  if (!GOOGLE_SHEET_URL) {
-    console.warn('⚠️ Google Sheet URL not configured');
-    return;
-  }
-
-  try {
-    console.log('📤 Saving to Google Sheet...');
-
-    const response = await fetch(GOOGLE_SHEET_URL, {
-      method: 'POST',
-      body: JSON.stringify(csvData)
-    });
-
-    const result = await response.json();
-
-    if (result.status === 'ok') {
-      console.log('✅ Saved to Google Sheet successfully!');
-    } else {
-      console.error('❌ Failed to save:', result.message);
-    }
-  } catch (err) {
-    console.error('❌ Error saving to Google Sheet:', err);
-  }
-}
-
-// ============================================================================
-// SYSTEM PROMPT & CONFIGURATION
-// ============================================================================
 
 const SYSTEM_PROMPT = `You are Maya, a witty and charming interior design assistant for Vizwalk.
 
@@ -340,16 +33,31 @@ JSON FORMAT:
   }
 }
 
-RULES: Extract ALL parameters. Use null for missing values. Return ONLY JSON.`;
+RULES: Extract ALL parameters. Use null for missing values. Return ONLY JSON.
 
+EXAMPLES:
+
+User: "Show me modern sofas under ₹50,000"
+{"reply": "Modern sofas coming right up!", "intent": "search_product", "params": {"category": "sofa", "style": "modern", "color": null, "secondary_colors": [], "room": null, "mood": null, "price_range": "under 50000", "material": null, "quantity": null, "seating_capacity": null, "budget": 50000, "additional_params": {"finish": null, "texture": null, "lighting": null}}}
+
+User: "I want Warm Minimal conference room: sofa + 2 chairs + lighting under ₹80,000"
+{"reply": "Creating your warm minimal conference setup...", "intent": "bundle", "params": {"category": "sofa,chair,lighting", "style": "minimal", "color": null, "secondary_colors": [], "room": "conference_room", "mood": "warm", "price_range": "under 80000", "material": null, "quantity": {"sofa": 1, "chair": 2, "lighting": 1}, "seating_capacity": null, "budget": 80000, "additional_params": {"finish": null, "texture": null, "lighting": "warm"}}}`;
+
+// ✅ FIXED: Simple API key loading for Create React App
 const WAKE_WORDS = ["hi maya", "hey maya", "maaya", "maya", "mara", "hi mara"];
 const SILENCE_TIMEOUT = 2000;
 const NOISE_THRESHOLD = 50;
 const SPEECH_CONFIDENCE_THRESHOLD = 0.85;
 const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY || "";
 const SARVAM_API_KEY = process.env.REACT_APP_SARVAM_API_KEY || "";
+// const RECEIVER_API_URL = "https://maya-receiver-api.onrender.com";
+const RECEIVER_API_URL = "http://localhost:8000";
 
 let sarvamFailureCount = 0;
+
+// TEST
+
+// Separate queues for STT and TTS — they never block each other
 let sttQueue = [];
 let ttsQueue = [];
 let isSTTProcessing = false;
@@ -399,8 +107,9 @@ const sarvamSTT = async (audioBlob, callback) => {
 
     if (!response.ok) {
       sarvamFailureCount++;
+      // 429 = rate limited — back off for 10 seconds before allowing next call
       if (response.status === 429) {
-        console.warn("⚠️ Sarvam rate limited (429)");
+        console.warn("⚠️ Sarvam rate limited (429) — backing off 10s");
         await new Promise(resolve => setTimeout(resolve, 10000));
       }
       callback(null);
@@ -463,11 +172,7 @@ const sarvamTTS = async (text, callback) => {
   }
 };
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
-
-export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
+export default function MayaChat() {
   const [visible, setVisible] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
@@ -480,7 +185,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
   const [liveText, setLiveText] = useState("");
   const [error, setError] = useState("");
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [csvStatus, setCSVStatus] = useState(null);
+  const [isPausedListening, setIsPausedListening] = useState(false);
 
   const messagesEndRef = useRef(null);
   const panelRef = useRef(null);
@@ -502,128 +207,10 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
   const recognitionRef = useRef(null);
   const queryEngineRef = useRef(new MayaQueryEngine());
   const liveTextRef = useRef("");
+  
+
   const lastMayaRequestIdRef = useRef("");
   const resultPollIntervalRef = useRef(null);
-
-  // ============================================================================
-  // ✅ FIXED: LISTEN FOR CSV FROM UNREAL VIA CustomEvent + postMessage fallback
-  // ============================================================================
-  useEffect(() => {
-    const parseCsvArrayAndStore = (csvArray) => {
-      if (!Array.isArray(csvArray) || csvArray.length === 0) {
-        console.error('❌ Invalid CSV array received');
-        return;
-      }
-
-      console.log('\n📥 CSV RECEIVED - Parsing with PapaParse...');
-
-      // Join lines into one CSV string and parse with header:true
-      const csvString = csvArray.join("\n");
-
-      Papa.parse(csvString, {
-        header: true,
-        skipEmptyLines: true,
-        complete: (results) => {
-          if (results.data && results.data.length > 0) {
-            console.log(`✅ Parsed ${results.data.length} rows from CSV`);
-            console.log('Sample row:', results.data[0]);
-
-            // Store properly parsed objects
-            storeRoomCSV(results.data);
-            setCSVStatus(getCsvStatus());
-          } else {
-            console.error('❌ PapaParse returned no data');
-          }
-        },
-        error: (err) => {
-          console.error('❌ PapaParse error:', err);
-        }
-      });
-    };
-
-    // ✅ PRIMARY: Listen for CustomEvent dispatched by Experience.jsx
-    const handleCsvCustomEvent = (event) => {
-      console.log('\n📥 CSV RECEIVED VIA CustomEvent "csvFromUnreal"');
-      parseCsvArrayAndStore(event.detail);
-    };
-
-    // ✅ FALLBACK: Listen for postMessage from parent
-    const handlePostMessage = (event) => {
-      const data = event.data;
-
-      // Format 1: { type: 'csvFromUnreal', data: [...] }
-      if (data?.type === 'csvFromUnreal' && Array.isArray(data.data)) {
-        console.log('\n📥 CSV RECEIVED VIA postMessage (type: csvFromUnreal)');
-        parseCsvArrayAndStore(data.data);
-        return;
-      }
-
-      // Format 2: Raw array where first row contains header keywords
-      if (Array.isArray(data) && data.length > 0) {
-        const firstRow = (data[0] || '').toString().toLowerCase();
-        if (
-          firstRow.includes('spacename') ||
-          firstRow.includes('productname') ||
-          firstRow.includes('category')
-        ) {
-          console.log('\n📥 CSV RECEIVED VIA postMessage (raw array)');
-          parseCsvArrayAndStore(data);
-        }
-      }
-    };
-
-    window.addEventListener('csvFromUnreal', handleCsvCustomEvent);
-    window.addEventListener('message', handlePostMessage);
-
-    console.log('✅ CSV listeners registered (CustomEvent + postMessage)');
-
-    return () => {
-      window.removeEventListener('csvFromUnreal', handleCsvCustomEvent);
-      window.removeEventListener('message', handlePostMessage);
-    };
-  }, []);
-
-  // ========== KEYBOARD SHORTCUTS FOR CSV ==========
-  useEffect(() => {
-    const handleKeyPress = (e) => {
-      if (e.key === 'c' || e.key === 'C') {
-        console.log('\n📊 CSV STATUS:');
-        console.table(getCsvStatus());
-      }
-
-      if (e.key === 'q' || e.key === 'Q') {
-        console.log('\n📝 QUERY QUEUE:');
-        console.table(queryQueue.slice(0, 10));
-      }
-
-      if (e.key === 'r' || e.key === 'R') {
-        csvStorage = {
-          sessionId: `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          original: null,
-          recommendations: null,
-          queryContext: null,
-          current: null,
-          currentState: 'idle',
-          completionPercent: 0
-        };
-        queryQueue = [];
-        console.log('🔄 CSV Storage Reset');
-      }
-
-      if (e.key === 'h' || e.key === 'H') {
-        console.log(`
-🎯 KEYBOARD SHORTCUTS:
-  C → Check CSV Status
-  Q → Show Query Queue
-  R → Reset Storage
-  H → Show this help
-        `);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, []);
 
   useEffect(() => {
     if (!hasInitializedRef.current) {
@@ -646,10 +233,12 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
       e.preventDefault();
 
       if (!isOpen) {
+        // Open chatbot — resume listening, keep existing chat history
         setIsOpen(true);
         setVisible(true);
         setTimeout(() => !listeningRef.current && startListening(), 300);
       } else {
+        // Minimize chatbot — stop mic but keep chat history intact
         stopListeningImmediately();
         setIsOpen(false);
       }
@@ -688,55 +277,61 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
         }
       };
 
-      recognition.onerror = () => {};
-      recognition.onend = () => {};
+      recognition.onerror = () => {
+        // Silent
+      };
+
+      recognition.onend = () => {
+        // Silent
+      };
 
       recognitionRef.current = recognition;
       recognition.start();
-    } catch (err) {}
+    } catch (err) {
+      // Silent
+    }
   };
 
   const startPollingForResult = (requestId) => {
-    if (!requestId) return;
+  if (!requestId) return;
 
-    lastMayaRequestIdRef.current = requestId;
+  lastMayaRequestIdRef.current = requestId;
 
-    if (resultPollIntervalRef.current) {
-      clearInterval(resultPollIntervalRef.current);
-    }
+  if (resultPollIntervalRef.current) {
+    clearInterval(resultPollIntervalRef.current);
+  }
 
-    let attempts = 0;
+  let attempts = 0;
 
-    resultPollIntervalRef.current = setInterval(async () => {
-      attempts++;
+  resultPollIntervalRef.current = setInterval(async () => {
+    attempts++;
 
-      try {
-        const res = await fetch(`${RECEIVER_API_URL}/result/${requestId}`);
-        const data = await res.json();
+    try {
+      const res = await fetch(`${RECEIVER_API_URL}/result/${requestId}`);
+      const data = await res.json();
 
-        if (data?.found && data?.data?.categories?.length) {
-          console.log("✅ RESULT RECEIVED FROM API");
-          console.log(JSON.stringify(data.data, null, 2));
+      console.log("Polling result:", data);
 
-          populateRecommendations(data.data, sendUpdatedCSVRowsToUnreal);
-          setCSVStatus(getCsvStatus());
+      if (data?.found && data?.data?.categories?.length) {
+        console.log("✅ RESULT RECEIVED FROM STREAMLIT:");
+        console.log(JSON.stringify(data.data, null, 2));
 
-          window.lastMayaSearchResult = data.data;
+        window.lastMayaSearchResult = data.data;
 
-          clearInterval(resultPollIntervalRef.current);
-          resultPollIntervalRef.current = null;
-        }
-
-        if (attempts >= 30) {
-          console.warn("Result polling stopped");
-          clearInterval(resultPollIntervalRef.current);
-          resultPollIntervalRef.current = null;
-        }
-      } catch (err) {
-        console.error("Polling error:", err);
+        clearInterval(resultPollIntervalRef.current);
+        resultPollIntervalRef.current = null;
       }
-    }, 1000);
-  };
+
+      if (attempts >= 30) {
+        console.warn("Result polling stopped. No result found.");
+        clearInterval(resultPollIntervalRef.current);
+        resultPollIntervalRef.current = null;
+      }
+    } catch (err) {
+      console.error("Failed polling result:", err);
+    }
+  }, 1000);
+};
 
   const startListening = async () => {
     if (listeningRef.current) return;
@@ -796,10 +391,12 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
           const hasSpeech = speechStartedRef.current || blobSize > 30000;
 
           if (hasSpeech && blobSize > 15000) {
+            // Quick wake word pre-check using liveText — skips Sarvam if no wake word
             const liveTextLower = (liveTextRef.current || "").toLowerCase();
             const hasWakeWordInLive = liveTextLower.length > 0 &&
               WAKE_WORDS.some(word => liveTextLower.includes(word));
 
+            // Only skip if liveText is confident (has content) and no wake word found
             if (liveTextLower.length > 3 && !hasWakeWordInLive) {
               setListeningMode("idle");
               speechStartedRef.current = false;
@@ -938,13 +535,16 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
 
     const lowerTranscript = transcript.toLowerCase();
 
+    // Wake word check — every query, every time, must start with "Maaya"
     const hasWakeWord = WAKE_WORDS.some(word => lowerTranscript.includes(word));
     if (!hasWakeWord) {
+      // Silently ignore — no wake word detected
       setListeningMode("idle");
       setTimeout(() => startListening(), 1000);
       return;
     }
 
+    // Wake word found — now validate the command
     const validation = queryEngineRef.current.validateQuery(transcript);
 
     if (!validation.isValid) {
@@ -977,34 +577,59 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
     processSTTQueue();
   };
 
-  const postJsonToReceiver = async (jsonData, userQuery = "") => {
-    if (!RECEIVER_API_URL) return;
+  const streamMessageText = (fullText) => {
+    const words = fullText.split(" ");
+    let currentIndex = 0;
+    let displayedText = "";
 
-    try {
-      const payloadWithId = {
-        ...jsonData,
-        search_query: userQuery,
-        request_id: `maya-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        source: "maya_frontend",
-        created_at: new Date().toISOString(),
-      };
+    const streamNextWord = () => {
+      if (currentIndex < words.length) {
+        displayedText += (currentIndex > 0 ? " " : "") + words[currentIndex];
 
-      console.log("📤 Sending payload to receiver:", payloadWithId);
+        const streamedMessages = [
+          ...messagesRef.current.slice(0, -1),
+          { role: "assistant", content: displayedText }
+        ];
 
-      const res = await fetch(`${RECEIVER_API_URL}/ingest`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payloadWithId),
-      });
+        setMessages(streamedMessages);
+        messagesRef.current = streamedMessages;
 
-      const result = await res.json().catch(() => null);
-      console.log("✅ Receiver status:", res.status, result);
+        currentIndex++;
+        setTimeout(streamNextWord, 120);
+      }
+    };
 
-      startPollingForResult(payloadWithId.request_id);
-    } catch (err) {
-      console.error("Failed to post:", err);
-    }
+    streamNextWord();
   };
+
+  const postJsonToReceiver = async (jsonData, userQuery = "") => {
+  if (!RECEIVER_API_URL) return;
+
+  try {
+    const payloadWithId = {
+      ...jsonData,
+      search_query: userQuery,
+      request_id: `maya-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      source: "maya_frontend",
+      created_at: new Date().toISOString(),
+    };
+
+    console.log("Sending Maya payload to receiver:", payloadWithId);
+
+    const res = await fetch(`${RECEIVER_API_URL}/ingest`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payloadWithId),
+    });
+
+    const result = await res.json().catch(() => null);
+    console.log("Receiver ingest status:", res.status, result);
+
+    startPollingForResult(payloadWithId.request_id);
+  } catch (err) {
+    console.error("Failed to post Maya JSON:", err);
+  }
+};
 
   const speakText = (text, fullText) => {
     if (!text || text.trim().length === 0) return;
@@ -1025,15 +650,19 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
             const audio = new Audio(audioUrl);
 
             audio.onloadedmetadata = () => {
+              // Calculate word delay based on actual audio duration
               const words = fullText.split(" ");
               const audioDurationMs = audio.duration * 1000;
               const delayPerWord = Math.max(80, audioDurationMs / words.length);
 
+              // Start audio and word streaming at the same time
               audio.play().catch(() => setIsSpeaking(false));
 
+              // 🗣️ TALKING — mic fully paused, prevents feedback loop
               setListeningMode("talking");
               stopListeningImmediately();
 
+              // Stream words in sync with audio
               let currentIndex = 0;
               let displayedText = "";
 
@@ -1057,6 +686,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
             audio.onended = () => {
               setIsSpeaking(false);
               URL.revokeObjectURL(audioUrl);
+              // 🗣️ TALKING done — go back to 👂 LISTENING
               setListeningMode("idle");
               speechStartedRef.current = false;
               pauseTimeoutRef.current = null;
@@ -1073,6 +703,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
             setIsSpeaking(false);
           }
         } else {
+          // TTS failed — still show text and restart listening
           setListeningMode("idle");
           speechStartedRef.current = false;
           pauseTimeoutRef.current = null;
@@ -1088,6 +719,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
     const messageText = textToSend || input;
 
     if (isProcessingRef.current) {
+      // Already processing a command — clear STT queue to prevent duplicates
       sttQueue = [];
       return;
     }
@@ -1096,6 +728,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
 
     isProcessingRef.current = true;
 
+    // 🧠 THINKING — mic fully off, no new query can sneak in
     stopListeningImmediately();
     setListeningMode("processing");
 
@@ -1110,7 +743,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
 
     try {
       if (!OPENAI_API_KEY) {
-        console.error("❌ OPENAI_API_KEY is missing");
+        console.error("❌ OPENAI_API_KEY is missing - check your .env file");
         throw new Error("REACT_APP_OPENAI_API_KEY is missing");
       }
 
@@ -1156,8 +789,26 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
           return;
         }
 
-        console.log("\n📦 Maya JSON Response received");
+        console.log("\n╔════════════════════════════════════════════════════════════╗");
+        console.log("║           📦 MAYA JSON OUTPUT - OPENAI RESPONSE           ║");
+        console.log("╚════════════════════════════════════════════════════════════╝");
+        console.log("\n📋 COMPLETE JSON OBJECT:");
         console.log(JSON.stringify(jsonData, null, 2));
+        console.log("\n💬 REPLY:");
+        console.log(`"${jsonData.reply}"`);
+        console.log("\n🎯 INTENT:");
+        console.log(jsonData.intent);
+        console.log("\n📊 PARAMETERS:");
+        const p = jsonData.params;
+        console.log("category:", p.category);
+        console.log("style:", p.style);
+        console.log("color:", p.color);
+        console.log("room:", p.room);
+        console.log("mood:", p.mood);
+        console.log("budget:", p.budget);
+        console.log("\n╔════════════════════════════════════════════════════════════╗");
+        console.log("║ 💾 Accessible via: window.lastMayaJSON                   ║");
+        console.log("╚════════════════════════════════════════════════════════════╝\n");
 
         postJsonToReceiver(jsonData, messageText);
       } catch (parseErr) {
@@ -1175,6 +826,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
       const errorMessages = [...messagesRef.current, { role: "assistant", content: "Oops! Something went wrong. Please try again." }];
       setMessages(errorMessages);
       messagesRef.current = errorMessages;
+      // On error only — reset and restart listening since speakText won't be called
       setListeningMode("idle");
       speechStartedRef.current = false;
       pauseTimeoutRef.current = null;
@@ -1217,20 +869,15 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
           <div style={styles.statusBar}>
             {listeningMode === "talking" ? (
               <span style={styles.statusLive}>
-                🗣️ TALKING
+                🗣️ <span style={{ fontSize: 13, fontWeight: "600" }}>TALKING</span>
               </span>
             ) : listeningMode === "processing" || listeningMode === "paused" ? (
               <span style={styles.statusLive}>
-                🧠 THINKING
+                🧠 <span style={{ fontSize: 13, fontWeight: "600" }}>THINKING</span>
               </span>
             ) : (
               <span style={styles.statusLive}>
-                👂 LISTENING
-              </span>
-            )}
-            {csvStatus && (
-              <span style={{ fontSize: 11, marginLeft: 'auto', color: '#666' }}>
-                CSV: {csvStatus.completionPercent}%
+                👂 <span style={{ fontSize: 13, fontWeight: "600" }}>LISTENING</span>
               </span>
             )}
           </div>
@@ -1287,21 +934,17 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
                 </div>
                 <p style={styles.listeningText}>Hi, I'm Maya. I'm listening.</p>
                 <p style={styles.statusText}>
-                  {listeningMode === "talking" && "🗣️ Speaking..."}
-                  {(listeningMode === "processing" || listeningMode === "paused") && "🧠 Processing..."}
-                  {(listeningMode === "idle" || listeningMode === "continuous") && "👂 Waiting..."}
+                  {listeningMode === "talking" && "🗣️ Maaya is speaking..."}
+                  {(listeningMode === "processing" || listeningMode === "paused") && "🧠 Processing your request..."}
+                  {(listeningMode === "idle" || listeningMode === "continuous") && "👂 Waiting for 'Maaya'..."}
                 </p>
-                {csvStatus && (
-                  <p style={styles.recordedTextDisplay}>
-                    📊 CSV: {csvStatus.rowsCount} rows | {csvStatus.completionPercent}%
-                  </p>
-                )}
+                {recordedText && <p style={styles.recordedTextDisplay}>"{recordedText}"</p>}
               </div>
             ) : (
               <div style={styles.greeting}>
                 <div style={styles.sparkleIcon}>✦</div>
                 <p style={styles.greetingTitle}>Hi! I'm Maya</p>
-                <p style={styles.greetingSub}>Say 'Hi Maya' to begin</p>
+                <p style={styles.greetingSub}>Say "Hi Maya" to begin</p>
               </div>
             )}
           </div>
@@ -1311,10 +954,11 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
           <div style={styles.inputRow}>
             <input
               style={styles.input}
-              placeholder="Or type here..."
+              placeholder="Or type here and press Enter..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
+              disabled={loading || isListening}
             />
 
             <button
@@ -1340,10 +984,6 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
     </>
   );
 }
-
-// ============================================================================
-// STYLES
-// ============================================================================
 
 const styles = {
   toggleBtn: {
@@ -1386,15 +1026,20 @@ const styles = {
     color: "#666",
     textAlign: "center",
     borderBottom: "1px solid rgba(0,0,0,0.05)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
   },
   statusLive: {
     color: "#ff6b6b",
     fontWeight: "600",
     display: "flex",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  statusIdle: {
+    color: "#6b5c45",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
   },
   closeBtn: {

@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { MayaQueryEngine } from './MayaQueryEngine';
 import { MayaQueryFilter } from './MayaQueryFilter';
-import Papa from "papaparse";
 
 // ============================================================================
 // CSV STORAGE SYSTEM
@@ -18,7 +17,7 @@ let csvStorage = {
 };
 
 let queryQueue = [];
-let apiResults = {}; 
+let apiResults = {};
 
 // ============================================================================
 // GOOGLE SHEETS CONFIGURATION
@@ -26,34 +25,267 @@ let apiResults = {};
 const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbw_elUc3irWx6yy3X9JfF9AR7Z2sxoA3j9eZYRZdK_ty0b4iDis8OQpm0vo2AQN3Q9m/exec";
 
 // ============================================================================
-// RECEIVER API CONFIGURATION
-// ============================================================================
-// const RECEIVER_API_URL = "http://localhost:8000"; 
-
-const RECEIVER_API_URL = "https://maya-receiver-api.onrender.com";
-
-// ============================================================================
 // CSV STORAGE FUNCTIONS
 // ============================================================================
 
-function storeRoomCSV(parsedRows) {
+function storeRoomCSV(csvRows) {
   console.log('\n╔════════════════════════════════════════╗');
   console.log('║ 📥 CSV RECEIVED FROM UNREAL            ║');
   console.log('╚════════════════════════════════════════╝\n');
-
-  if (!Array.isArray(parsedRows) || parsedRows.length === 0) {
-    console.error('❌ Invalid parsed rows');
+  
+  if (!Array.isArray(csvRows) || csvRows.length === 0) {
+    console.error('❌ Invalid CSV format');
     return false;
   }
 
-  csvStorage.original = parsedRows;
-  csvStorage.current = parsedRows;
+  let startIndex = 0;
+  const firstRow = csvRows[0].toLowerCase();
+  
+  const isHeaderRow = firstRow.includes('spacename') || 
+                      firstRow.includes('productname') || 
+                      firstRow.includes('category');
+  
+  if (isHeaderRow) {
+    console.log('✅ First row identified as HEADER - skipping');
+    startIndex = 1;
+  }
+
+  csvStorage.original = csvRows.slice(startIndex);
+  csvStorage.current = csvRows.slice(startIndex);
   csvStorage.currentState = 'received';
   csvStorage.completionPercent = 0;
 
   window.csvStorage = csvStorage;
+  window.lastRoomCsv = csvRows.slice(startIndex);
 
   console.log(`✅ CSV Stored Successfully: ${csvStorage.original.length} data rows\n`);
+
+  console.log('📤 Auto-exporting to Google Sheet...');
+  
+  const exported = {
+    csvRows: csvStorage.current,
+    metadata: {
+      sessionId: csvStorage.sessionId,
+      status: csvStorage.currentState,
+      completionPercent: csvStorage.completionPercent,
+      exportedAt: new Date().toISOString()
+    }
+  };
+  
+  window.lastExportedCSV = exported;
+  
+  if (GOOGLE_SHEET_URL) {
+    saveToGoogleSheet(exported);
+  } else {
+    console.warn('⚠️ Google Sheet URL not configured');
+  }
+
+  return true;
+}
+
+// ============================================================================
+// HELPER: Parse CSV correctly (handles quoted fields)
+// ============================================================================
+
+function parseCSVRowCorrectly(row) {
+  const result = [];
+  let current = '';
+  let insideQuotes = false;
+  
+  for (let i = 0; i < row.length; i++) {
+    const char = row[i];
+    
+    if (char === '"' && (i === 0 || row[i-1] !== '\\')) {
+      insideQuotes = !insideQuotes;
+    } else if (char === ',' && !insideQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  
+  result.push(current.trim());
+  return result;
+}
+
+// ============================================================================
+// FIXED: populateRecommendations() - NO DOUBLE ESCAPING
+// ============================================================================
+
+function populateRecommendations(apiResponse, sendUpdatedCSVRowsToUnreal, showCSVPreviewModal) {
+  if (!csvStorage.original || csvStorage.original.length === 0) {
+    console.error('❌ No CSV stored yet');
+    return false;
+  }
+ 
+  console.log('\n╔════════════════════════════════════════╗');
+  console.log('║ 📤 POPULATING RECOMMENDATIONS        ║');
+  console.log('╚════════════════════════════════════════╝\n');
+ 
+  csvStorage.recommendations = apiResponse;
+  
+  // ========== KEY FIX: Use original CSV directly, NO RE-ESCAPING ==========
+  const completeCsv = csvStorage.original.map((row, idx) => {
+    try {
+      const cols = parseCSVRowCorrectly(row);
+      
+      const spaceName = cols[0] || "";
+      const category = cols[1] || "";
+      const productName = cols[2] || "";
+      const productSKU = cols[3] || "";
+      const productPrice = cols[4] || "";
+      const productQuantity = cols[5] || "";
+      const finishes = cols[6] || "";  // ← KEEP AS-IS!
+      
+      let updatedProductName = productName;
+      let updatedProductSKU = productSKU;
+      let updatedProductPrice = productPrice;
+      let updatedProductQuantity = productQuantity;
+      let updatedFinishes = finishes;
+      
+      if (apiResponse && apiResponse.categories && Array.isArray(apiResponse.categories)) {
+        const categoryMatch = apiResponse.categories.find(c => {
+          if (!c || !c.category) return false;
+          return c.category.toUpperCase() === (category || "").toUpperCase();
+        });
+        
+        if (categoryMatch && categoryMatch.skus && categoryMatch.skus.length > 0) {
+          updatedProductName = categoryMatch.category;
+          updatedProductSKU = categoryMatch.skus[0];
+        }
+      }
+      
+      // ========== BUILD NEW ROW - NO RE-ESCAPING ==========
+      const newRow = [
+        spaceName,
+        category,
+        productName,
+        productSKU,
+        productPrice,
+        productQuantity,
+        finishes,  // ← ALREADY PROPERLY ESCAPED FROM UNREAL
+        updatedProductName,
+        updatedProductSKU,
+        updatedProductPrice,
+        updatedProductQuantity,
+        updatedFinishes,
+        ""
+      ].join(',');  // ← SIMPLE JOIN - NO RE-ESCAPING
+      
+      return newRow;
+      
+    } catch (err) {
+      console.error(`Error parsing row ${idx}:`, err);
+      return row;
+    }
+  });
+  
+  csvStorage.current = completeCsv;
+  csvStorage.currentState = 'completed';
+  csvStorage.completionPercent = 100;
+  window.csvStorage = csvStorage;
+  
+  console.log(`✅ ${completeCsv.length} rows populated\n`);
+  
+  setTimeout(() => {
+    const exported = {
+      csvRows: completeCsv,
+      metadata: {
+        sessionId: csvStorage.sessionId,
+        status: csvStorage.currentState,
+        completionPercent: csvStorage.completionPercent,
+        exportedAt: new Date().toISOString()
+      }
+    };
+    
+    if (GOOGLE_SHEET_URL) {
+      console.log('📤 Saving to Google Sheet...');
+      saveToGoogleSheet(exported);
+    }
+    
+    console.log('\n╔════════════════════════════════════════╗');
+    console.log('║ 🚀 PREPARING CSV FOR UNREAL          ║');
+    console.log('╚════════════════════════════════════════╝\n');
+    
+    // ========== CRITICAL: Don't modify the rows - send as-is ==========
+    const headerRow = 'SpaceName,Category,ProductName,ProductSKU,ProductPrice,ProductQuantity,Finishes,UpdatedProductName,UpdatedProductSKU,UpdatedProductPrice,UpdatedProductQuantity,UpdatedFinishes,Area';
+    
+    const unrealCsv = [headerRow, ...completeCsv];
+    
+    console.log(`✅ Ready to send ${completeCsv.length} rows to Unreal`);
+    console.log(unrealCsv);
+    sendUpdatedCSVRowsToUnreal(unrealCsv);
+    
+    console.log('📋 Opening CSV Preview Modal...');
+    
+    if (typeof showCSVPreviewModal === 'function') {
+      showCSVPreviewModal(unrealCsv, (confirmedCsv) => {
+        console.log('\n✅ CSV Confirmed by User - Sending to Unreal');
+        sendReplacementCsvToUnreal(confirmedCsv);
+      });
+    } else {
+      console.warn('⚠️ showCSVPreviewModal not available');
+      // sendReplacementCsvToUnreal(unrealCsv);
+    }
+  }, 500);
+  
+  return true;
+}
+
+function verifyCSVColumns() {
+  console.log('\n╔════════════════════════════════════════╗');
+  console.log('║ 🔍 COLUMN VERIFICATION               ║');
+  console.log('╚════════════════════════════════════════╝\n');
+  
+  if (!csvStorage.current || csvStorage.current.length === 0) {
+    console.error('No CSV data');
+    return;
+  }
+  
+  const firstRow = csvStorage.current[0];
+  const columns = firstRow.split(',');
+  
+  console.log(`Total columns: ${columns.length}`);
+  columns.forEach((col, idx) => {
+    console.log(`  ${idx}: ${col.substring(0, 40)}`);
+  });
+}
+
+function addQueryToStack(query, intent, params) {
+  const record = {
+    id: `query-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    query,
+    intent,
+    params,
+    spaceName: 'ConferenceRoom',
+    csvStateAtQuery: csvStorage.currentState,
+    completionPercentAtQuery: csvStorage.completionPercent,
+    timestamp: new Date().toISOString(),
+    source: 'voice'
+  };
+
+  queryQueue.unshift(record);
+  
+  if (queryQueue.length > 50) {
+    queryQueue = queryQueue.slice(0, 50);
+  }
+
+  console.log(`📝 Query Added: "${query.substring(0, 50)}..."`);
+  window.queryQueue = queryQueue;
+  
+  return record;
+}
+
+function exportFilledCSV() {
+  if (!csvStorage.current) {
+    console.error('❌ No CSV to export');
+    return null;
+  }
+
+  console.log('\n╔════════════════════════════════════════╗');
+  console.log('║ 📋 EXPORTING FILLED CSV                  ║');
+  console.log('╚════════════════════════════════════════╝\n');
 
   const exported = {
     csvRows: csvStorage.current,
@@ -65,207 +297,15 @@ function storeRoomCSV(parsedRows) {
     }
   };
 
-  window.lastExportedCSV = exported;
+  console.log(`✅ CSV exported: ${csvStorage.completionPercent}%\n`);
 
+  window.lastExportedCSV = exported;
+  
   if (GOOGLE_SHEET_URL) {
     saveToGoogleSheet(exported);
-  } else {
-    console.warn('⚠️ Google Sheet URL not configured');
   }
-
-  return true;
-}
-
-// ============================================================================
-// FIXED: populateRecommendations() - NO DOUBLE ESCAPING
-// ============================================================================
-
-function populateRecommendations(apiResponse, sendUpdatedCSVRowsToUnreal) {
-  console.log("\n╔════════════════════════════════════════════════════╗");
-  console.log("║ 🎯 POPULATING RECOMMENDATIONS FROM API             ║");
-  console.log("╚════════════════════════════════════════════════════╝\n");
-
-  // ========== VALIDATION ==========
-  if (!apiResponse || !apiResponse.categories) {
-    console.error("❌ No categories in API response");
-    return;
-  }
-
-  if (!csvStorage.original || csvStorage.original.length === 0) {
-    console.error("❌ No original CSV stored");
-    return;
-  }
-
-  // ========== ITERATE OVER EACH ROW FROM UNREAL ==========
-  let updatedRows = csvStorage.original.map((row, index) => {
-    console.log(`\n📍 Processing row ${index}:`);
-    console.log(`   Category: ${row.Category}`);
-    console.log(`   ProductSKU: ${row.ProductSKU}`);
-
-    // ========== GET ORIGINAL VALUES (DON'T CHANGE) ==========
-    const spaceName = row.SpaceName;
-    const category = row.Category;
-    const productName = row.ProductName;
-    const productSku = row.ProductSKU;
-    const productPrice = row.ProductPrice;
-    const productQuantity = row.ProductQuantity;
-    const finishes = row.Finishes;
-
-    // ========== INITIALIZE UPDATED COLUMNS ==========
-    let updatedProductName = "";
-    let updatedProductSKU = "";
-    let updatedProductPrice = productPrice;
-    let updatedProductQuantity = productQuantity;
-    let updatedFinishes = "";
-
-    // ========== FIND MATCHING CATEGORY IN API RESPONSE ==========
-    const apiCategory = apiResponse.categories.find(c =>
-      c.category.toUpperCase() === (category || "").toUpperCase()
-    );
-
-    console.log(`   API Match: ${apiCategory ? "✅ FOUND" : "❌ NOT FOUND"}`);
-
-    // ========== RULES ==========
-    //
-    // UpdatedProductName    → always copy ProductName as-is
-    // UpdatedProductSKU     → always copy ProductSKU as-is
-    // UpdatedProductPrice   → always copy ProductPrice as-is
-    // UpdatedProductQuantity→ always copy ProductQuantity as-is
-    // UpdatedFinishes       →
-    //   - If API match found AND finish part starts with "StaticMeshComponent0":
-    //       replace SKU segment (3rd colon part) with top API SKU
-    //       e.g. "StaticMeshComponent0:NOT_FOUND:OldSKU" → "StaticMeshComponent0:NOT_FOUND:AW-ACCENT-43"
-    //   - If finish part starts with anything else (FAbric, BodyFabric, TableTop, etc.):
-    //       copy that part as-is (no change)
-    //   - If no API match: copy entire Finishes as-is
-
-    // ✅ Cols 7,9,10 — always copy originals
-    updatedProductName = productName;
-    updatedProductPrice = productPrice;
-    updatedProductQuantity = productQuantity;
-
-    // ========== DETECT FINISH TYPE ==========
-    // Check if the FIRST finish part starts with StaticMeshComponent0
-    const firstFinishPart = (finishes || "").trim().split(",")[0] || "";
-    const firstPartName = firstFinishPart.split(":")[0]?.trim() || "";
-    const isStaticMesh = firstPartName.toLowerCase().startsWith("staticmeshcomponent");
-
-    console.log(`   Finish type: ${isStaticMesh ? "StaticMesh" : "Non-StaticMesh (FAbric/BodyFabric/etc)"}`);
-
-    if (apiCategory && apiCategory.skus && apiCategory.skus.length > 0) {
-      const apiSku = apiCategory.skus[0];
-      console.log(`   → Top API SKU: "${apiSku}"`);
-
-      if (isStaticMesh) {
-        // ✅ StaticMeshComponent0 rows: UpdatedProductSKU = original ProductSKU
-        updatedProductSKU = productSku;
-        console.log(`   → UpdatedProductSKU: "${updatedProductSKU}" (original, StaticMesh row)`);
-      } else {
-        // ✅ Non-StaticMesh rows (FAbric, BodyFabric, TableTop, etc.): UpdatedProductSKU = top API SKU
-        updatedProductSKU = apiSku;
-        console.log(`   → UpdatedProductSKU: "${updatedProductSKU}" (API SKU, non-StaticMesh row)`);
-      }
-
-      if (finishes && finishes.trim()) {
-        const finishParts = finishes.split(",");
-
-        console.log(`   Original Finishes: "${finishes}"`);
-        console.log(`   Finish parts: [${finishParts.map(p => `"${p}"`).join(", ")}]`);
-
-        const formattedParts = finishParts.map((part) => {
-          if (!part.trim()) return "";
-
-          const segments = part.split(":");
-          const partName = segments[0]?.trim();
-
-          if (!partName) return "";
-
-          if (partName.toLowerCase().startsWith("staticmeshcomponent")) {
-            // ✅ StaticMesh parts → replace SKU with top API SKU
-            const rebuilt = `${partName}:NOT_FOUND:${apiSku}`;
-            console.log(`   Part "${part.trim()}" → "${rebuilt}" (StaticMesh → API SKU)`);
-            return rebuilt;
-          }
-
-          // ✅ Non-StaticMesh parts (FAbric, BodyFabric, TableTop, etc.) → copy as-is
-          console.log(`   Part "${part.trim()}" → kept as-is (non-StaticMesh)`);
-          return part.trim();
-        });
-
-        updatedFinishes = formattedParts.filter((p) => p).join(",");
-
-        if (updatedFinishes) {
-          updatedFinishes += ",";
-        }
-
-        console.log(`   → UpdatedFinishes: "${updatedFinishes}"`);
-      } else {
-        updatedFinishes = finishes || "";
-      }
-
-    } else {
-      // ❌ No API match — copy everything as-is
-      updatedProductSKU = productSku;
-      updatedFinishes = finishes || "";
-      console.log(`   → NO API MATCH - all values copied as-is`);
-    }
-
-    console.log(`   → UpdatedProductName: "${updatedProductName}"`);
-    console.log(`   → UpdatedProductSKU: "${updatedProductSKU}"`);
-    console.log(`   → UpdatedProductPrice: "${updatedProductPrice}"`);
-    console.log(`   → UpdatedProductQuantity: "${updatedProductQuantity}"`)
-
-    // ========== BUILD UPDATED ROW OBJECT ==========
-    const updatedRow = {
-      SpaceName: spaceName,
-      Category: category,
-      ProductName: productName,
-      ProductSKU: productSku,
-      ProductPrice: productPrice,
-      ProductQuantity: productQuantity,
-      Finishes: finishes,
-      UpdatedProductName: updatedProductName,
-      UpdatedProductSKU: updatedProductSKU,
-      UpdatedProductPrice: updatedProductPrice,
-      UpdatedProductQuantity: updatedProductQuantity,
-      UpdatedFinishes: updatedFinishes,
-      Area: row.Area || "",
-    };
-
-    return updatedRow;
-  });
-
-  // ========== FILTER: ONLY SEND ROWS WHOSE CATEGORY MATCHED THE API ==========
-  const matchedCategories = new Set(
-    apiResponse.categories.map(c => c.category.toUpperCase())
-  );
-
-  const rowsToSend = updatedRows.filter((row) => {
-    const matched = matchedCategories.has((row.Category || "").toUpperCase());
-    if (matched) {
-      console.log(`   ✅ Sending: [${row.Category}] ${row.ProductSKU}`);
-    } else {
-      console.log(`   ⏭️  Skipping (no API match): [${row.Category}] ${row.ProductSKU}`);
-    }
-    return matched;
-  });
-
-  console.log(`\n✅ Sending ${rowsToSend.length} of ${updatedRows.length} rows to Unreal...\n`);
-
-  if (rowsToSend.length === 0) {
-    console.warn("⚠️ No matching rows to send.");
-    return;
-  }
-
-  // ========== CONVERT BACK TO CSV (matched rows only) ==========
-  const csvString = Papa.unparse(rowsToSend, { header: true });
-  const csvRowsArray = csvString.split("\n");
-
-  console.log(`📤 Sending ${csvRowsArray.length} rows (header + ${rowsToSend.length} data rows) to Unreal`);
-  console.log(csvRowsArray.slice(0, 3));
-
-  // ========== SEND TO UNREAL VIA EXPERIENCE.JSX ==========
-  sendUpdatedCSVRowsToUnreal(csvRowsArray);
+  
+  return exported;
 }
 
 function getCsvStatus() {
@@ -287,14 +327,14 @@ async function saveToGoogleSheet(csvData) {
 
   try {
     console.log('📤 Saving to Google Sheet...');
-
+    
     const response = await fetch(GOOGLE_SHEET_URL, {
       method: 'POST',
       body: JSON.stringify(csvData)
     });
 
     const result = await response.json();
-
+    
     if (result.status === 'ok') {
       console.log('✅ Saved to Google Sheet successfully!');
     } else {
@@ -348,6 +388,7 @@ const NOISE_THRESHOLD = 50;
 const SPEECH_CONFIDENCE_THRESHOLD = 0.85;
 const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY || "";
 const SARVAM_API_KEY = process.env.REACT_APP_SARVAM_API_KEY || "";
+const RECEIVER_API_URL = "http://localhost:8000";
 
 let sarvamFailureCount = 0;
 let sttQueue = [];
@@ -482,6 +523,12 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [csvStatus, setCSVStatus] = useState(null);
 
+  // ========== CSV PREVIEW MODAL STATES ==========
+  const [csvPreviewVisible, setCSVPreviewVisible] = useState(false);
+  const [csvPreviewData, setCSVPreviewData] = useState([]);
+  const [csvEditData, setCSVEditData] = useState([]);
+  const pendingUnrealSendRef = useRef(null);
+
   const messagesEndRef = useRef(null);
   const panelRef = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -505,81 +552,136 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
   const lastMayaRequestIdRef = useRef("");
   const resultPollIntervalRef = useRef(null);
 
-  // ============================================================================
-  // ✅ FIXED: LISTEN FOR CSV FROM UNREAL VIA CustomEvent + postMessage fallback
-  // ============================================================================
+  // ========== CSV PREVIEW MODAL FUNCTIONS ==========
+  
+  const showCSVPreviewModal = (csvRows, onConfirm) => {
+    console.log('\n╔════════════════════════════════════════╗');
+    console.log('║ 📋 CSV PREVIEW MODAL OPENED           ║');
+    console.log('╚════════════════════════════════════════╝\n');
+    
+    setCSVPreviewData(csvRows);
+    // ========== CRITICAL: Store as-is, don't modify ==========
+    setCSVEditData([...csvRows]);
+    pendingUnrealSendRef.current = onConfirm;
+    setCSVPreviewVisible(true);
+  };
+
+  const confirmCSVSend = () => {
+    console.log('\n╔════════════════════════════════════════╗');
+    console.log('║ ✅ CSV CONFIRMED - SENDING TO UNREAL ║');
+    console.log('╚════════════════════════════════════════╝\n');
+    
+    console.log('CSV rows to send:');
+    csvEditData.forEach((row, idx) => {
+      console.log(`Row ${idx}: ${row}`);
+    });
+    
+    if (pendingUnrealSendRef.current) {
+      pendingUnrealSendRef.current(csvEditData);
+    }
+    
+    setCSVPreviewVisible(false);
+  };
+
+  const cancelCSVSend = () => {
+    console.log('❌ CSV send cancelled by user');
+    setCSVPreviewVisible(false);
+    setCSVPreviewData([]);
+    setCSVEditData([]);
+    pendingUnrealSendRef.current = null;
+  };
+
+  const updateCSVRow = (rowIndex, newValue) => {
+    const updated = [...csvEditData];
+    updated[rowIndex] = newValue;
+    setCSVEditData(updated);
+    console.log(`Row ${rowIndex} updated (length: ${newValue.length})`);
+  };
+
+  // ========== CSV PREVIEW MODAL COMPONENT ==========
+  const CSVPreviewModal = () => {
+    if (!csvPreviewVisible) return null;
+
+    return (
+      <div style={styles.csvModalOverlay}>
+        <div style={styles.csvModal}>
+          <div style={styles.csvModalHeader}>
+            <h3 style={styles.csvModalTitle}>📋 CSV Preview - Ready to Send</h3>
+            <button
+              onClick={cancelCSVSend}
+              style={styles.csvModalClose}
+            >
+              ✕
+            </button>
+          </div>
+
+          <div style={styles.csvModalBody}>
+            <div style={styles.csvScrollContainer}>
+              {csvEditData.map((row, idx) => (
+                <div key={idx} style={styles.csvRowContainer}>
+                  <div style={styles.csvRowNumber}>
+                    {idx === 0 ? '📌 HEADER' : `📊 Row ${idx}`}
+                  </div>
+                  <textarea
+                    value={row}
+                    onChange={(e) => updateCSVRow(idx, e.target.value)}
+                    style={styles.csvRowInput}
+                    spellCheck="false"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={styles.csvModalFooter}>
+            <div style={styles.csvInfo}>
+              Total: {csvEditData.length} rows
+            </div>
+            <div style={styles.csvModalButtons}>
+              <button
+                onClick={cancelCSVSend}
+                style={styles.csvCancelBtn}
+              >
+                ❌ Cancel
+              </button>
+              <button
+                onClick={confirmCSVSend}
+                style={styles.csvConfirmBtn}
+              >
+                ✅ Send to Unreal
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ========== LISTEN FOR CSV FROM UNREAL ==========
   useEffect(() => {
-    const parseCsvArrayAndStore = (csvArray) => {
-      if (!Array.isArray(csvArray) || csvArray.length === 0) {
-        console.error('❌ Invalid CSV array received');
-        return;
-      }
-
-      console.log('\n📥 CSV RECEIVED - Parsing with PapaParse...');
-
-      // Join lines into one CSV string and parse with header:true
-      const csvString = csvArray.join("\n");
-
-      Papa.parse(csvString, {
-        header: true,
-        skipEmptyLines: true,
-        complete: (results) => {
-          if (results.data && results.data.length > 0) {
-            console.log(`✅ Parsed ${results.data.length} rows from CSV`);
-            console.log('Sample row:', results.data[0]);
-
-            // Store properly parsed objects
-            storeRoomCSV(results.data);
-            setCSVStatus(getCsvStatus());
-          } else {
-            console.error('❌ PapaParse returned no data');
-          }
-        },
-        error: (err) => {
-          console.error('❌ PapaParse error:', err);
-        }
-      });
-    };
-
-    // ✅ PRIMARY: Listen for CustomEvent dispatched by Experience.jsx
-    const handleCsvCustomEvent = (event) => {
-      console.log('\n📥 CSV RECEIVED VIA CustomEvent "csvFromUnreal"');
-      parseCsvArrayAndStore(event.detail);
-    };
-
-    // ✅ FALLBACK: Listen for postMessage from parent
-    const handlePostMessage = (event) => {
+    const handleMessage = (event) => {
       const data = event.data;
 
-      // Format 1: { type: 'csvFromUnreal', data: [...] }
-      if (data?.type === 'csvFromUnreal' && Array.isArray(data.data)) {
-        console.log('\n📥 CSV RECEIVED VIA postMessage (type: csvFromUnreal)');
-        parseCsvArrayAndStore(data.data);
-        return;
-      }
-
-      // Format 2: Raw array where first row contains header keywords
-      if (Array.isArray(data) && data.length > 0) {
-        const firstRow = (data[0] || '').toString().toLowerCase();
-        if (
-          firstRow.includes('spacename') ||
-          firstRow.includes('productname') ||
-          firstRow.includes('category')
-        ) {
-          console.log('\n📥 CSV RECEIVED VIA postMessage (raw array)');
-          parseCsvArrayAndStore(data);
-        }
+      if (Array.isArray(data) && data[0]?.includes('SpaceName')) {
+        console.log('\n📥 CSV RECEIVED VIA postMessage');
+        storeRoomCSV(data);
+        setCSVStatus(getCsvStatus());
       }
     };
 
-    window.addEventListener('csvFromUnreal', handleCsvCustomEvent);
-    window.addEventListener('message', handlePostMessage);
+    window.addEventListener('message', handleMessage);
 
-    console.log('✅ CSV listeners registered (CustomEvent + postMessage)');
+    const checkInterval = setInterval(() => {
+      if (window.lastRoomCsv && !csvStorage.original) {
+        console.log('\n📥 CSV RECEIVED VIA window.lastRoomCsv');
+        storeRoomCSV(window.lastRoomCsv);
+        setCSVStatus(getCsvStatus());
+      }
+    }, 500);
 
     return () => {
-      window.removeEventListener('csvFromUnreal', handleCsvCustomEvent);
-      window.removeEventListener('message', handlePostMessage);
+      window.removeEventListener('message', handleMessage);
+      clearInterval(checkInterval);
     };
   }, []);
 
@@ -594,6 +696,13 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
       if (e.key === 'q' || e.key === 'Q') {
         console.log('\n📝 QUERY QUEUE:');
         console.table(queryQueue.slice(0, 10));
+      }
+
+      if (e.key === 'e' || e.key === 'E') {
+        const exported = exportFilledCSV();
+        if (exported) {
+          console.log('✅ CSV exported');
+        }
       }
 
       if (e.key === 'r' || e.key === 'R') {
@@ -615,6 +724,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
 🎯 KEYBOARD SHORTCUTS:
   C → Check CSV Status
   Q → Show Query Queue
+  E → Export Filled CSV
   R → Reset Storage
   H → Show this help
         `);
@@ -716,9 +826,8 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
 
         if (data?.found && data?.data?.categories?.length) {
           console.log("✅ RESULT RECEIVED FROM API");
-          console.log(JSON.stringify(data.data, null, 2));
 
-          populateRecommendations(data.data, sendUpdatedCSVRowsToUnreal);
+          populateRecommendations(data.data, sendUpdatedCSVRowsToUnreal, showCSVPreviewModal);
           setCSVStatus(getCsvStatus());
 
           window.lastMayaSearchResult = data.data;
@@ -981,6 +1090,8 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
     if (!RECEIVER_API_URL) return;
 
     try {
+      addQueryToStack(userQuery, jsonData.intent, jsonData.params);
+
       const payloadWithId = {
         ...jsonData,
         search_query: userQuery,
@@ -989,7 +1100,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
         created_at: new Date().toISOString(),
       };
 
-      console.log("📤 Sending payload to receiver:", payloadWithId);
+      console.log("📤 Sending payload to receiver");
 
       const res = await fetch(`${RECEIVER_API_URL}/ingest`, {
         method: "POST",
@@ -998,7 +1109,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
       });
 
       const result = await res.json().catch(() => null);
-      console.log("✅ Receiver status:", res.status, result);
+      console.log("✅ Receiver status:", res.status);
 
       startPollingForResult(payloadWithId.request_id);
     } catch (err) {
@@ -1315,6 +1426,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
+              disabled={loading || isListening}
             />
 
             <button
@@ -1337,6 +1449,9 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
           ✦
         </button>
       )}
+
+      {/* CSV PREVIEW MODAL */}
+      <CSVPreviewModal />
     </>
   );
 }
@@ -1563,6 +1678,128 @@ const styles = {
     borderTop: "1px solid rgba(0,0,0,0.06)",
     maxHeight: "60px",
     overflowY: "auto",
+  },
+
+  // CSV MODAL STYLES
+  csvModalOverlay: {
+    position: "fixed",
+    inset: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10001,
+    backdropFilter: "blur(4px)",
+    WebkitBackdropFilter: "blur(4px)",
+  },
+  csvModal: {
+    width: "90%",
+    maxWidth: "1000px",
+    height: "80vh",
+    backgroundColor: "rgba(255, 255, 255, 0.98)",
+    borderRadius: "16px",
+    boxShadow: "0 25px 50px rgba(0, 0, 0, 0.3)",
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+  },
+  csvModalHeader: {
+    padding: "20px 24px",
+    borderBottom: "1px solid rgba(0, 0, 0, 0.1)",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#f8f9fa",
+  },
+  csvModalTitle: {
+    margin: 0,
+    fontSize: "18px",
+    fontWeight: "600",
+    color: "#2d2d2d",
+  },
+  csvModalClose: {
+    width: "32px",
+    height: "32px",
+    borderRadius: "50%",
+    background: "rgba(0, 0, 0, 0.08)",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "18px",
+    transition: "background 0.2s",
+  },
+  csvModalBody: {
+    flex: 1,
+    overflowY: "auto",
+    padding: "16px",
+    backgroundColor: "#ffffff",
+  },
+  csvScrollContainer: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+  },
+  csvRowContainer: {
+    padding: "12px",
+    backgroundColor: "#f8f9fa",
+    borderRadius: "8px",
+    border: "1px solid rgba(0, 0, 0, 0.1)",
+  },
+  csvRowNumber: {
+    fontSize: "12px",
+    fontWeight: "600",
+    color: "#666",
+    marginBottom: "8px",
+    padding: "0 4px",
+  },
+  csvRowInput: {
+    width: "100%",
+    padding: "10px 12px",
+    border: "1px solid #ddd",
+    borderRadius: "6px",
+    fontFamily: "monospace",
+    fontSize: "12px",
+    lineHeight: "1.4",
+    resize: "vertical",
+    minHeight: "60px",
+    backgroundColor: "#ffffff",
+  },
+  csvModalFooter: {
+    padding: "16px 24px",
+    borderTop: "1px solid rgba(0, 0, 0, 0.1)",
+    backgroundColor: "#f8f9fa",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  csvInfo: {
+    fontSize: "12px",
+    color: "#666",
+  },
+  csvModalButtons: {
+    display: "flex",
+    gap: "12px",
+  },
+  csvCancelBtn: {
+    padding: "10px 20px",
+    borderRadius: "8px",
+    border: "1px solid #ddd",
+    backgroundColor: "#ffffff",
+    color: "#2d2d2d",
+    cursor: "pointer",
+    fontSize: "14px",
+    fontWeight: "500",
+    transition: "all 0.2s",
+  },
+  csvConfirmBtn: {
+    padding: "10px 20px",
+    borderRadius: "8px",
+    border: "none",
+    backgroundColor: "#2d2d2d",
+    color: "#ffffff",
+    cursor: "pointer",
+    fontSize: "14px",
+    fontWeight: "500",
+    transition: "all 0.2s",
   },
 };
 
