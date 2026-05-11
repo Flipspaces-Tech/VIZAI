@@ -229,6 +229,7 @@ let UIControlApp;
 export default function Experience() {
   const currentCsvHeaders = useRef(null);
   const currentCsvRows = useRef(null); // contains parsed rows from Unreal
+  // const [currentRoomName, setCurrentRoomName] = useState(""); // contains the current room name
 
   const parseCSVAndUpdateCurrentRows = (csvRows) => {
     // Convert the array of strings into one single CSV block
@@ -528,7 +529,7 @@ export default function Experience() {
       if (
         typeof PixelStreamingUiApp?.stream?.emitUIInteraction === "function"
       ) {
-        PixelStreamingUiApp.stream.emitUIInteraction(payload);
+        PixelStreamingUiApp.stream.emitUIInteraction(payload); // this is the one that works
         return;
       }
 
@@ -1039,32 +1040,40 @@ export default function Experience() {
         e.stopPropagation();
 
         const testCsvRows = [
-        //   "SpaceName,Category,ProductName,ProductSKU,ProductPrice,ProductQuantity,Finishes,UpdatedProductName,UpdatedProductSKU,UpdatedProductPrice,UpdatedProductQuantity,UpdatedFinishes,Area",
-        //   'TestRoom,AccentWall,NOT_FOUND,Wooden,NOT_FOUND,2,"StaticMeshComponent0:NOT_FOUND:AccentWall_38,",NOT_FOUND,Wooden,NOT_FOUND,2,"StaticMeshComponent0:NOT_FOUND:AW-ACCENT-11,",NOT_FOUND',
-         ];
+          "SpaceName,Category,ProductName,ProductSKU,ProductPrice,ProductQuantity,Finishes,UpdatedProductName,UpdatedProductSKU,UpdatedProductPrice,UpdatedProductQuantity,UpdatedFinishes,Area",
+          'TestRoom,AccentWall,NOT_FOUND,Wooden,NOT_FOUND,2,"StaticMeshComponent0:NOT_FOUND:AccentWall_38,",NOT_FOUND,Wooden,NOT_FOUND,2,"StaticMeshComponent0:NOT_FOUND:AW-ACCENT-11,",NOT_FOUND',
+        ];
+
+        // 'Kitchen,Chair,AC130,SKU988,6000,1,"ArmChair--SKU224--Cushion:NOT_FOUND:WhiteFabric,",OC1,SKU981,5000,1,"",NOT_FOUND',
 
         // DUMMY DATA (fill right side cols)
-        // currentCsvRows.current[0].UpdatedProductName = "NOT_FOUND";
-        // currentCsvRows.current[0].UpdatedProductSKU = "Wooden";
-        // currentCsvRows.current[0].UpdatedProductPrice = "NOT_FOUND";
-        // currentCsvRows.current[0].UpdatedProductQuantity = 2;
-        // currentCsvRows.current[0].UpdatedFinishDetailsList = [
-        //   {
-        //     partName: "StaticMeshComponent0",
-        //     finishDisplayName: "NOT_FOUND",
-        //     finishSkuId: "AW-ACCENT-43",
-        //   },
-        // ];
-        // currentCsvRows.current[0].UpdatedFinishes =
-        //   "StaticMeshComponent0:NOT_FOUND:AW-ACCENT-43,";
+        // TODO: replace with what chatbot sent back
+        currentCsvRows.current[0].UpdatedProductName = "NOT_FOUND";
+        currentCsvRows.current[0].UpdatedProductSKU = "Wooden";
+        currentCsvRows.current[0].UpdatedProductPrice = "NOT_FOUND";
+        currentCsvRows.current[0].UpdatedProductQuantity = 2;
+        currentCsvRows.current[0].UpdatedFinishDetailsList = [
+          {
+            partName: "StaticMeshComponent0",
+            finishDisplayName: "NOT_FOUND",
+            finishSkuId: "AW-ACCENT-43",
+          },
+        ];
+        currentCsvRows.current[0].UpdatedFinishes =
+          "StaticMeshComponent0:NOT_FOUND:AW-ACCENT-43,";
 
-        // const updatedCsvString = Papa.unparse(currentCsvRows.current, {
-        //   header: true,
-        //   columns: currentCsvHeaders.current,
-        // });
+        // currentCsvRows.current = tempRows;
+
+        // TODO: parseCSVAndUpdateCurrentRows(msg.csvRowsFromBot);
+
+        const updatedCsvString = Papa.unparse(currentCsvRows.current, {
+          header: true,
+          columns: currentCsvHeaders.current,
+        });
 
         const updatedCsvRows = updatedCsvString.split("\n");
 
+        // sendReplacementCsvToUnreal(testCsvRows);
         sendReplacementCsvToUnreal(updatedCsvRows);
         return;
       }

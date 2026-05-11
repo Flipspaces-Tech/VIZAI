@@ -2,27 +2,78 @@
 
 export class MayaQueryFilter {
   constructor() {
-    // Valid design intents
+    // Blocked phrases from meetings/demo environments
+    this.BLOCKED_PHRASES = [
+      // Greetings & Acknowledgments
+      "thank you", "thanks", "thank you so much", "hello", "hi there",
+      "good morning", "good afternoon", "welcome", "goodbye", "bye",
+
+      // Confirmations
+      "yes", "no", "sure", "absolutely", "correct", "exactly", "that's right",
+      "okay", "ok", "alright", "fine", "good", "yeah", "yep", "nope",
+
+      // Logistics & Setup
+      "ready", "let's start", "let's begin", "how long", "how much",
+      "what time", "when", "how many", "are you ready", "let me know",
+      "one moment", "just a second", "give me a second", "wait",
+
+      // Demo Control (REMOVED most - these are valid design commands)
+      "next", "can you", "check this",
+      "do you see", "see that", "look here", "watch this",
+
+      // General Chat
+      "i think", "you know", "right", "actually", "i mean", "basically",
+      "like", "i guess", "probably", "maybe", "perhaps",
+
+      // Feedback & Comments
+      "looks good", "nice", "cool", "awesome", "great", "excellent",
+      "perfect", "beautiful", "very nice",
+      "that's nice", "that's good", "that works",
+
+      // Corrections & Revisions
+      "hold on", "actually no", "no wait", "scratch that",
+      "never mind", "ignore that", "go back", "undo that"
+    ];
+
+    // Action verbs for command validation
+    this.ACTION_VERBS = [
+      "show", "display", "find", "search", "apply", "change", "redesign",
+      "make", "create", "swap", "replace", "update", "use", "set up",
+      "arrange", "organize", "suggest", "recommend", "tell", "compare",
+      "give", "provide", "show me", "display for", "find me",
+      // Navigation verbs
+      "go", "go to", "take me", "navigate", "move to", "move", "visit"
+    ];
+
+    // Valid design intents (MUST MATCH SYSTEM_PROMPT!)
     this.PRIMARY_INTENTS = [
-      "search_product",
-      "display_products",
-      "apply_theme",
+      "change_theme",
       "style_consultation",
-      "product_swap",
-      "palette_match",
-      "room_setup",
+      "selected_swap",
+      "navigate",
       "budget_analysis",
-      "quick_filter",
-      "bundle",
-      "comparison",
-      "upgrade",
-      "refine",
+      "change_budget",
       "partial_swap",
-      "show_preview",
       "confirm_order"
     ];
 
     this.INTENT_CONFIDENCE_THRESHOLD = 0.7;
+  }
+
+  // Check if phrase is blocked
+  isBlockedPhrase(command) {
+    const lowerCommand = command.toLowerCase();
+    return this.BLOCKED_PHRASES.some(phrase =>
+      lowerCommand.includes(phrase)
+    );
+  }
+
+  // Check if command has action verb
+  hasActionVerb(command) {
+    const lowerCommand = command.toLowerCase();
+    return this.ACTION_VERBS.some(verb =>
+      lowerCommand.includes(verb)
+    );
   }
 
   // Validate intent confidence (for Phase 2)
@@ -40,19 +91,30 @@ export class MayaQueryFilter {
 
   // Full validation pipeline
   validate(command) {
-    // ✅ CHANGED: Skip rigid validation - let OpenAI handle intent
-    // Real clients say natural things like "this is amazing keep it"
-    // which don't fit rigid action verb patterns
+    // TESTING MODE: Skip all validations for natural conversation
+    // In production, uncomment these checks below
     
-    // Only check: does command have minimum content?
-    if (!command || command.trim().length === 0) {
+    return { isValid: true };
+    
+    // ===== PRODUCTION VALIDATIONS (COMMENTED OUT FOR TESTING) =====
+    /*
+    // Check 1: Blocked phrase
+    if (this.isBlockedPhrase(command)) {
       return {
         isValid: false,
-        reason: "Empty command"
+        reason: "Blocked phrase"
       };
     }
 
-    // Let OpenAI's validateIntent() filter bad queries instead
+    // Check 2: Action verb
+    if (!this.hasActionVerb(command)) {
+      return {
+        isValid: false,
+        reason: "No action verb"
+      };
+    }
+
     return { isValid: true };
+    */
   }
 }
