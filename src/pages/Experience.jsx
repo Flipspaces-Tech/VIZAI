@@ -231,6 +231,7 @@ export default function Experience() {
   const currentCsvRows = useRef(null); // contains parsed rows from Unreal
   // const [currentRoomName, setCurrentRoomName] = useState(""); // contains the current room name
 
+  /// Can be used for both initial state from Unreal and updated state from MayaChat - populates left/right side as needed into StateObject
   const parseCSVAndUpdateCurrentRows = (csvRows) => {
     // Convert the array of strings into one single CSV block
     const csvString = csvRows.join("\n");
@@ -303,6 +304,8 @@ export default function Experience() {
 
   /// Called from MayaChat
   const sendUpdatedCSVRowsToUnreal = (csvRows) => {
+    
+    // Update the StateObject with the updated data from MayaChat
     parseCSVAndUpdateCurrentRows(csvRows);
 
     const updatedCsvString = Papa.unparse(currentCsvRows.current, {
@@ -311,7 +314,13 @@ export default function Experience() {
     });
 
     const updatedCsvRows = updatedCsvString.split("\n");
-    sendReplacementCsvToUnreal(updatedCsvRows);
+
+    const receivedReplacementCsvJson = {
+        msgType: "receivedReplacementCsv",
+        csvRows: updatedCsvRows,
+      };
+      
+    sendMsgToUnreal(receivedReplacementCsvJson);
   };
 
   const videoWrapRef = useRef(null);
@@ -518,71 +527,33 @@ export default function Experience() {
     }, 200);
   }, [sendKeyI, sendLeftClick]);
 
-  // ✅ NEW: send command to Unreal
-  const sendConsoleCommandToUnreal = useCallback((command) => {
+  const sendMsgToUnreal = useCallback((jsonObject) => {
+     
     try {
-      const payload = { msgType: command };
+      if(!jsonObject.msgType) {
+        console.error("sendMsgToUnreal: msgType is required in the payload");
+        return;
+      }
+      console.log("sendMsgToUnreal: ", jsonObject);
 
-      console.log("Sending UI interaction to Unreal:", payload);
-
-      // Try StreamPixel stream object first
       if (
         typeof PixelStreamingUiApp?.stream?.emitUIInteraction === "function"
       ) {
-        PixelStreamingUiApp.stream.emitUIInteraction(payload); // this is the one that works
+        PixelStreamingUiApp.stream.emitUIInteraction(jsonObject);
         return;
       }
-
-      // Try pixel streaming instance
-      if (typeof PixelStreamingApp?.emitUIInteraction === "function") {
-        PixelStreamingApp.emitUIInteraction(payload);
-        return;
-      }
-
-      // Browser global fallback
-      if (typeof window.pixelStreaming?.emitUIInteraction === "function") {
-        window.pixelStreaming.emitUIInteraction(payload);
-        return;
-      }
-
-      console.warn(
-        "emitUIInteraction not found on any Pixel Streaming object.",
-      );
     } catch (err) {
-      console.error("Failed to send UI interaction to Unreal:", err);
+      console.error("Failed to send receivedReplacementCsv to Unreal:", err);
     }
   }, []);
 
   const sendReplacementCsvToUnreal = useCallback((csvRows) => {
-    try {
+    
       const payload = {
         msgType: "receivedReplacementCsv",
         csvRows: csvRows,
       };
-
-      console.log("Sending receivedReplacementCsv to Unreal:", payload);
-
-      if (
-        typeof PixelStreamingUiApp?.stream?.emitUIInteraction === "function"
-      ) {
-        PixelStreamingUiApp.stream.emitUIInteraction(payload);
-        return;
-      }
-
-      if (typeof PixelStreamingApp?.emitUIInteraction === "function") {
-        PixelStreamingApp.emitUIInteraction(payload);
-        return;
-      }
-
-      if (typeof window.pixelStreaming?.emitUIInteraction === "function") {
-        window.pixelStreaming.emitUIInteraction(payload);
-        return;
-      }
-
-      console.warn("emitUIInteraction not found.");
-    } catch (err) {
-      console.error("Failed to send receivedReplacementCsv to Unreal:", err);
-    }
+      
   }, []);
 
   // ========== ADD CSV FUNCTIONS (CRITICAL) ==========
@@ -1085,8 +1056,15 @@ export default function Experience() {
 
         const updatedCsvRows = updatedCsvString.split("\n");
 
+        const receivedReplacementCsvJson = {
+          msgType: "receivedReplacementCsv",
+          csvRows: updatedCsvRows,
+        };
+
+        sendMsgToUnreal(receivedReplacementCsvJson);
+
         // sendReplacementCsvToUnreal(testCsvRows);
-        sendReplacementCsvToUnreal(updatedCsvRows);
+        //sendReplacementCsvToUnreal(updatedCsvRows);
         return;
       }
 
@@ -1144,7 +1122,7 @@ export default function Experience() {
     hardDisconnect,
     runIKeyClickSequence,
     sendConsoleCommandToUnreal,
-    sendReplacementCsvToUnreal,
+    sendMsgToUnreal,
     currentCsvRows,
   ]);
 
