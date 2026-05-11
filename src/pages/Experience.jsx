@@ -663,6 +663,8 @@ export default function Experience() {
       try {
         console.log("Received unreal message:", response);
 
+        
+
         const forwardImageUrl = async (url) => {
           const extracted = extractBestImageUrl(url).trim();
           console.log("forwardImageUrl raw:", url);
@@ -686,6 +688,16 @@ export default function Experience() {
         }
 
         const msg = response;
+        if(msg.type == "log")
+        {
+          if(msg.log.includes("[ERROR] MappedSpaceSearchResult does NOT contain SpaceName"))
+          {
+            let currentSpaceName = msg.log.replace("[ERROR] MappedSpaceSearchResult does NOT contain SpaceName ","");
+            // means the player wasn't in a room that has NavActor
+            console.log(`ERROR: Player is in a room ${currentSpaceName} without BP_NavActor`);
+          }
+        }
+
         if (msg.type === "roomSkuCsv") {
           console.log("Received roomSkuCsv from Unreal:");
           console.log(msg.csvRows);
