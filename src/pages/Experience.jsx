@@ -658,7 +658,7 @@ export default function Experience() {
     return parts[parts.length - 1] || s;
   };
 
-  const handleResponseApp = useCallback(
+  const onReceivedMsgFromUnreal = useCallback(
     async (response) => {
       try {
         console.log("Received unreal message:", response);
@@ -873,7 +873,7 @@ export default function Experience() {
           return;
         }
       } catch (e) {
-        console.error("handleResponseApp error:", e, response);
+        console.error("onReceivedMsgFromUnreal error:", e, response);
       }
     },
     [
@@ -892,7 +892,7 @@ export default function Experience() {
     try {
       PixelStreamingApp?.removeResponseEventListener?.(
         "handle_responses",
-        handleResponseApp,
+        onReceivedMsgFromUnreal,
       );
     } catch {}
     try {
@@ -925,7 +925,7 @@ export default function Experience() {
     PixelStreamingApp = undefined;
     PixelStreamingUiApp = undefined;
     UIControlApp = undefined;
-  }, [handleResponseApp]);
+  }, [onReceivedMsgFromUnreal]);
 
   const startPlay = useCallback(async () => {
     if (connectingRef.current) return;
@@ -980,7 +980,7 @@ export default function Experience() {
       attachVideoAutoplaySafe(app.rootElement);
     };
 
-    ps.addResponseEventListener("handle_responses", handleResponseApp);
+    ps.addResponseEventListener("handle_responses", onReceivedMsgFromUnreal);
     console.log("added event listener to handle_responses");
 
     if (pendingHoverEnabled !== null) {
@@ -1000,7 +1000,7 @@ export default function Experience() {
     connectingRef.current = false;
   }, [
     attachVideoAutoplaySafe,
-    handleResponseApp,
+    onReceivedMsgFromUnreal,
     hardDisconnect,
     buildName,
     buildVersion,
