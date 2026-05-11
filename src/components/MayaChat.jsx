@@ -25,12 +25,6 @@ let apiResults = {};
 // ============================================================================
 const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbw_elUc3irWx6yy3X9JfF9AR7Z2sxoA3j9eZYRZdK_ty0b4iDis8OQpm0vo2AQN3Q9m/exec";
 
-// ============================================================================
-// RECEIVER API CONFIGURATION
-// ============================================================================
-// const RECEIVER_API_URL = "http://localhost:8000"; 
-
-const RECEIVER_API_URL = "https://maya-receiver-api.onrender.com";
 
 // ============================================================================
 // CSV STORAGE FUNCTIONS
@@ -350,7 +344,7 @@ const NOISE_THRESHOLD = 50;
 const SPEECH_CONFIDENCE_THRESHOLD = 0.85;
 const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY || '';
 const SARVAM_API_KEY = process.env.REACT_APP_SARVAM_API_KEY || '';
-const RECEIVER_API_URL = 'https://maya-receiver-api.onrender.com';
+const RECEIVER_API_URL = 'https://maya-receiver-api.onrender.com';  //"http://localhost:8000"; 
 
 let sarvamFailureCount = 0;
 
