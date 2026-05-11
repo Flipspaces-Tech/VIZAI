@@ -71,10 +71,10 @@ function storeRoomCSV(parsedRows) {
 }
 
 // ============================================================================
-// FIXED: populateRecommendations() - NO DOUBLE ESCAPING
+// FIXED: onReceivedMsgFromChatbot() - NO DOUBLE ESCAPING
 // ============================================================================
 
-function populateRecommendations(apiResponse, sendUpdatedCSVRowsToUnreal) {
+function onReceivedMsgFromChatbot(apiResponse, sendUpdatedCSVRowsToUnreal) {
   console.log("\n╔════════════════════════════════════════════════════╗");
   console.log("║ 🎯 POPULATING RECOMMENDATIONS FROM API             ║");
   console.log("╚════════════════════════════════════════════════════╝\n");
@@ -997,7 +997,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
           console.log("✅ RESULT RECEIVED FROM API");
           console.log(JSON.stringify(data.data, null, 2));
 
-          populateRecommendations(data.data, sendUpdatedCSVRowsToUnreal);
+          onReceivedMsgFromChatbot(data.data, sendUpdatedCSVRowsToUnreal);
           setCSVStatus(getCsvStatus());
 
           window.lastMayaSearchResult = data.data;
@@ -1330,7 +1330,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
     processSTTQueue();
   };
 
-  const postJsonToReceiver = async (jsonData, userQuery = "") => {
+  const sendMsgToChatbot = async (jsonData, userQuery = "") => {
     if (!RECEIVER_API_URL) return;
 
     try {
@@ -1567,6 +1567,8 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
         console.log('\n╔════════════════════════════════════════════════════════════╗');
         console.log('║ 💾 Accessible via: window.lastMayaJSON                   ║');
         console.log('╚════════════════════════════════════════════════════════════╝\n');
+        
+        sendMsgToChatbot(jsonData, messageText);
 
         // ✅ ADDED: Send preview command to Unreal
         if (typeof window.sendToUnreal === 'function') {
