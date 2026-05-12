@@ -3,6 +3,13 @@ import { MayaQueryEngine } from '../components/MayaQueryEngine';
 import { MayaQueryFilter } from '../components/MayaQueryFilter';
 import Papa from "papaparse";
 
+// 🎨 IMPORT YOUR CUSTOM ICONS
+import idleIcon from '../assets/maya icons/idle.png';
+import listeningIcon from '../assets/maya icons/Listening.png';
+import thinkingIcon from '../assets/maya icons/Thinking.png';
+import talkingIcon from '../assets/maya icons/Talking.png';
+import previewingIcon from '../assets/maya icons/Previewing.png';
+
 // ============================================================================
 // CSV STORAGE SYSTEM
 // ============================================================================
@@ -303,12 +310,7 @@ async function saveToGoogleSheet(csvData) {
 // SYSTEM PROMPT & CONFIGURATION
 // ============================================================================
 
-// 🎨 IMPORT YOUR CUSTOM ICONS
-import idleIcon from '../assets/maya icons/idle.png';
-import listeningIcon from '../assets/maya icons/Listening.png';
-import thinkingIcon from '../assets/maya icons/Thinking.png';
-import talkingIcon from '../assets/maya icons/Talking.png';
-import previewingIcon from '../assets/maya icons/Previewing.png';
+
 
 const SYSTEM_PROMPT = `"You are Maaya, the AI design personality of VizWalk by Flipspaces.
 You are not a chatbot. You are not a search engine. You are not an assistant.
@@ -688,7 +690,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
     return () => window.removeEventListener('gotoRoomFinished', handleGotoRoomFinished);
   }, []);
 
-  const sendMsgToUnreal = (msg) => {
+  const sendMsgToUnreal = (jsonObject) => {
      try {
       if(!jsonObject.msgType) {
         console.error("sendMsgToUnreal: msgType is required in the payload");
