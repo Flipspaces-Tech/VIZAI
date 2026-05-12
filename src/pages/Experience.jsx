@@ -658,6 +658,11 @@ export default function Experience() {
           try {
             response = JSON.parse(response);
           } catch {
+            const rawStr = response.trim();
+            if (rawStr === "gotoRoomCompleted" || rawStr === "gotoRoomFinished") {
+              console.log("✅ Experience.jsx: Received", rawStr, "(plain string) from Unreal");
+              window.dispatchEvent(new CustomEvent('gotoRoomFinished'));
+            }
             return;
           }
         }
@@ -698,9 +703,10 @@ export default function Experience() {
           return;
         }
 
-        if (msg.type === "gotoRoomCompleted") {
-          console.log("Received gotoRoomCompleted from Unreal:");
-          // TODO: MayaChat can now ask the user for the design prompt on what they want to change in this room
+        const gotoRoomDoneType = msg.type || msg.msgType || "";
+        if (gotoRoomDoneType === "gotoRoomCompleted" || gotoRoomDoneType === "gotoRoomFinished") {
+          console.log("✅ Experience.jsx: Received", gotoRoomDoneType, "from Unreal — dispatching CustomEvent");
+          window.dispatchEvent(new CustomEvent('gotoRoomFinished'));
           return;
         }
 
