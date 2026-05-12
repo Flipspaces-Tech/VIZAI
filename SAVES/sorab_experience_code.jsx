@@ -231,7 +231,6 @@ export default function Experience() {
   const currentCsvRows = useRef(null); // contains parsed rows from Unreal
   // const [currentRoomName, setCurrentRoomName] = useState(""); // contains the current room name
 
-  /// Can be used for both initial state from Unreal and updated state from MayaChat - populates left/right side as needed into StateObject
   const parseCSVAndUpdateCurrentRows = (csvRows) => {
     // Convert the array of strings into one single CSV block
     const csvString = csvRows.join("\n");
@@ -304,8 +303,6 @@ export default function Experience() {
 
   /// Called from MayaChat
   const sendUpdatedCSVRowsToUnreal = (csvRows) => {
-    
-    // Update the StateObject with the updated data from MayaChat
     parseCSVAndUpdateCurrentRows(csvRows);
 
     const updatedCsvString = Papa.unparse(currentCsvRows.current, {
@@ -314,13 +311,7 @@ export default function Experience() {
     });
 
     const updatedCsvRows = updatedCsvString.split("\n");
-
-    const receivedReplacementCsvJson = {
-        msgType: "receivedReplacementCsv",
-        csvRows: updatedCsvRows,
-      };
-      
-    sendMsgToUnreal(receivedReplacementCsvJson);
+    sendReplacementCsvToUnreal(updatedCsvRows);
   };
 
   const videoWrapRef = useRef(null);
@@ -527,92 +518,134 @@ export default function Experience() {
     }, 200);
   }, [sendKeyI, sendLeftClick]);
 
-  const sendMsgToUnreal = useCallback((jsonObject) => {
-     
+  // ✅ NEW: send command to Unreal
+  const sendConsoleCommandToUnreal = useCallback((command) => {
     try {
-      if(!jsonObject.msgType) {
-        console.error("sendMsgToUnreal: msgType is required in the payload");
+      const payload = { msgType: command };
+
+      console.log("Sending UI interaction to Unreal:", payload);
+
+      // Try StreamPixel stream object first
+      if (
+        typeof PixelStreamingUiApp?.stream?.emitUIInteraction === "function"
+      ) {
+        PixelStreamingUiApp.stream.emitUIInteraction(payload); // this is the one that works
         return;
       }
-      console.log("sendMsgToUnreal: ", jsonObject);
+
+      // Try pixel streaming instance
+      if (typeof PixelStreamingApp?.emitUIInteraction === "function") {
+        PixelStreamingApp.emitUIInteraction(payload);
+        return;
+      }
+
+      // Browser global fallback
+      if (typeof window.pixelStreaming?.emitUIInteraction === "function") {
+        window.pixelStreaming.emitUIInteraction(payload);
+        return;
+      }
+
+      console.warn(
+        "emitUIInteraction not found on any Pixel Streaming object.",
+      );
+    } catch (err) {
+      console.error("Failed to send UI interaction to Unreal:", err);
+    }
+  }, []);
+
+  const sendReplacementCsvToUnreal = useCallback((csvRows) => {
+    try {
+      // const rowsArray = Array.isArray(csvRows)
+      //   ? csvRows
+      //   : String(csvRows || "")
+      //       .map((r) => r.trim())
+      //       .filter(Boolean);
+
+      const payload = {
+        msgType: "receivedReplacementCsv",
+        csvRows: csvRows,
+      };
+
+      console.log("Sending receivedReplacementCsv to Unreal:", payload);
 
       if (
         typeof PixelStreamingUiApp?.stream?.emitUIInteraction === "function"
       ) {
-        PixelStreamingUiApp.stream.emitUIInteraction(jsonObject);
+        PixelStreamingUiApp.stream.emitUIInteraction(payload);
         return;
       }
+
+      if (typeof PixelStreamingApp?.emitUIInteraction === "function") {
+        PixelStreamingApp.emitUIInteraction(payload);
+        return;
+      }
+
+      if (typeof window.pixelStreaming?.emitUIInteraction === "function") {
+        window.pixelStreaming.emitUIInteraction(payload);
+        return;
+      }
+
+      console.warn("emitUIInteraction not found.");
     } catch (err) {
       console.error("Failed to send receivedReplacementCsv to Unreal:", err);
     }
   }, []);
 
-  const sendReplacementCsvToUnreal = useCallback((csvRows) => {
-    
-      const payload = {
-        msgType: "receivedReplacementCsv",
-        csvRows: csvRows,
-      };
-      
-  }, []);
-
-  // ========== ADD CSV FUNCTIONS (CRITICAL) ==========
-  useEffect(() => {
-    console.log("\n╔════════════════════════════════════════════════════╗");
-    console.log("║ 📡 SETTING UP CSV BRIDGE: MayaChat ↔ Unreal      ║");
-    console.log("╚════════════════════════════════════════════════════╝\n");
-
-    // ✅ Function: Receive CSV from MayaChat and forward to Unreal
-    window.sendCSVToExperience = (csvData) => {
-      if (!csvData) {
-        console.error("❌ No csvData provided");
-        return;
-      }
-
-      console.log("📤 Forwarding filled CSV to Unreal:");
-      console.log("   Rows:", csvData.csvRows?.length || 0);
-
-      const payload = {
-        msgType: "receivedReplacementCsv",
-        csvRows: csvData.csvRows,
-        metadata: csvData.metadata,
-      };
-
-      // ========== SEND TO UNREAL ==========
-      try {
-        if (PixelStreamingUiApp?.stream?.emitUIInteraction) {
-          console.log("✅ Sent via PixelStreamingUiApp");
-          PixelStreamingUiApp.stream.emitUIInteraction(payload);
+  // ========== ADD CSV FUNCTIONS (NEW) ==========
+    // ========== ADD CSV FUNCTIONS (CRITICAL) ==========
+    useEffect(() => {
+      console.log("\n╔════════════════════════════════════════════════════╗");
+      console.log("║ 📡 SETTING UP CSV BRIDGE: MayaChat ↔ Unreal      ║");
+      console.log("╚════════════════════════════════════════════════════╝\n");
+  
+      // ✅ Function: Receive CSV from MayaChat and forward to Unreal
+      window.sendCSVToExperience = (csvData) => {
+        if (!csvData) {
+          console.error("❌ No csvData provided");
           return;
         }
-
-        if (PixelStreamingApp?.emitUIInteraction) {
-          console.log("✅ Sent via PixelStreamingApp");
-          PixelStreamingApp.emitUIInteraction(payload);
-          return;
-        }
-
-        console.error("❌ No emitUIInteraction found");
-      } catch (err) {
-        console.error("❌ Error sending to Unreal:", err);
-      }
-    };
-
-    console.log("✅ CSV bridge is active");
-
-    const timer = setTimeout(() => {
-      console.log("🚀 AUTO-SENDING getRoomCsv to Unreal");
-      let getRoomCsvJson = {
-          msgType: "getRoomCsv",
+  
+        console.log("📤 Forwarding filled CSV to Unreal:");
+        console.log("   Rows:", csvData.csvRows?.length || 0);
+  
+        const payload = {
+          msgType: "receivedReplacementCsv",
+          csvRows: csvData.csvRows,
+          metadata: csvData.metadata,
         };
-      sendMsgToUnreal(getRoomCsvJson);
-    }, 2000);
-
-    return () => {
-      clearTimeout(timer);
-      delete window.sendCSVToExperience;
-    };
-  }, [sendMsgToUnreal]);
+  
+        // ========== SEND TO UNREAL ==========
+        try {
+          if (PixelStreamingUiApp?.stream?.emitUIInteraction) {
+            console.log("✅ Sent via PixelStreamingUiApp");
+            PixelStreamingUiApp.stream.emitUIInteraction(payload);
+            return;
+          }
+  
+          if (PixelStreamingApp?.emitUIInteraction) {
+            console.log("✅ Sent via PixelStreamingApp");
+            PixelStreamingApp.emitUIInteraction(payload);
+            return;
+          }
+  
+          console.error("❌ No emitUIInteraction found");
+        } catch (err) {
+          console.error("❌ Error sending to Unreal:", err);
+        }
+      };
+  
+      console.log("✅ CSV bridge is active");
+  
+      const timer = setTimeout(() => {
+        console.log("🚀 AUTO-SENDING getRoomCsv to Unreal");
+        sendConsoleCommandToUnreal("getRoomCsv");
+      }, 2000);
+  
+      return () => {
+        clearTimeout(timer);
+        delete window.sendCSVToExperience;
+      };
+    }, [sendConsoleCommandToUnreal]);
 
   const extractBestImageUrl = (raw) => {
     if (typeof raw !== "string") return "";
@@ -632,12 +665,10 @@ export default function Experience() {
     return parts[parts.length - 1] || s;
   };
 
-  const onReceivedMsgFromUnreal = useCallback(
+  const handleResponseApp = useCallback(
     async (response) => {
       try {
         console.log("Received unreal message:", response);
-
-        
 
         const forwardImageUrl = async (url) => {
           const extracted = extractBestImageUrl(url).trim();
@@ -662,16 +693,6 @@ export default function Experience() {
         }
 
         const msg = response;
-        if(msg.type == "log")
-        {
-          if(msg.log.includes("[ERROR] MappedSpaceSearchResult does NOT contain SpaceName"))
-          {
-            let currentSpaceName = msg.log.replace("[ERROR] MappedSpaceSearchResult does NOT contain SpaceName ","");
-            // means the player wasn't in a room that has NavActor
-            console.log(`ERROR: Player is in a room ${currentSpaceName} without BP_NavActor`);
-          }
-        }
-
         if (msg.type === "roomSkuCsv") {
           console.log("Received roomSkuCsv from Unreal:");
           console.log(msg.csvRows);
@@ -691,7 +712,7 @@ export default function Experience() {
           }
 
           parseCSVAndUpdateCurrentRows(msg.csvRows);
-
+          
           console.log("📥 CSV FROM UNREAL - FORWARDING TO MAYA");
           const csvArray = msg.csvRows;
 
@@ -847,7 +868,7 @@ export default function Experience() {
           return;
         }
       } catch (e) {
-        console.error("onReceivedMsgFromUnreal error:", e, response);
+        console.error("handleResponseApp error:", e, response);
       }
     },
     [
@@ -866,7 +887,7 @@ export default function Experience() {
     try {
       PixelStreamingApp?.removeResponseEventListener?.(
         "handle_responses",
-        onReceivedMsgFromUnreal,
+        handleResponseApp,
       );
     } catch {}
     try {
@@ -899,7 +920,7 @@ export default function Experience() {
     PixelStreamingApp = undefined;
     PixelStreamingUiApp = undefined;
     UIControlApp = undefined;
-  }, [onReceivedMsgFromUnreal]);
+  }, [handleResponseApp]);
 
   const startPlay = useCallback(async () => {
     if (connectingRef.current) return;
@@ -924,7 +945,6 @@ export default function Experience() {
 
     const init = await StreamPixelApplication({
       AutoConnect: true,
-      
       appId: resolvedAppId,
       keyBoardInput: true,
     });
@@ -954,7 +974,7 @@ export default function Experience() {
       attachVideoAutoplaySafe(app.rootElement);
     };
 
-    ps.addResponseEventListener("handle_responses", onReceivedMsgFromUnreal);
+    ps.addResponseEventListener("handle_responses", handleResponseApp);
     console.log("added event listener to handle_responses");
 
     if (pendingHoverEnabled !== null) {
@@ -974,7 +994,7 @@ export default function Experience() {
     connectingRef.current = false;
   }, [
     attachVideoAutoplaySafe,
-    onReceivedMsgFromUnreal,
+    handleResponseApp,
     hardDisconnect,
     buildName,
     buildVersion,
@@ -992,13 +1012,7 @@ export default function Experience() {
     mountedRef.current = true;
     startPlay();
 
-    // ========== FIXED: Only prevent specific keys, not ALL keys ==========
     const onKey = (e) => {
-      const tag = document.activeElement?.tagName?.toLowerCase();
-      if (tag === 'input' || tag === 'textarea' || document.activeElement?.contentEditable === 'true') {
-        return;
-      }
-
       e.preventDefault();
 
       if (e.code === "Digit0" && e.altKey && !e.repeat) {
@@ -1020,16 +1034,9 @@ export default function Experience() {
       if (e.code === "Digit7" && !e.repeat) {
         e.preventDefault();
         e.stopPropagation();
-       
-        let getRoomCsvJson = {
-          msgType: "getRoomCsv",
-        };
-
-        sendMsgToUnreal(getRoomCsvJson);
+        sendConsoleCommandToUnreal("getRoomCsv");
         return;
       }
-
-      // ✅ TEMP TEST: press 8 to send test CSV to Unreal
       if (e.code === "Digit8" && !e.repeat) {
         e.preventDefault();
         e.stopPropagation();
@@ -1068,19 +1075,10 @@ export default function Experience() {
 
         const updatedCsvRows = updatedCsvString.split("\n");
 
-        const receivedReplacementCsvJson = {
-          msgType: "receivedReplacementCsv",
-          csvRows: updatedCsvRows,
-        };
-
-        sendMsgToUnreal(receivedReplacementCsvJson);
-
         // sendReplacementCsvToUnreal(testCsvRows);
-        //sendReplacementCsvToUnreal(updatedCsvRows);
+        sendReplacementCsvToUnreal(updatedCsvRows);
         return;
       }
-
-      // ✅ All other keys are allowed through (for typing in MayaChat input)
     };
 
     window.addEventListener("keydown", onKey, { capture: true });
@@ -1133,7 +1131,8 @@ export default function Experience() {
     toggleMouseHover,
     hardDisconnect,
     runIKeyClickSequence,
-    sendMsgToUnreal,
+    sendConsoleCommandToUnreal,
+    sendReplacementCsvToUnreal,
     currentCsvRows,
   ]);
 
