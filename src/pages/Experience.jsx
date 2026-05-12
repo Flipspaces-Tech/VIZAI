@@ -602,14 +602,17 @@ export default function Experience() {
 
     const timer = setTimeout(() => {
       console.log("🚀 AUTO-SENDING getRoomCsv to Unreal");
-      sendConsoleCommandToUnreal("getRoomCsv");
+      let getRoomCsvJson = {
+          msgType: "getRoomCsv",
+        };
+      sendMsgToUnreal(getRoomCsvJson);
     }, 2000);
 
     return () => {
       clearTimeout(timer);
       delete window.sendCSVToExperience;
     };
-  }, [sendConsoleCommandToUnreal]);
+  }, [sendMsgToUnreal]);
 
   const extractBestImageUrl = (raw) => {
     if (typeof raw !== "string") return "";
@@ -1013,7 +1016,12 @@ export default function Experience() {
       if (e.code === "Digit7" && !e.repeat) {
         e.preventDefault();
         e.stopPropagation();
-        sendConsoleCommandToUnreal("getRoomCsv");
+       
+        let getRoomCsvJson = {
+          msgType: "getRoomCsv",
+        };
+
+        sendMsgToUnreal(getRoomCsvJson);
         return;
       }
 
@@ -1121,7 +1129,6 @@ export default function Experience() {
     toggleMouseHover,
     hardDisconnect,
     runIKeyClickSequence,
-    sendConsoleCommandToUnreal,
     sendMsgToUnreal,
     currentCsvRows,
   ]);
