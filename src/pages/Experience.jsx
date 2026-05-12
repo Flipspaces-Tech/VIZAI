@@ -698,8 +698,8 @@ export default function Experience() {
           return;
         }
 
-        if (msg.type === "gotoRoomCompleted") {
-          console.log("Received gotoRoomCompleted from Unreal:");
+        if (msg.type === "gotoRoomFinished") {
+          console.log("Received gotoRoomFinished from Unreal");        
           // TODO: MayaChat can now ask the user for the design prompt on what they want to change in this room
           return;
         }
