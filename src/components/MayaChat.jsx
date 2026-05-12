@@ -871,8 +871,12 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
         }
       };
 
+      let bShowWakeWordLogs = false; // Set to true to see all wake word detector transcripts
+
       recognition.onerror = (error) => {
-        console.log('Wake word detector error:', error.error);
+        if(bShowWakeWordLogs) {
+          console.log('Wake word detector error:', error.error);
+        }
       };
       
       recognition.onend = () => {
@@ -881,14 +885,18 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
         
         // ✅ If not currently listening, restart wake word detector
         if (!listeningRef.current) {
-          console.log('🔄 Wake word detector ended, restarting...');
+          if(bShowWakeWordLogs) {
+            console.log('🔄 Wake word detector ended, restarting...');
+          }
           setTimeout(() => startWakeWordDetector(), 500);
         }
       };
 
       recognitionRef.current = recognition;
       recognition.start();
-      console.log('🎤 Wake word detector started');
+      if(bShowWakeWordLogs) {
+        console.log('🎤 Wake word detector started');
+      }
     } catch (err) {
       console.log('Wake word detector error:', err.message);
     }
