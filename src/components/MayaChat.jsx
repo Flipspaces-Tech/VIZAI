@@ -583,7 +583,7 @@ function MayaBubbleIcon({ state }) {
 // MAIN COMPONENT
 // ============================================================================
 
-export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
+export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, currentRoomName }) {
   const [visible, setVisible] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
@@ -640,6 +640,35 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal }) {
   }, [isTypingMode]);
   const lastMayaRequestIdRef = useRef("");
   const resultPollIntervalRef = useRef(null);
+
+  /// Handle roomNames updates from Unreal
+  useEffect(() => {
+    if (!roomNames || roomNames.length === 0) return;
+
+    console.log("roomNames updated:", roomNames);
+    // TODO: Ask the user to select a room -> match response with roomNames 
+    // -> fire sendMsgToUnreal with gotoRoom json containing selected room name and show "Moving to room" text in MayaChat
+    // -> wait till Unreal confirms roomTeleportCompleted in Experience JSX
+  }, [roomNames]);
+
+  const sendMsgToUnreal = (msg) => {
+     try {
+      if(!jsonObject.msgType) {
+        console.error("sendMsgToUnreal: msgType is required in the payload");
+        return;
+      }
+      console.log("sendMsgToUnreal: ", jsonObject);
+
+      if (
+        typeof PixelStreamingUiApp?.stream?.emitUIInteraction === "function"
+      ) {
+        PixelStreamingUiApp.stream.emitUIInteraction(jsonObject);
+        return;
+      }
+    } catch (err) {
+      console.error("Failed to send receivedReplacementCsv to Unreal:", err);
+    }
+  };
 
   // ============================================================================
   // ✅ FIXED: LISTEN FOR CSV FROM UNREAL VIA CustomEvent + postMessage fallback

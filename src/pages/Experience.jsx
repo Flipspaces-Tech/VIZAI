@@ -229,7 +229,8 @@ let UIControlApp;
 export default function Experience() {
   const currentCsvHeaders = useRef(null);
   const currentCsvRows = useRef(null); // contains parsed rows from Unreal
-  // const [currentRoomName, setCurrentRoomName] = useState(""); // contains the current room name
+  const [currentRoomName, setCurrentRoomName] = useState(""); // contains the current room name
+  const [roomNames, setRoomNames] = useState([]);
 
   /// Can be used for both initial state from Unreal and updated state from MayaChat - populates left/right side as needed into StateObject
   const parseCSVAndUpdateCurrentRows = (csvRows) => {
@@ -662,14 +663,45 @@ export default function Experience() {
         }
 
         const msg = response;
-        if(msg.type === "log")
-        {
+
+        // Handle log type
+        if(msg.type === "log") {
           if(msg.log.includes("[ERROR] MappedSpaceSearchResult does NOT contain SpaceName"))
           {
             let currentSpaceName = msg.log.replace("[ERROR] MappedSpaceSearchResult does NOT contain SpaceName ","");
             // means the player wasn't in a room that has NavActor
             console.log(`ERROR: Player is in a room ${currentSpaceName} without BP_NavActor`);
           }
+        }
+
+        // Once scene is loaded, ask Unreal for the roomSkuCsv and roomNames
+        if(msg.type === "sceneLoaded") {
+          console.log("Scene loaded in Unreal, requesting roomSkuCsv and roomNames...");
+
+          let getRoomCsvJson = {
+            msgType: "getRoomCsv",
+          };
+          sendMsgToUnreal(getRoomCsvJson);
+
+          let getRoomNamesJson = {
+            msgType: "getRoomNames",
+          };
+          sendMsgToUnreal(getRoomNamesJson);
+        }
+
+        // Handle roomNames response from Unreal
+        if (msg.type === "roomNames") {
+          console.log("Received roomNames from Unreal:", msg.roomNames);
+          const names = msg.roomNames || [];
+          window.lastRoomNames = names;
+          setRoomNames(names);
+          return;
+        }
+
+        if (msg.type === "gotoRoomCompleted") {
+          console.log("Received gotoRoomCompleted from Unreal:");
+          // TODO: MayaChat can now ask the user for the design prompt on what they want to change in this room
+          return;
         }
 
         if (msg.type === "roomSkuCsv") {
@@ -690,6 +722,7 @@ export default function Experience() {
             currentCsvHeaders.current = headers;
           }
 
+          /// Store in StateObject
           parseCSVAndUpdateCurrentRows(msg.csvRows);
 
           console.log("📥 CSV FROM UNREAL - FORWARDING TO MAYA");
@@ -713,13 +746,6 @@ export default function Experience() {
             }),
           );
 
-          return;
-        }
-
-        // Handle roomNames response from Unreal
-        if (msg.type === "roomNames") {
-          console.log("Received roomNames from Unreal:", msg.roomNames);
-          window.lastRoomNames = msg.roomNames || [];
           return;
         }
 
@@ -1219,7 +1245,8 @@ export default function Experience() {
           willChange: "transform",
         }}
       />
-      <MayaChat sendUpdatedCSVRowsToUnreal={sendUpdatedCSVRowsToUnreal} />
+
+      <MayaChat sendUpdatedCSVRowsToUnreal={sendUpdatedCSVRowsToUnreal} roomNames={roomNames} currentRoomName={currentRoomName} />
     </div>
   );
 }
