@@ -704,7 +704,7 @@ export default function Experience() {
         }
 
         if (msg.type === "gotoRoomFinished") {
-          console.log("✅ Experience.jsx: Received", gotoRoomDoneType, "from Unreal — dispatching CustomEvent");
+          console.log("✅ Experience.jsx: Received gotoRoomFinished from Unreal — dispatching CustomEvent");
           window.dispatchEvent(new CustomEvent('gotoRoomFinished'));          
           return;
         }
