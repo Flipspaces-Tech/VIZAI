@@ -621,8 +621,14 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
   const recognitionRef = useRef(null);
   const queryEngineRef = useRef(new MayaQueryEngine());
   const liveTextRef = useRef('');
+  const awaitingRoomSelectionRef = useRef(false);
+  const availableRoomsRef = useRef([]);
+  const pendingRoomConfirmRef = useRef(null);
+  const isTypingModeRef = useRef(false);
+  const roomNamesHandledRef = useRef(false);
 
   useEffect(() => {
+    isTypingModeRef.current = isTypingMode;
     if (isTypingMode && typingInputRef.current) {
       setTimeout(() => {
         const el = typingInputRef.current;
@@ -641,15 +647,46 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
   const lastMayaRequestIdRef = useRef("");
   const resultPollIntervalRef = useRef(null);
 
-  /// Handle roomNames updates from Unreal
+  /// Handle roomNames updates from Unreal — triggers room selection onboarding (first time only)
   useEffect(() => {
     if (!roomNames || roomNames.length === 0) return;
 
     console.log("roomNames updated:", roomNames);
-    // TODO: Ask the user to select a room -> match response with roomNames 
-    // -> fire sendMsgToUnreal with gotoRoom json containing selected room name and show "Moving to room" text in MayaChat
-    // -> wait till Unreal confirms roomTeleportCompleted in Experience JSX
+
+    const splitCamelCase = (s) => s.replace(/([a-z])([A-Z])/g, '$1 $2');
+    const rooms = roomNames.map(name => ({ original: name, display: splitCamelCase(name) }));
+    availableRoomsRef.current = rooms;
+
+    if (roomNamesHandledRef.current) return;
+    roomNamesHandledRef.current = true;
+
+    awaitingRoomSelectionRef.current = true;
+    pendingRoomConfirmRef.current = null;
+
+    setIsOpen(true);
+    const welcomeText = `Welcome! Which room would you like to start designing first?`;
+    const welcomeMsg = [...messagesRef.current, { role: 'assistant', content: '' }];
+    setMessages(welcomeMsg);
+    messagesRef.current = welcomeMsg;
+    speakText(welcomeText, welcomeText);
   }, [roomNames]);
+
+  useEffect(() => {
+    const handleGotoRoomFinished = () => {
+      awaitingRoomSelectionRef.current = false;
+      pendingRoomConfirmRef.current = null;
+      speechStartedRef.current = false;
+      audioChunksRef.current = [];
+      stopListeningImmediately();
+      const promptText = "We're here! What would you like to change in this room?";
+      const newMsgs = [...messagesRef.current, { role: 'assistant', content: '' }];
+      setMessages(newMsgs);
+      messagesRef.current = newMsgs;
+      speakText(promptText, promptText);
+    };
+    window.addEventListener('gotoRoomFinished', handleGotoRoomFinished);
+    return () => window.removeEventListener('gotoRoomFinished', handleGotoRoomFinished);
+  }, []);
 
   const sendMsgToUnreal = (msg) => {
      try {
@@ -798,12 +835,6 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
       setVisible(true);
       setListeningMode('idle');
 
-      if (typeof window.sendToUnreal === 'function') {
-        const msg = JSON.stringify({msgType: 'getRoomNames'});
-        console.log(`MayaChat → Unreal: ${msg}`);
-        window.sendToUnreal({msgType: 'getRoomNames'});
-      }
-
       // Wake word detector is started by the dedicated useEffect below (wakeWordInitializedRef)
       // Do NOT call startWakeWordDetector() here — would create two competing instances
     }
@@ -824,9 +855,11 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         }
       } else if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
+        isTypingModeRef.current = true;
         setIsTypingMode(true);
         stopListeningImmediately();
       } else if (e.key === 'Escape') {
+        isTypingModeRef.current = false;
         setIsTypingMode(false);
         setInput('');
       }
@@ -1133,19 +1166,23 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         const blobSize = audioBlob ? audioBlob.size : 0;
 
         if (audioBlob && blobCount > 0) {
-          const hasSpeech = speechStartedRef.current || blobSize > 30000;
+          const hasSpeech = speechStartedRef.current;
 
           if (hasSpeech && blobSize > 15000) {
-            await sendAudioToSarvam(audioBlob);
+            if (!isTypingModeRef.current) {
+              await sendAudioToSarvam(audioBlob);
+            } else if (!isProcessingRef.current) {
+              speechStartedRef.current = false;
+            }
           } else {
-            if (!isProcessingRef.current) {
+            if (!isProcessingRef.current && !isTypingModeRef.current) {
               setListeningMode('listening');
               speechStartedRef.current = false;
               setTimeout(() => startListening(), 500);
             }
           }
         } else {
-          if (!isProcessingRef.current) {
+          if (!isProcessingRef.current && !isTypingModeRef.current) {
             setListeningMode('listening');
             speechStartedRef.current = false;
             setTimeout(() => startListening(), 500);
@@ -1281,6 +1318,21 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
     const lowerTranscript = transcript.toLowerCase();
     const originalTranscript = transcript;
 
+    if (awaitingRoomSelectionRef.current) {
+      sendMessage(transcript);
+      return;
+    }
+
+    // Bypass intent validation for direct room navigation commands mid-session
+    if (availableRoomsRef.current.length > 0) {
+      const navPrefixes = ['go to ', 'take me to ', 'navigate to ', 'head to ', "let's go to ", 'lets go to ', 'teleport to ', 'move to ', 'i want to go to ', 'can we go to '];
+      const lowerT = transcript.toLowerCase().trim();
+      if (navPrefixes.some(p => lowerT.startsWith(p))) {
+        sendMessage(transcript);
+        return;
+      }
+    }
+
     // Wake word ONLY bypasses the confidence gate — it does NOT bypass intent validation
     const hasWakeWord = WAKE_WORDS.some(word => lowerTranscript.includes(word));
 
@@ -1333,9 +1385,8 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         if (transcript) {
           liveTextRef.current = '';
           setLiveText('');
-          // ✅ Pass both transcript and confidence to handleTranscript
           handleTranscript(transcript, confidence);
-        } else {
+        } else if (!isTypingModeRef.current) {
           audioChunksRef.current = [];
           speechStartedRef.current = false;
           setListeningMode('listening');
@@ -1491,6 +1542,114 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
     stopListeningImmediately();
     setListeningMode('thinking');
+
+    if (awaitingRoomSelectionRef.current) {
+      const norm = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const navPrefixes = ['go to ', 'take me to ', 'navigate to ', 'head to ', "let's go to ", 'lets go to ', 'teleport to ', 'move to ', 'i want to go to ', 'can we go to '];
+      let cleanInput = messageText.toLowerCase().trim();
+      for (const prefix of navPrefixes) {
+        if (cleanInput.startsWith(prefix)) { cleanInput = cleanInput.slice(prefix.length).trim(); break; }
+      }
+      const userNorm = norm(cleanInput);
+      const userStem = userNorm.replace(/s$/, '');
+      const rooms = availableRoomsRef.current;
+
+      const withUser = [...messagesRef.current, { role: 'user', content: messageText }];
+      setMessages(withUser);
+      messagesRef.current = withUser;
+      setInput('');
+      setRecordedText('');
+
+      const addMayaReply = (text) => {
+        const withMaya = [...messagesRef.current, { role: 'assistant', content: '' }];
+        setMessages(withMaya);
+        messagesRef.current = withMaya;
+        speakText(text, text);
+        isProcessingRef.current = false;
+      };
+
+      if (pendingRoomConfirmRef.current) {
+        const lower = messageText.toLowerCase();
+        const yesWords = ['yes', 'yeah', 'yep', 'correct', 'right', 'sure', 'ok', 'okay', 'yup'];
+        const noWords = ['no', 'nope', 'nah', 'not', 'wrong'];
+
+        if (yesWords.some(w => lower.includes(w))) {
+          const room = pendingRoomConfirmRef.current;
+          pendingRoomConfirmRef.current = null;
+          awaitingRoomSelectionRef.current = false;
+          window.sendToUnreal({ msgType: 'gotoRoom', targetRoom: room.original });
+          addMayaReply(`Let's go! Heading to the ${room.display} now.`);
+          return;
+        } else if (noWords.some(w => lower.includes(w))) {
+          pendingRoomConfirmRef.current = null;
+          addMayaReply(`No worries — which room would you like to go to?`);
+          return;
+        }
+        pendingRoomConfirmRef.current = null;
+      }
+
+      let exactMatch = null;
+      let partialMatch = null;
+      for (const room of rooms) {
+        const dn = norm(room.display);
+        const on = norm(room.original);
+        const dnStem = dn.replace(/s$/, '');
+        const onStem = on.replace(/s$/, '');
+        if (userNorm === dn || userNorm === on || userStem === dnStem || userStem === onStem || userNorm.includes(dn) || userNorm.includes(on)) { exactMatch = room; break; }
+        if (!partialMatch && (dn.includes(userStem) || userStem.includes(dnStem))) {
+          partialMatch = room;
+        }
+      }
+
+      if (exactMatch) {
+        awaitingRoomSelectionRef.current = false;
+        window.sendToUnreal({ msgType: 'gotoRoom', targetRoom: exactMatch.original });
+        addMayaReply(`Let's go! Heading to the ${exactMatch.display} now.`);
+      } else if (partialMatch) {
+        pendingRoomConfirmRef.current = partialMatch;
+        addMayaReply(`Do you mean the ${partialMatch.display}?`);
+      } else {
+        addMayaReply(`Hmm, I didn't catch that. Which room would you like to go to?`);
+      }
+      return;
+    }
+
+    // Direct navigation intercept — if user explicitly says "go to X" and X matches a known room,
+    // send gotoRoom immediately without hitting the AI pipeline
+    if (availableRoomsRef.current.length > 0) {
+      const navPrefixes = ['go to ', 'take me to ', 'navigate to ', 'head to ', "let's go to ", 'lets go to ', 'teleport to ', 'move to ', 'i want to go to ', 'can we go to '];
+      let navInput = messageText.toLowerCase().trim();
+      let hasNavPrefix = false;
+      for (const prefix of navPrefixes) {
+        if (navInput.startsWith(prefix)) { navInput = navInput.slice(prefix.length).trim(); hasNavPrefix = true; break; }
+      }
+      if (hasNavPrefix) {
+        const norm = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const uNorm = norm(navInput);
+        const uStem = uNorm.replace(/s$/, '');
+        for (const room of availableRoomsRef.current) {
+          const dn = norm(room.display);
+          const on = norm(room.original);
+          const dnStem = dn.replace(/s$/, '');
+          const onStem = on.replace(/s$/, '');
+          if (uNorm === dn || uNorm === on || uStem === dnStem || uStem === onStem || dn.includes(uStem) || uStem.includes(dnStem)) {
+            window.sendToUnreal({ msgType: 'gotoRoom', targetRoom: room.original });
+            const withUser = [...messagesRef.current, { role: 'user', content: messageText }];
+            setMessages(withUser);
+            messagesRef.current = withUser;
+            setInput('');
+            setRecordedText('');
+            const reply = `Off to the ${room.display}!`;
+            const withMaya = [...withUser, { role: 'assistant', content: '' }];
+            setMessages(withMaya);
+            messagesRef.current = withMaya;
+            speakText(reply, reply);
+            isProcessingRef.current = false;
+            return;
+          }
+        }
+      }
+    }
 
     const userMessage = { role: 'user', content: messageText };
     const newMessages = [...messagesRef.current, userMessage];
@@ -1766,6 +1925,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
                         const text = e.currentTarget.innerText.trim();
                         if (text) {
                           e.currentTarget.blur();
+                          isTypingModeRef.current = false;
                           setIsTypingMode(false);
                           setInput('');
                           e.currentTarget.innerText = '';
@@ -1774,6 +1934,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
                       } else if (e.key === 'Escape') {
                         e.preventDefault();
                         e.currentTarget.blur();
+                        isTypingModeRef.current = false;
                         setIsTypingMode(false);
                         setInput('');
                       }
