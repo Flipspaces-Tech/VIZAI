@@ -662,7 +662,7 @@ export default function Experience() {
         }
 
         const msg = response;
-        if(msg.type == "log")
+        if(msg.type === "log")
         {
           if(msg.log.includes("[ERROR] MappedSpaceSearchResult does NOT contain SpaceName"))
           {
