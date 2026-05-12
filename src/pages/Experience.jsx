@@ -703,10 +703,9 @@ export default function Experience() {
           return;
         }
 
-        const gotoRoomDoneType = msg.type || msg.msgType || "";
-        if (gotoRoomDoneType === "gotoRoomCompleted" || gotoRoomDoneType === "gotoRoomFinished") {
+        if (msg.type === "gotoRoomFinished") {
           console.log("✅ Experience.jsx: Received", gotoRoomDoneType, "from Unreal — dispatching CustomEvent");
-          window.dispatchEvent(new CustomEvent('gotoRoomFinished'));
+          window.dispatchEvent(new CustomEvent('gotoRoomFinished'));          
           return;
         }
 

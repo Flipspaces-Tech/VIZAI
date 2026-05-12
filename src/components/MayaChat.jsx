@@ -1398,33 +1398,45 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
   };
 
   const sendMsgToRecEngine = async (jsonData, userQuery = "") => {
-    if (!RECEIVER_API_URL) return;
+  if (!RECEIVER_API_URL) return;
+  
 
-    try {
-      const payloadWithId = {
-        ...jsonData,
-        search_query: userQuery,
-        request_id: `maya-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        source: "maya_frontend",
-        created_at: new Date().toISOString(),
-      };
+  try {
+    const payloadWithId = {
+      ...jsonData,
+      search_query: userQuery,
+      request_id: `maya-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      source: "maya_frontend",
+      created_at: new Date().toISOString(),
+      
+      // ✅ ADD THIS NEW SECTION:
+      csv_data: {
+        original_rows: csvStorage.original || [],
+        current_rows: csvStorage.current || [],
+        session_id: csvStorage.sessionId,
+        room_name: currentRoomName || "Unknown",
+        available_rooms: roomNames || [],
+      }
+      
+    };
+    console.log("CSV + QUERY");
 
-      console.log("📤 Sending payload to receiver:", payloadWithId);
+    console.log("📤 Sending payload with CSV data to receiver:", payloadWithId);
 
-      const res = await fetch(`${RECEIVER_API_URL}/ingest`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payloadWithId),
-      });
+    const res = await fetch(`${RECEIVER_API_URL}/ingest`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payloadWithId),
+    });
 
-      const result = await res.json().catch(() => null);
-      console.log("✅ Receiver status:", res.status, result);
+    const result = await res.json().catch(() => null);
+    console.log("✅ Receiver status:", res.status, result);
 
-      startPollingForResult(payloadWithId.request_id);
-    } catch (err) {
-      console.error("Failed to post:", err);
-    }
-  };
+    startPollingForResult(payloadWithId.request_id);
+  } catch (err) {
+    console.error("Failed to post:", err);
+  }
+};
 
   const speakText = (text, fullText) => {
     if (!text || text.trim().length === 0) return;
