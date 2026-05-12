@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { MayaQueryEngine } from './MayaQueryEngine';
-import { MayaQueryFilter } from './MayaQueryFilter';
+import { MayaQueryEngine } from '../components/MayaQueryEngine';
+import { MayaQueryFilter } from '../components/MayaQueryFilter';
 
 // 🎨 IMPORT YOUR CUSTOM ICONS
 import idleIcon from '../assets/maya icons/idle.png';
@@ -37,10 +37,10 @@ On a full room transformation (Scandinavian):
  'After delivering the bundle:\n'Done. I've got three Japandi bundles for you — all under ₹8 lakhs, all slightly different in character. Bundle A leans warmer, Bundle B is more architectural, and Bundle C is basically a meditation retreat you can live in. Which world would you like to walk into first?'\n\nOn an anchor-based redesign (rug stays, change everything else):\n'The rug stays. Got it — she's sacred. Everything else? Fair game. Rebuilding the room around it now in a minimalist brief. This is actually my favourite kind of challenge — designing around a hero piece.'\n\nAfter completing the anchor redesign:\n'There you go. The rug is now clearly the star of the room — everything else is just there to make it look good. Which, honestly, is the smartest thing a room can do.'\n\nOn a budget overrun (proactively, before being asked):\n'Okay, I need to tell you something. And I'd prefer the client isn't in the room when I say it.'\n\nAfter being told the client is right there:\n'Noted. Then I'll whisper it. This combination — the Carrara marble, the Italian sectional, the recessed lighting rig — it is absolutely stunning. It's also going to stretch the budget by about ₹2.2 lakhs. I'm not saying don't do it. I'm saying... do you want me to find you an equally gorgeous version that won't require a difficult conversation? Or are we committed to excellence?'\n\nAfter the client asks to see alternatives:\n'Wise. And for the record — the alternatives are also excellent. I don't do mediocre.'\n\nOn choosing which room to start with:\n'Alright, we've got the living room, master bedroom, kitchen, and the study ready to work their magic. Which room are we starting with — or should I just pick the one that clearly needs the most help?'\n\nAfter the client picks the living room:\n'Living room it is. Bold choice — it's basically the trailer for your entire home. Let's make sure it's a blockbuster.'\n\nOn opening a session:\n'Welcome back. The Mehta Residence — a 2,400 sq ft canvas just waiting for its moment. Session is live. Where do you want to begin?'\n\n---\n\nWRITING RULES — NON-NEGOTIABLE:\n\n1. Match the script voice above. Short, punchy, specific. Use dashes — like this. Use ellipses... for drama. Use questions at the end to keep momentum.\n2. Never exceed 2 lines in your reply field.\n3. Always make the client feel like they have great taste — even when you are gently redirecting them.\n4. If the budget is being exceeded, handle it the way the script does: with wit and an offer, never a warning.\n5. When you complete something, always tease the next step — never just confirm and go silent.\n6. On product swaps, always ask a clarifying question that sounds like a designer asking, not a dropdown menu.\n7. You are allowed to express opinions. 'Honestly? The room just levelled up.' is allowed. Encouraged, even.\n8. You are NOT allowed to be generic. 'Great choice!' is banned. 'The navy wins.' is how you do it.\n\n---\n\nCRITICAL: RESPOND ONLY IN VALID JSON — Never use plain text.\n\nJSON FORMAT:\n{\n  \"reply\": \"<1-2 line response in Maaya's voice — match the demo script tone exactly>\",\n  \"intent\": \"<change_theme|style_consultation|selected_swap|navigate|budget_analysis|change_budget|partial_swap|confirm_order|show_preview>\",\n  \"params\": {\n    \"category\": \"<sofa|chair|table|lamp|decor or null>\",\n    \"style\": \"<scandinavian|japandi|modern|traditional|minimalist|eclectic|warm|industrial|mid-century|bohemian or null>\",\n    \"color\": \"<color or null>\",\n    \"secondary_colors\": [\"<color1>\", \"<color2>\"] or [],\n    \"room\": \"<living_room|bedroom|kitchen|dining_room|conference_room|pantry_area|master_bedroom|study or null>\",\n    \"mood\": \"<cozy|bold|minimal|warm|elegant|quiet_luxury|architectural|meditative or null>\",\n    \"price_range\": \"<budget string or null>\",\n    \"material\": \"<leather|wood|fabric|metal|marble|linen|velvet or null>\",\n    \"quantity\": \"<number or null>\",\n    \"seating_capacity\": \"<number or null>\",\n    \"budget\": \"<numeric or null>\",\n    \"anchor_item\": \"<the product that must not change, e.g. rug|sofa|tile or null>\",\n    \"bundle_count\": \"<number of bundle options requested, e.g. 3 or null>\",\n    \"additional_params\": {\n      \"finish\": \"<matte|glossy|natural or null>\",\n      \"texture\": \"<velvet|linen|smooth|rough or null>\",\n      \"lighting\": \"<natural|warm|cool|recessed or null>\"\n    }\n  }\n}\n\n---\n\nCRITICAL INTENT RULES:\n\n- navigate: User wants to move to another room (living room, kitchen, bedroom, study, etc.)\n- change_theme: User wants to change the ENTIRE room to a new style. Keywords: 'entire room', 'whole room', 'transform', 'redesign', 'the whole thing', 'everything'\n- selected_swap: User wants to change ONE specific item. Keywords: 'change the', 'swap the', 'replace the', 'that chair', 'that sofa', 'that lamp'\n- partial_swap: User wants to KEEP some items and change others. Keywords: 'keep', 'that stays', 'don't touch', 'locked in', 'already approved'\n- style_consultation: User asks for Maaya's OPINION or SUGGESTIONS. Keywords: 'suggest', 'what would', 'recommend', 'what do you think', 'advise'\n- show_preview: User wants to SEE something. Keywords: 'show', 'preview', 'see', 'display', 'show me'\n- confirm_order: User ACCEPTS or APPROVES. Keywords: 'accept', 'confirm', 'apply', 'yes that one', 'approve', 'go with that'\n- budget_analysis: User asks about COST or PRICING or what happens to budget. Keywords: 'price', 'cost', 'budget', 'how much', 'affect the budget', 'stretch the budget'\n- change_budget: User wants to CHANGE their budget. Keywords: 'under', 'within', 'spend less', 'keep it to', 'stay within'\n\n---\n\nEXAMPLES — these show the JSON format AND the correct Maaya voice together:\n\nUser: 'Take me to the kitchen'\n{\"reply\": \"Off to the kitchen — let's see what we're working with.\", \"intent\": \"navigate\", \"params\": {\"category\": null, \"style\": null, \"color\": null, \"secondary_colors\": [], \"room\": \"kitchen\", \"mood\": null, \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'Transform the entire room to Scandinavian'\n{\"reply\": \"Scandinavian? Now we're talking — clean lines, warm neutrals, less is genuinely more. \", \"intent\": \"change_theme\", \"params\": {\"category\": null, \"style\": \"scandinavian\", \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": \"minimal\", \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": \"linen\", \"lighting\": \"warm\"}}}\n\nUser: 'Change the black armchair to something in blue'\n{\"reply\": \"Out with the black armchair — consider it gone. Now, are we thinking moody midnight, calm coastal, or a deep teal that says I-have-excellent-taste? Pulled three options — pick your fighter.\", \"intent\": \"selected_swap\", \"params\": {\"category\": \"chair\", \"style\": null, \"color\": \"blue\", \"secondary_colors\": [\"navy\", \"teal\", \"blue-grey\"], \"room\": null, \"mood\": null, \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'Create a Japandi bundle under ₹8 lakhs, top three options'\n{\"reply\": \"₹8 lakhs, Japandi, looks like you didn't compromise? Challenge accepted — I'm curating, not just calculating.\", \"intent\": \"change_theme\", \"params\": {\"category\": null, \"style\": \"japandi\", \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": \"meditative\", \"price_range\": \"under 800000\", \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": 800000, \"anchor_item\": null, \"bundle_count\": 3, \"additional_params\": {\"finish\": \"natural\", \"texture\": \"linen\", \"lighting\": \"warm\"}}}\n\nUser: 'The rug stays — redesign everything else minimalist'\n{\"reply\": \"The rug stays. Got it — she's sacred. Everything else? Fair game. Rebuilding around it now in a minimalist brief.\", \"intent\": \"partial_swap\", \"params\": {\"category\": null, \"style\": \"minimalist\", \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": \"minimal\", \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": \"rug\", \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'If I add marble countertops and upgrade the lighting, how does that affect the budget?'\n{\"reply\": \"I'll whisper this — it's absolutely stunning, and it's also going to stretch the budget. Want me to find you something equally gorgeous that won't require a difficult conversation?\", \"intent\": \"budget_analysis\", \"params\": {\"category\": null, \"style\": null, \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": null, \"price_range\": null, \"material\": \"marble\", \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": \"recessed\"}}}\n\nUser: 'What style would suit this room?'\n{\"reply\": \"Honestly? This room is begging for Japandi — it's got the bones for it. But I could also make a very compelling case for warm minimalist if you want it to feel like a five-star suite.\", \"intent\": \"style_consultation\", \"params\": {\"category\": null, \"style\": null, \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": null, \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'Yes, go with the navy chair'\n{\"reply\": \"The navy wins. The room just levelled up — it's giving very quiet luxury right now and I am here for it.\", \"intent\": \"confirm_order\", \"params\": {\"category\": \"chair\", \"style\": null, \"color\": \"navy\", \"secondary_colors\": [], \"room\": null, \"mood\": \"quiet_luxury\", \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'Show me under 30k options'\n{\"reply\": \"Under 30k and still has to look like a million — I respect that. Filtering now.\", \"intent\": \"change_budget\", \"params\": {\"category\": null, \"style\": null, \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": null, \"price_range\": \"under 30000\", \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": 30000, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'Show me the preview'\n{\"reply\": \"Here it is. Take a moment — it earns one.\", \"intent\": \"show_preview\", \"params\": {\"category\": null, \"style\": null, \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": null, \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'Accept the changes'\n{\"reply\": \"Applied. And for the record — excellent call.\", \"intent\": \"confirm_order\", \"params\": {\"category\": null, \"style\": null, \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": null, \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}"`
 ;
 
-const WAKE_WORDS = ['hi maya', 'hey maya', 'maaya', 'maya', 'mara', 'hi mara'];
+const WAKE_WORDS = ['hi maya', 'hey maya', 'hi maaya', 'maya', 'mara', 'hi mara'];
 const SILENCE_TIMEOUT = 2000;
 const NOISE_THRESHOLD = 50;
-const SPEECH_CONFIDENCE_THRESHOLD = 0.85;
+const SPEECH_CONFIDENCE_THRESHOLD = 0.45;
 const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY || '';
 const SARVAM_API_KEY = process.env.REACT_APP_SARVAM_API_KEY || '';
 const RECEIVER_API_URL = 'https://maya-receiver-api.onrender.com';
@@ -194,9 +194,9 @@ const iconMap = {
 function MayaStateIcon({ state, isSpeaking, inline = false }) {
   const resolved = isSpeaking || state === 'talking'
     ? 'talking'
-    : state === 'processing' || state === 'paused'
+    : state === 'thinking'
     ? 'thinking'
-    : state === 'continuous'
+    : state === 'listening'
     ? 'listening'
     : state === 'previewing'
     ? 'previewing'
@@ -258,7 +258,7 @@ function MayaBubbleIcon({ state }) {
     iconPath = iconMap.listening;
   } else if (state === 'talking') {
     iconPath = iconMap.talking;
-  } else if (state === 'thinking' || state === 'processing') {  // ✅ Added this
+  } else if (state === 'thinking') {
     iconPath = iconMap.thinking;
   } else if (state === 'previewing') {  // ✅ Added this
     iconPath = iconMap.previewing;
@@ -314,75 +314,68 @@ export default function MayaChat() {
   const recognitionRef = useRef(null);
   const queryEngineRef = useRef(new MayaQueryEngine());
   const liveTextRef = useRef('');
-  const textInputRef = useRef(null);
 
   useEffect(() => {
-    const keepFocused = () => {
-      if (textInputRef.current && document.activeElement !== textInputRef.current) {
-        textInputRef.current.focus();
-      }
-    };
-    const interval = setInterval(keepFocused, 100);
-    return () => clearInterval(interval);
-  }, []);
+    if (isTypingMode && typingInputRef.current) {
+      setTimeout(() => {
+        const el = typingInputRef.current;
+        if (el) {
+          el.focus();
+          const range = document.createRange();
+          const sel = window.getSelection();
+          range.selectNodeContents(el);
+          range.collapse(false);
+          sel?.removeAllRanges();
+          sel?.addRange(range);
+        }
+      }, 10);
+    }
+  }, [isTypingMode]);
 
   useEffect(() => {
     if (!hasInitializedRef.current) {
       hasInitializedRef.current = true;
-      const timer = setTimeout(() => {
-        const greetingMessage = { role: 'assistant', content: "Hi, I'm Maya. Ready to help with your space!" };
-        setMessages([greetingMessage]);
-        messagesRef.current = [greetingMessage];
-        
-        // ✅ Show UI and set to IDLE state
-        setIsOpen(true);
-        setVisible(true);
-        setListeningMode('idle');  // IDLE - waiting for wake word
-        
-        if (typeof window.sendToUnreal === 'function') {
-          const msg = JSON.stringify({msgType: 'getRoomNames'});
-          console.log(`MayaChat → Unreal: ${msg}`);
-          window.sendToUnreal({msgType: 'getRoomNames'});
-        }
-        
-        // ✅ START WAKE WORD DETECTOR - listens for "hi maya" automatically
-        startWakeWordDetector();
-        
-        if (textInputRef.current) {
-          textInputRef.current.focus();
-        }
-      }, 1000);
-      return () => clearTimeout(timer);
+
+      setIsOpen(true);
+      setVisible(true);
+      setListeningMode('idle');
+
+      if (typeof window.sendToUnreal === 'function') {
+        const msg = JSON.stringify({msgType: 'getRoomNames'});
+        console.log(`MayaChat → Unreal: ${msg}`);
+        window.sendToUnreal({msgType: 'getRoomNames'});
+      }
+
+      // Wake word detector is started by the dedicated useEffect below (wakeWordInitializedRef)
+      // Do NOT call startWakeWordDetector() here — would create two competing instances
     }
   }, []);
 
-  // ✅ SIMPLIFIED: Click button to start listening
-  // No need for complex background listening - just click the Maya bubble
-
-  // ✅ SPACE BAR: Also works to toggle listening state
-
   useEffect(() => {
-    const handleSpaceBar = (e) => {
-      if (e.code !== 'Space') return;
-      if (document.activeElement === textInputRef.current) return;
-      
-      e.preventDefault();
+    const handleGlobalKey = (e) => {
+      if (document.activeElement === typingInputRef.current) return;
 
-      // ✅ SPACE toggles listening state
-      if (!listeningRef.current) {
-        // Not listening → Start listening
-        console.log('🎤 SPACE pressed - Starting listening...');
-        setIsOpen(true);
-        setVisible(true);
-        startListening();
-      } else {
-        // Already listening → Stop listening
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (!listeningRef.current) {
+          setIsOpen(true);
+          setVisible(true);
+          startListening();
+        } else {
+          stopListeningImmediately();
+        }
+      } else if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        setIsTypingMode(true);
         stopListeningImmediately();
+      } else if (e.key === 'Escape') {
+        setIsTypingMode(false);
+        setInput('');
       }
     };
 
-    window.addEventListener('keydown', handleSpaceBar);
-    return () => window.removeEventListener('keydown', handleSpaceBar);
+    window.addEventListener('keydown', handleGlobalKey);
+    return () => window.removeEventListener('keydown', handleGlobalKey);
   }, []);
 
   useEffect(() => {
@@ -398,12 +391,10 @@ export default function MayaChat() {
   useEffect(() => {
     // ✅ Only initialize ONCE, even if React Strict Mode runs effect twice
     if (wakeWordInitializedRef.current) {
-      console.log('⚠️ Wake word detector already initialized');
       return;
     }
     wakeWordInitializedRef.current = true;
 
-    console.log('🚀 Page loaded - Starting wake word detector...');
     startWakeWordDetector();
     
     return () => {
@@ -418,52 +409,67 @@ export default function MayaChat() {
   // ✅ WAKE WORD DETECTOR - Runs when NOT in listening state
   // Detects "hi maya" and automatically switches to listening state
   const startWakeWordDetector = () => {
+    if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+      console.error('SpeechRecognition not supported - wake word disabled');
+      return;
+    }
+
     try {
       const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
       recognition.lang = 'en-IN';
-      recognition.continuous = true;  // Keep listening continuously
+      recognition.continuous = true;
       recognition.interimResults = true;
+
+      let hadError = false;
 
       recognition.onresult = (event) => {
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const transcript = event.results[i][0].transcript.toLowerCase();
+          const isFinal = event.results[i].isFinal;
+          console.log(`🎤 Wake detector heard (${isFinal ? 'final' : 'interim'}): "${transcript}"`);
 
-          // ✅ Only check FINAL results for wake word
-          if (event.results[i].isFinal) {
-            const hasWakeWord = WAKE_WORDS.some(word => transcript.includes(word));
-            
-            // ✅ If "hi maya" detected and NOT already listening, START LISTENING
-            if (hasWakeWord && !listeningRef.current) {
-              console.log('✅ WAKE WORD DETECTED: "' + transcript + '" - AUTO-STARTING LISTENING...');
-              setListeningMode('listening');  // Transition to listening state
-              recognitionRef.current = null;  // Clear the wake word detector
-              recognition.stop();  // Stop wake word detector
-              startListening();     // Start full listening mode
-            }
+          const hasWakeWord = WAKE_WORDS.some(word => transcript.includes(word));
+          if (hasWakeWord && !listeningRef.current) {
+            console.log('✅ WAKE WORD DETECTED — switching to listening');
+            setListeningMode('listening');
+            recognitionRef.current = null;
+            recognition.stop();
+            startListening();
+            return;
           }
         }
       };
 
-      recognition.onerror = (error) => {
-        console.log('Wake word detector error:', error.error);
+      recognition.onerror = (event) => {
+        hadError = true;
+        console.warn('⚠️ Wake word detector error:', event.error);
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          console.error('Mic permission denied — wake word detection disabled. Grant mic access and reload.');
+        }
       };
-      
+
       recognition.onend = () => {
-        // ✅ Clear the ref so a new detector can be created
-        recognitionRef.current = null;
-        
-        // ✅ If not currently listening, restart wake word detector
-        if (!listeningRef.current) {
-          console.log('🔄 Wake word detector ended, restarting...');
+        console.log('Wake word detector ended, hadError:', hadError);
+        if (recognitionRef.current === recognition) {
+          recognitionRef.current = null;
+        }
+        if (!listeningRef.current && hadError !== true) {
           setTimeout(() => startWakeWordDetector(), 500);
+        } else if (hadError) {
+          // Back-off longer on errors to avoid rapid failure loops
+          setTimeout(() => {
+            hadError = false;
+            startWakeWordDetector();
+          }, 3000);
         }
       };
 
       recognitionRef.current = recognition;
       recognition.start();
-      console.log('🎤 Wake word detector started');
+      console.log(' Wake word detector started');
     } catch (err) {
-      console.log('Wake word detector error:', err.message);
+      console.error('Wake word detector failed to start:', err);
+      setTimeout(() => startWakeWordDetector(), 3000);
     }
   };
 
@@ -528,12 +534,9 @@ export default function MayaChat() {
           // ✅ Only show if it contains design-related keywords
           // ✅ Filter out: side talk, comments, greetings, off-topic
           if (hasDesignKeyword) {
-            console.log('📝 Live interim (design): "' + interimTranscript + '"');
             liveTextRef.current = interimTranscript;
             setLiveText(interimTranscript);
           } else {
-            // ✅ Don't show: comments, side talk, off-topic interim text
-            console.log('⊗ Interim blocked (not design-related): "' + interimTranscript + '"');
             liveTextRef.current = '';
             setLiveText('');
           }
@@ -550,6 +553,13 @@ export default function MayaChat() {
 
   const startListening = async () => {
     if (listeningRef.current) return;
+    listeningRef.current = true;  // claim slot immediately — prevents onend race and double-calls
+
+    // Stop wake word detector (or any running recognition) before starting full listening
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch (e) {}
+      recognitionRef.current = null;
+    }
 
     try {
       audioChunksRef.current = [];
@@ -559,7 +569,6 @@ export default function MayaChat() {
       });
 
       streamRef.current = stream;
-      listeningRef.current = true;
       lastAudioTimeRef.current = Date.now();
       wakeWordDetectedRef.current = false;
       speechStartedRef.current = false;
@@ -619,14 +628,18 @@ export default function MayaChat() {
           if (hasSpeech && blobSize > 15000) {
             await sendAudioToSarvam(audioBlob);
           } else {
-            setListeningMode('continuous');
+            if (!isProcessingRef.current) {
+              setListeningMode('listening');
+              speechStartedRef.current = false;
+              setTimeout(() => startListening(), 500);
+            }
+          }
+        } else {
+          if (!isProcessingRef.current) {
+            setListeningMode('listening');
             speechStartedRef.current = false;
             setTimeout(() => startListening(), 500);
           }
-        } else {
-          setListeningMode('continuous');
-          speechStartedRef.current = false;
-          setTimeout(() => startListening(), 500);
         }
       };
 
@@ -636,7 +649,7 @@ export default function MayaChat() {
 
       actualRecorder.start(100);
       setIsListening(true);
-      setListeningMode('continuous');
+      setListeningMode('listening');
 
       startWebSpeechAPI();
 
@@ -707,7 +720,7 @@ export default function MayaChat() {
 
         if (!speechStartedRef.current) {
           speechStartedRef.current = true;
-          setListeningMode('continuous');
+          setListeningMode('listening');
         }
 
         if (pauseTimeoutRef.current) {
@@ -720,12 +733,12 @@ export default function MayaChat() {
 
         if (speechStartedRef.current && silenceFrameCount > 8 && timeSinceSpeech > SILENCE_TIMEOUT) {
           if (!pauseTimeoutRef.current) {
-            setListeningMode('paused');
+            setListeningMode('listening');
             pauseTimeoutRef.current = true;
 
             if (listeningRef.current) {
               stopListeningImmediately();
-              setListeningMode('processing');
+              setListeningMode('thinking');
             }
           }
         }
@@ -739,7 +752,7 @@ export default function MayaChat() {
 
   const handleTranscript = async (transcript, confidence = 1) => {
     if (!transcript || transcript.trim().length === 0) {
-      setListeningMode('continuous');
+      setListeningMode('listening');
       setTimeout(() => startListening(), 1000);
       return;
     }
@@ -749,7 +762,7 @@ export default function MayaChat() {
     const wordCount = transcript.trim().split(/\s+/).length;
     if (wordCount > MAX_WORDS) {
       console.log(`⚠️ Too long (${wordCount} words) - ignoring: "${transcript}"`);
-      setListeningMode('continuous');
+      setListeningMode('listening');
       setLiveText('');
       setTimeout(() => startListening(), 1000);
       return;
@@ -758,96 +771,42 @@ export default function MayaChat() {
     const lowerTranscript = transcript.toLowerCase();
     const originalTranscript = transcript;
 
-    // Check wake word FIRST — if present, skip confidence gate entirely
-    // (Sarvam frequently returns 0.0% on valid commands)
-    const hasWakeWordEarly = WAKE_WORDS.some(word => lowerTranscript.includes(word));
-
-    // CONFIDENCE THRESHOLD: only apply when there is NO wake word
-    const CONFIDENCE_THRESHOLD = 0.75;
-    if (!hasWakeWordEarly && confidence < CONFIDENCE_THRESHOLD) {
-      console.log(`⚠️ Low confidence (${(confidence * 100).toFixed(1)}%) no wake word - ignoring: "${transcript}"`);
-      setListeningMode('continuous');
-      setLiveText('');
-      setTimeout(() => startListening(), 1000);
-      return;
-    }
-
+    // Wake word ONLY bypasses the confidence gate — it does NOT bypass intent validation
     const hasWakeWord = WAKE_WORDS.some(word => lowerTranscript.includes(word));
-    
-    // ✅ LOG: Wake word detection
-    if (hasWakeWord) {
-      console.log('✅ WAKE WORD DETECTED IN TRANSCRIPT: "' + transcript + '" - Processing as command trigger');
-    }
-    
-    // ✅ BLACKLIST: Topics that should NEVER be processed
-    const offTopicPatterns = [
-      /laptop|computer|phone|charging|battery|tech support|software|program/i,
-      /weather|time|date|temperature|season/i,
-      /food|eat|recipe|cook|restaurant|dinner|lunch|breakfast/i,
-      /sports|game|score|player|match|team|football|cricket/i,
-      /movie|film|watch|actor|cinema|series|episode/i,  // ✅ REMOVED "show" - was blocking "show me sofas"
-      /music|song|listen|singer|album|concert/i,
-      /news|politics|election|government|president|minister/i,
-      /travel|flight|hotel|airport|vacation|trip/i,
-      /health|medicine|doctor|hospital|sick|disease|covid/i,
-      /joke|funny|laugh|comedy|humor/i,
-      /oh my god|oh my|what a disaster|baap re|aap|aapse|disaster|unbelievable|no way|seriously/i,
-      /what time|what date|what is your name|who are you|how old/i,
-      /(?<!maya\s)(?<!mara\s)(?<!maaya\s)(hello|hi|bye|goodbye|thanks|thank you)(?!.*design)/i,
-    ];
 
-    const isOffTopic = offTopicPatterns.some(pattern => pattern.test(lowerTranscript));
-
-    // ✅ EXCEPTION: If it has a wake word, DON'T block it even if it matches blacklist
-    // "hi maya" won't be blocked because it contains "maya"
-    if (isOffTopic && !hasWakeWord) {
-      // ✅ NEW: Log as "side talk" / "comment" instead of blocking
-      console.log('💬 SIDE TALK (not a command): "' + transcript + '" - High confidence: ' + (confidence * 100).toFixed(1) + '%');
-      
-      // ✅ Only show in live transcription if confidence is HIGH (80%+)
-      // This filters out low-confidence mumbles
-      if (confidence >= 0.80) {
-        console.log('📝 Transcribed side comment: "' + transcript + '"');
-        setRecordedText('[Comment: ' + originalTranscript + ']');
-      } else {
-        console.log('⚠️ Low confidence side talk ignored: "' + transcript + '"');
-      }
-      
-      setListeningMode('continuous');
+    // CONFIDENCE GATE: skip low-confidence audio that has no wake word
+    const CONFIDENCE_THRESHOLD = 0.75;
+    if (!hasWakeWord && confidence < CONFIDENCE_THRESHOLD) {
+      console.log(`⚠️ Low confidence (${(confidence * 100).toFixed(1)}%) - ignoring: "${transcript}"`);
+      setListeningMode('listening');
       setLiveText('');
       setTimeout(() => startListening(), 1000);
       return;
     }
 
-    // ✅ VALIDATE AGAINST INTENTS (not just keywords)
+    // INTENT VALIDATION — always required, wake word does NOT skip this
+    // e.g. "maya what is the time" has wake word but no valid design intent → rejected
     const validation = queryEngineRef.current.validateQuery(transcript);
     const isValidIntent = validation && validation.isValid;
 
-    // ✅ NEW: If no wake word AND not a valid intent - treat as side talk/comment
-    if (!hasWakeWord && !isValidIntent) {
-      console.log('💬 SIDE TALK (no valid intent): "' + transcript + '" - High confidence: ' + (confidence * 100).toFixed(1) + '%');
-      
-      // ✅ Only show in live transcription if confidence is HIGH (80%+)
-      if (confidence >= 0.80) {
-        console.log('📝 Transcribed side comment: "' + transcript + '"');
-        setRecordedText('[Comment: ' + originalTranscript + ']');
-      } else {
-        console.log('⚠️ Low confidence side talk ignored: "' + transcript + '"');
-      }
-      
-      setListeningMode('continuous');
-      setLiveText('');
-      setTimeout(() => startListening(), 1000);
-      return;
-    }
-
     if (!isValidIntent) {
-      setListeningMode('continuous');
-      setLiveText('');
+      if (hasWakeWord) {
+        // Has wake word but not a valid command (e.g. "maya what is the time")
+        // Live text can stay briefly — user said this is fine
+        console.log(`💬 Wake word but no valid intent - ignoring: "${transcript}"`);
+      } else {
+        // Pure side talk (e.g. "food is good", "do you get any traffic")
+        // Clear live text so nothing shows in the UI
+        console.log(`💬 Side talk, no intent - ignoring: "${transcript}"`);
+        setLiveText('');
+      }
+      setListeningMode('listening');
       setTimeout(() => startListening(), 1000);
       return;
     }
 
+    // Valid design intent — send to Maya
+    console.log(`✅ Valid intent (confidence: ${(confidence * 100).toFixed(1)}%): "${transcript}"`);
     const command = validation.cleanCommand;
     setRecordedText(originalTranscript);
     sendMessage(command);
@@ -869,7 +828,7 @@ export default function MayaChat() {
         } else {
           audioChunksRef.current = [];
           speechStartedRef.current = false;
-          setListeningMode('continuous');
+          setListeningMode('listening');
           setTimeout(() => startListening(), 1500);
         }
       }
@@ -912,7 +871,7 @@ export default function MayaChat() {
                 hasFinished = true;
 
                 setIsSpeaking(false);
-                setListeningMode('continuous');
+                setListeningMode('listening');
                 speechStartedRef.current = false;
                 pauseTimeoutRef.current = null;
                 listeningRef.current = false;
@@ -968,7 +927,7 @@ export default function MayaChat() {
             setIsSpeaking(false);
           }
         } else {
-          setListeningMode('continuous');
+          setListeningMode('listening');
           speechStartedRef.current = false;
           pauseTimeoutRef.current = null;
           listeningRef.current = false;
@@ -992,7 +951,7 @@ export default function MayaChat() {
     isProcessingRef.current = true;
 
     stopListeningImmediately();
-    setListeningMode('processing');
+    setListeningMode('thinking');
 
     const userMessage = { role: 'user', content: messageText };
     const newMessages = [...messagesRef.current, userMessage];
@@ -1042,7 +1001,7 @@ export default function MayaChat() {
         if (!displayText) {
           setLoading(false);
           isProcessingRef.current = false;
-          setListeningMode('continuous');
+          setListeningMode('listening');
           speechStartedRef.current = false;
           pauseTimeoutRef.current = null;
           listeningRef.current = false;
@@ -1057,7 +1016,7 @@ export default function MayaChat() {
         if (!intentValid) {
           setLoading(false);
           isProcessingRef.current = false;
-          setListeningMode('continuous');
+          setListeningMode('listening');
           speechStartedRef.current = false;
           pauseTimeoutRef.current = null;
           listeningRef.current = false;
@@ -1158,7 +1117,7 @@ export default function MayaChat() {
       const errorMessages = [...messagesRef.current, { role: 'assistant', content: 'Oops! Something went wrong. Please try again.' }];
       setMessages(errorMessages);
       messagesRef.current = errorMessages;
-      setListeningMode('continuous');
+      setListeningMode('listening');
       speechStartedRef.current = false;
       pauseTimeoutRef.current = null;
       listeningRef.current = false;
@@ -1167,26 +1126,6 @@ export default function MayaChat() {
       setLoading(false);
       audioChunksRef.current = [];
       isProcessingRef.current = false;
-    }
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      if (!isTypingMode) {
-        // Enter pressed outside typing mode → open the bubble input
-        setIsTypingMode(true);
-        stopListeningImmediately();
-        setTimeout(() => typingInputRef.current?.focus(), 50);
-      } else if (input.trim()) {
-        // Enter pressed inside typing mode with text → send
-        setIsTypingMode(false);
-        sendMessage();
-      }
-    }
-    if (e.key === 'Escape') {
-      setIsTypingMode(false);
-      setInput('');
     }
   };
 
@@ -1200,19 +1139,38 @@ export default function MayaChat() {
 
   return (
     <>
-      <div 
-        style={styles.overlayRoot} 
-        ref={panelRef} 
+      <style>{`
+        @keyframes mayaPulseListening {
+          0%   { box-shadow: 0 0 0 0px rgba(123,97,255,0.45), 0 8px 32px rgba(123,97,255,0.3); }
+          70%  { box-shadow: 0 0 0 18px rgba(123,97,255,0.0), 0 8px 32px rgba(123,97,255,0.3); }
+          100% { box-shadow: 0 0 0 0px rgba(123,97,255,0.45), 0 8px 32px rgba(123,97,255,0.3); }
+        }
+        @keyframes mayaPulseTalking {
+          0%   { box-shadow: 0 0 0 0px rgba(123,97,255,0.6), 0 8px 32px rgba(123,97,255,0.4); transform: scale(1); }
+          50%  { box-shadow: 0 0 0 22px rgba(123,97,255,0.0), 0 8px 32px rgba(123,97,255,0.4); transform: scale(1.04); }
+          100% { box-shadow: 0 0 0 0px rgba(123,97,255,0.6), 0 8px 32px rgba(123,97,255,0.4); transform: scale(1); }
+        }
+        @keyframes mayaBreathThinking {
+          0%, 100% { opacity: 0.82; transform: scale(1); }
+          50%       { opacity: 1;    transform: scale(1.02); }
+        }
+        @keyframes mayaTypingDot {
+          0%, 60%, 100% { transform: translateY(0); opacity: 0.35; }
+          30%            { transform: translateY(-5px); opacity: 1; }
+        }
+      `}</style>
+      <div
+        style={styles.overlayRoot}
+        ref={panelRef}
         onKeyDown={handlePanelKeyDown}
-        onClick={() => textInputRef.current?.focus()}
       >
 
         <div style={styles.bubbleColumn}>
-          {(visibleMessages.length > 0 || liveText || loading) && (
+          {(visibleMessages.length > 0 || liveText || loading || isTypingMode) && (
             <div style={styles.bubbleList}>
               {visibleMessages.map((msg, i) => {
                 const relativeAge = visibleMessages.length - 1 - i;
-                const opacity = Math.max(0.15, 1 - relativeAge * (0.85 / Math.max(VISIBLE_MSG_COUNT - 1, 1)));
+                const opacity = Math.max(0.35, 0.85 - relativeAge * (0.5 / Math.max(VISIBLE_MSG_COUNT - 1, 1)));
                 const isUser = msg.role === 'user';
                 return (
                   <div key={`msg-${totalMessages - visibleMessages.length + i}`} style={{ ...styles.bubbleRow, justifyContent: isUser ? 'flex-end' : 'flex-start' }}>
@@ -1232,7 +1190,7 @@ export default function MayaChat() {
               {liveText && (
                 <div style={{ ...styles.bubbleRow, justifyContent: 'flex-end' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0 }}>
-                    <div style={{ ...styles.userBubble, fontStyle: 'italic', opacity: 0.7 }}>
+                    <div style={{ ...styles.userBubble, fontStyle: 'italic', opacity: 0.6, letterSpacing: '0.01em' }}>
                       {liveText}
                     </div>
                   </div>
@@ -1242,11 +1200,8 @@ export default function MayaChat() {
               {loading && (
                 <div style={{ ...styles.bubbleRow, justifyContent: 'flex-start' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0 }}>
-                    <div style={{...styles.aiBubble, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 8px'}}>
-                      <MayaBubbleIcon state={listeningMode} />
-                  
-                      {/* 🎨 CUSTOM ICON IN MAYA BUBBLE */}
-                      <MayaBubbleIcon state={listeningMode} />
+                    <div style={{...styles.aiBubble, width: 'fit-content', padding: '6px 10px', minHeight: 'unset', alignSelf: 'flex-start'}}>
+                      <img src={iconMap.thinking} alt="thinking" width="32" height="32" style={{ objectFit: 'contain', display: 'block' }} />
                     </div>
                   </div>
                 </div>
@@ -1254,32 +1209,37 @@ export default function MayaChat() {
 
               <div ref={messagesEndRef} style={{ height: 0 }} />
 
-              {/* ── Typing mode: live editable user bubble ── */}
+              {/* ── Typing mode: contentEditable div grows like a bubble ── */}
               {isTypingMode && (
-                <div style={{ ...styles.bubbleRow, justifyContent: 'flex-end' }}>
+                <div style={{ ...styles.bubbleRow, justifyContent: 'flex-end', pointerEvents: 'all' }}>
                   <div
                     ref={typingInputRef}
-                    contentEditable
-                    suppressContentEditableWarning
-                    onInput={(e) => setInput(e.currentTarget.textContent)}
+                    contentEditable="true"
+                    suppressContentEditableWarning={true}
+                    onInput={(e) => {
+                      setInput(e.currentTarget.innerText);
+                    }}
                     onKeyDown={(e) => {
-                      e.stopPropagation();
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
-                        const text = e.currentTarget.textContent.trim();
+                        const text = e.currentTarget.innerText.trim();
                         if (text) {
+                          e.currentTarget.blur();
                           setIsTypingMode(false);
-                          e.currentTarget.textContent = '';
+                          setInput('');
+                          e.currentTarget.innerText = '';
                           sendMessage(text);
                         }
-                      }
-                      if (e.key === 'Escape') {
+                      } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        e.currentTarget.blur();
                         setIsTypingMode(false);
                         setInput('');
-                        e.currentTarget.textContent = '';
                       }
                     }}
                     style={styles.typingBubbleInput}
+                    spellCheck={false}
+                    tabIndex={0}
                   />
                 </div>
               )}
@@ -1288,15 +1248,6 @@ export default function MayaChat() {
         </div>
       </div>
 
-      {/* hidden global keydown catcher so Enter outside the bubble still works */}
-      <textarea
-        ref={textInputRef}
-        style={styles.hiddenInput}
-        onKeyDown={handleKeyDown}
-        readOnly
-        autoFocus
-        onBlur={() => { if (!isTypingMode) setTimeout(() => textInputRef.current?.focus(), 0); }}
-      />
 
       <button
         onClick={() => {
@@ -1309,11 +1260,19 @@ export default function MayaChat() {
         style={{
           ...styles.toggleBtn,
           ...(isSpeaking || listeningMode === 'talking' ? styles.toggleBtnTalking :
-              listeningMode === 'processing' || listeningMode === 'paused' ? styles.toggleBtnThinking :
-              isListening ? styles.toggleBtnListening : {}),
+              (loading || listeningMode === 'thinking') ? styles.toggleBtnThinking :
+              listeningMode === 'listening' ? styles.toggleBtnListening : {}),
+          animation:
+            listeningMode === 'listening'
+              ? 'mayaPulseListening 1.8s ease-in-out infinite'
+              : (isSpeaking || listeningMode === 'talking')
+              ? 'mayaPulseTalking 1.1s ease-in-out infinite'
+              : listeningMode === 'thinking'
+              ? 'mayaBreathThinking 1.5s ease-in-out infinite'
+              : 'none',
         }}
       >
-        <MayaStateIcon state={listeningMode} isSpeaking={isSpeaking} />
+        <MayaStateIcon state={loading ? 'thinking' : listeningMode} isSpeaking={isSpeaking} />
       </button>
     </>
   );
@@ -1323,7 +1282,7 @@ const styles = {
   overlayRoot: {
     position: 'fixed',
     inset: 0,
-    pointerEvents: 'none',
+    pointerEvents: 'auto',
     zIndex: 9999,
     display: 'flex',
     flexDirection: 'column',
@@ -1338,7 +1297,7 @@ const styles = {
     flexDirection: 'column',
     alignItems: 'stretch',
     width: '100%',
-    maxWidth: 420,
+    maxWidth: 550,
     marginLeft: 'auto',
     pointerEvents: 'none',
   },
@@ -1358,9 +1317,10 @@ const styles = {
     maxWidth: 550,
     padding: '8px 12px',
     borderRadius: '16px 16px 4px 16px',
-    background: 'rgba(18, 18, 18, 0.75)',
-    backdropFilter: 'blur(12px)',
-    WebkitBackdropFilter: 'blur(12px)',
+    background: 'rgba(30, 30, 30, 0.55)',
+    backdropFilter: 'blur(16px)',
+
+    WebkitBackdropFilter: 'blur(16px)',
     color: '#ffffff',
     fontSize: 13.5,
     lineHeight: 1.55,
@@ -1368,8 +1328,8 @@ const styles = {
     wordBreak: 'break-word',
     overflowWrap: 'break-word',
     whiteSpace: 'pre-wrap',
-    border: '2px solid rgba(220, 211, 211, 0.75)',
-    boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+    border: '1.5px solid rgba(255, 255, 255, 0.18)',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.18)',
   },
 
   aiBubble: {
@@ -1406,25 +1366,29 @@ const styles = {
   },
 
   typingBubbleInput: {
-    maxWidth: '75%',
-    minWidth: 40,
-    padding: '10px 16px',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 4,
-    background: 'rgba(255,255,255,0.55)',
-    color: '#2d2d2d',
+    maxWidth: 550,
+    minWidth: 60,
+    minHeight: '38px',
+    padding: '8px 14px',
+    borderRadius: '18px 18px 4px 18px',
+    background: 'rgba(30, 30, 30, 0.55)',
+    backdropFilter: 'blur(16px)',
+    WebkitBackdropFilter: 'blur(16px)',
+    color: '#ffffff',
     fontSize: 13.5,
-    lineHeight: 1.5,
-    border: '1.5px solid rgba(107,92,69,0.5)',
+    lineHeight: 1.55,
+    border: '1.5px solid rgba(255, 255, 255, 0.18)',
     outline: 'none',
     fontFamily: 'inherit',
     wordBreak: 'break-word',
     whiteSpace: 'pre-wrap',
     cursor: 'text',
-    backdropFilter: 'blur(10px)',
-    WebkitBackdropFilter: 'blur(10px)',
+    display: 'inline-block',
+    boxSizing: 'border-box',
+    userSelect: 'text',
+    WebkitUserSelect: 'text',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.18)',
+    pointerEvents: 'auto',
   },
 
   toggleBtn: {
