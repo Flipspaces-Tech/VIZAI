@@ -1013,6 +1013,11 @@ export default function Experience() {
     startPlay();
 
     const onKey = (e) => {
+      const tag = document.activeElement?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || document.activeElement?.contentEditable === 'true') {
+        return;
+      }
+
       e.preventDefault();
 
       if (e.code === "Digit0" && e.altKey && !e.repeat) {
