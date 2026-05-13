@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { MayaQueryEngine } from '../components/MayaQueryEngine';
 import { MayaQueryFilter } from '../components/MayaQueryFilter';
 import Papa from "papaparse";
+import { sttQueue, ttsQueue, processSTTQueue, processTTSQueue } from './SarvamService';
 
 // 🎨 IMPORT YOUR CUSTOM ICONS
 import idleIcon from '../assets/maya icons/idle.png';
@@ -345,145 +346,9 @@ const SILENCE_TIMEOUT = 2000;
 const NOISE_THRESHOLD = 50;
 const SPEECH_CONFIDENCE_THRESHOLD = 0.45;
 const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY || '';
-const SARVAM_API_KEY = process.env.REACT_APP_SARVAM_API_KEY || '';
-const RECEIVER_API_URL = 'https://maya-receiver-api.onrender.com';  //"http://localhost:8000"; 
+const RECEIVER_API_URL = 'https://maya-receiver-api.onrender.com';  //"http://localhost:8000";
 
-let sarvamFailureCount = 0;
 
-// Separate queues for STT and TTS — they never block each other
-let sttQueue = [];
-let ttsQueue = [];
-let isSTTProcessing = false;
-let isTTSProcessing = false;
-
-const processSTTQueue = async () => {
-  if (isSTTProcessing || sttQueue.length === 0) return;
-  isSTTProcessing = true;
-  const { data, callback } = sttQueue.shift();
-  try {
-    await sarvamSTT(data, callback);
-  } catch (err) {}
-  isSTTProcessing = false;
-  setTimeout(processSTTQueue, 500);
-};
-
-const processTTSQueue = async () => {
-  if (isTTSProcessing || ttsQueue.length === 0) return;
-  isTTSProcessing = true;
-  const { data, callback } = ttsQueue.shift();
-  try {
-    await sarvamTTS(data, callback);
-  } catch (err) {}
-  isTTSProcessing = false;
-  setTimeout(processTTSQueue, 500);
-};
-
-const sarvamSTT = async (audioBlob, callback) => {
-  try {
-    if (!SARVAM_API_KEY) {
-      console.warn('⚠️ SARVAM_API_KEY not set');
-      callback(null);
-      return;
-    }
-
-    let fileExtension = 'webm';
-    if (audioBlob.type.includes('mp4') || audioBlob.type.includes('aac')) {
-      fileExtension = 'mp4';
-    } else if (audioBlob.type.includes('mpeg') || audioBlob.type.includes('mp3')) {
-      fileExtension = 'mp3';
-    } else if (audioBlob.type.includes('wav')) {
-      fileExtension = 'wav';
-    }
-
-    const formData = new FormData();
-    formData.append('file', audioBlob, `audio.${fileExtension}`);
-    formData.append('model', 'saaras:v2.5');
-    formData.append('language_code', 'en-IN');
-
-    console.log(`📤 Sending audio (${fileExtension}, ${audioBlob.size} bytes) to Sarvam STT...`);
-
-    const response = await fetch('https://api.sarvam.ai/speech-to-text-translate', {
-      method: 'POST',
-      headers: { 'api-subscription-key': SARVAM_API_KEY },
-      body: formData,
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      sarvamFailureCount++;
-      if (response.status === 429) {
-        console.warn('⚠️ Sarvam rate limited (429) — backing off 10s');
-        await new Promise(resolve => setTimeout(resolve, 10000));
-      } else {
-        console.error(`❌ Sarvam STT Error ${response.status}:`, data);
-      }
-      callback(null);
-      return;
-    }
-
-    sarvamFailureCount = 0;
-
-    if (data.transcript) {
-      const transcript = data.transcript.toLowerCase().trim();
-      // ✅ Get confidence score from Sarvam response
-      const confidence = data.confidence || 0; // Default to 0 if not provided
-      console.log(`✅ STT: "${transcript}" (Confidence: ${(confidence * 100).toFixed(1)}%)`);
-      
-      // ✅ Pass both transcript and confidence to callback
-      callback({ transcript, confidence });
-    } else {
-      console.warn('⚠️ No transcript in Sarvam response');
-      callback(null);
-    }
-  } catch (err) {
-    console.error('❌ STT Error:', err);
-    callback(null);
-  }
-};
-
-const sarvamTTS = async (text, callback) => {
-  try {
-    if (!SARVAM_API_KEY) {
-      console.warn('⚠️ SARVAM_API_KEY not set');
-      callback(null);
-      return;
-    }
-
-    const ttsResponse = await fetch('https://api.sarvam.ai/text-to-speech', {
-      method: 'POST',
-      headers: {
-        'api-subscription-key': SARVAM_API_KEY,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        inputs: [text],
-        target_language_code: 'en-IN',
-        model: 'bulbul:v3',
-        speaker: 'simran',
-        pace: 1.0,
-        temperature: 0.6,
-        audio_quality: 'high',
-      }),
-    });
-
-    if (!ttsResponse.ok) {
-      callback(null);
-      return;
-    }
-
-    const audioData = await ttsResponse.json();
-
-    if (audioData.audios && audioData.audios.length > 0) {
-      callback(audioData.audios[0]);
-    } else {
-      callback(null);
-    }
-  } catch (err) {
-    console.error('TTS Error:', err);
-    callback(null);
-  }
-};
 
 // 🎨 ICON MAP - Your custom PNG icons for toggle button
 const iconMap = {
@@ -1440,8 +1305,32 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
   }
 };
 
+  const streamTextDirectly = (fullText, onDone) => {
+    const words = fullText.split(' ');
+    let idx = 0;
+    let out = '';
+    const step = () => {
+      if (idx < words.length) {
+        out += (idx > 0 ? ' ' : '') + words[idx++];
+        const msgs = [...messagesRef.current.slice(0, -1), { role: 'assistant', content: out }];
+        setMessages(msgs);
+        messagesRef.current = msgs;
+        setTimeout(step, 80);
+      } else if (onDone) {
+        onDone();
+      }
+    };
+    step();
+  };
+
   const speakText = (text, fullText) => {
     if (!text || text.trim().length === 0) return;
+
+    // Typing mode: skip Sarvam TTS entirely, show text immediately
+    if (isTypingModeRef.current) {
+      streamTextDirectly(fullText, null);
+      return;
+    }
 
     ttsQueue.push({
       data: text,
@@ -1531,11 +1420,14 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
             setIsSpeaking(false);
           }
         } else {
-          setListeningMode('listening');
-          speechStartedRef.current = false;
-          pauseTimeoutRef.current = null;
-          listeningRef.current = false;
-          setTimeout(() => startListening(), 1000);
+          // TTS unavailable (CORS / no key / rate limit) — stream text directly so message still shows
+          streamTextDirectly(fullText, () => {
+            setListeningMode('listening');
+            speechStartedRef.current = false;
+            pauseTimeoutRef.current = null;
+            listeningRef.current = false;
+            if (!isTypingModeRef.current) setTimeout(() => startListening(), 1000);
+          });
         }
       }
     });
@@ -1546,7 +1438,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
     const messageText = textToSend || input;
 
     if (isProcessingRef.current) {
-      sttQueue = [];
+      sttQueue.length = 0;
       return;
     }
 
