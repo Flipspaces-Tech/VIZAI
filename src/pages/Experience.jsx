@@ -705,7 +705,13 @@ export default function Experience() {
 
         if (msg.type === "gotoRoomFinished") {
           console.log("✅ Experience.jsx: Received gotoRoomFinished from Unreal — dispatching CustomEvent");
-          window.dispatchEvent(new CustomEvent('gotoRoomFinished'));          
+          window.dispatchEvent(new CustomEvent('gotoRoomFinished'));
+          return;
+        }
+
+        if (msg.type === "finishedParsingReplacementCsv") {
+          console.log("✅ Experience.jsx: finishedParsingReplacementCsv — dispatching CustomEvent");
+          window.dispatchEvent(new CustomEvent('finishedParsingReplacementCsv'));
           return;
         }
 
