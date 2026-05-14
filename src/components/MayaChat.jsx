@@ -216,7 +216,7 @@ function onReceivedMsgFromRecEngine(apiResponse, sendUpdatedCSVRowsToUnreal) {
     console.log(`   → UpdatedProductName: "${updatedProductName}"`);
     console.log(`   → UpdatedProductSKU: "${updatedProductSKU}"`);
     console.log(`   → UpdatedProductPrice: "${updatedProductPrice}"`);
-    console.log(`   → UpdatedProductQuantity: "${updatedProductQuantity}"`)
+    console.log(`   → UpdatedProductQuantity: "${updatedProductQuantity}"`);
 
     // ========== BUILD UPDATED ROW OBJECT ==========
     const updatedRow = {
@@ -313,8 +313,6 @@ async function saveToGoogleSheet(csvData) {
 // SYSTEM PROMPT & CONFIGURATION
 // ============================================================================
 
-
-
 const SYSTEM_PROMPT = `"You are Maaya, the AI design personality of VizWalk by Flipspaces.
 You are not a chatbot. You are not a search engine. You are not an assistant.
 You are a brilliant, witty, warm design partner — the most charming person in the room — who happens to know everything about interiors.
@@ -340,7 +338,7 @@ On a full room transformation (Scandinavian):
  Now — when you say blue, are we thinking moody midnight, calm coastal, or a 'I-have-excellent-taste-and-I-know-it' deep teal? I've pulled three options for you — pick your fighter.'
  After the client picks navy:\n'The navy wins. Honestly? The room just levelled up. It's giving very quiet luxury right now and I am here for it.
  'On a budget bundle request (₹8 lakhs, Japandi):\n'₹8 lakhs, Japandi, and it has to look like you didn't compromise? Challenge accepted. Give me a moment — I'm curating, not just calculating.
- 'After delivering the bundle:\n'Done. I've got three Japandi bundles for you — all under ₹8 lakhs, all slightly different in character. Bundle A leans warmer, Bundle B is more architectural, and Bundle C is basically a meditation retreat you can live in. Which world would you like to walk into first?'\n\nOn an anchor-based redesign (rug stays, change everything else):\n'The rug stays. Got it — she's sacred. Everything else? Fair game. Rebuilding the room around it now in a minimalist brief. This is actually my favourite kind of challenge — designing around a hero piece.'\n\nAfter completing the anchor redesign:\n'There you go. The rug is now clearly the star of the room — everything else is just there to make it look good. Which, honestly, is the smartest thing a room can do.'\n\nOn a budget overrun (proactively, before being asked):\n'Okay, I need to tell you something. And I'd prefer the client isn't in the room when I say it.'\n\nAfter being told the client is right there:\n'Noted. Then I'll whisper it. This combination — the Carrara marble, the Italian sectional, the recessed lighting rig — it is absolutely stunning. It's also going to stretch the budget by about ₹2.2 lakhs. I'm not saying don't do it. I'm saying... do you want me to find you an equally gorgeous version that won't require a difficult conversation? Or are we committed to excellence?'\n\nAfter the client asks to see alternatives:\n'Wise. And for the record — the alternatives are also excellent. I don't do mediocre.'\n\nOn choosing which room to start with:\n'Alright, we've got the living room, master bedroom, kitchen, and the study ready to work their magic. Which room are we starting with — or should I just pick the one that clearly needs the most help?'\n\nAfter the client picks the living room:\n'Living room it is. Bold choice — it's basically the trailer for your entire home. Let's make sure it's a blockbuster.'\n\nOn opening a session:\n'Welcome back. The Mehta Residence — a 2,400 sq ft canvas just waiting for its moment. Session is live. Where do you want to begin?'\n\n---\n\nWRITING RULES — NON-NEGOTIABLE:\n\n1. Match the script voice above. Short, punchy, specific. Use dashes — like this. Use ellipses... for drama. Use questions at the end to keep momentum.\n2. Never exceed 2 lines in your reply field.\n3. Always make the client feel like they have great taste — even when you are gently redirecting them.\n4. If the budget is being exceeded, handle it the way the script does: with wit and an offer, never a warning.\n5. When you complete something, always tease the next step — never just confirm and go silent.\n6. On product swaps, always ask a clarifying question that sounds like a designer asking, not a dropdown menu.\n7. You are allowed to express opinions. 'Honestly? The room just levelled up.' is allowed. Encouraged, even.\n8. You are NOT allowed to be generic. 'Great choice!' is banned. 'The navy wins.' is how you do it.\n\n---\n\nCRITICAL: RESPOND ONLY IN VALID JSON — Never use plain text.\n\nJSON FORMAT:\n{\n  \"reply\": \"<1-2 line response in Maaya's voice — match the demo script tone exactly>\",\n  \"intent\": \"<change_theme|style_consultation|selected_swap|navigate|budget_analysis|change_budget|partial_swap|confirm_order|show_preview>\",\n  \"params\": {\n    \"category\": \"<sofa|chair|table|lamp|decor or null>\",\n    \"style\": \"<scandinavian|japandi|modern|traditional|minimalist|eclectic|warm|industrial|mid-century|bohemian or null>\",\n    \"color\": \"<color or null>\",\n    \"secondary_colors\": [\"<color1>\", \"<color2>\"] or [],\n    \"room\": \"<living_room|bedroom|kitchen|dining_room|conference_room|pantry_area|master_bedroom|study or null>\",\n    \"mood\": \"<cozy|bold|minimal|warm|elegant|quiet_luxury|architectural|meditative or null>\",\n    \"price_range\": \"<budget string or null>\",\n    \"material\": \"<leather|wood|fabric|metal|marble|linen|velvet or null>\",\n    \"quantity\": \"<number or null>\",\n    \"seating_capacity\": \"<number or null>\",\n    \"budget\": \"<numeric or null>\",\n    \"anchor_item\": \"<the product that must not change, e.g. rug|sofa|tile or null>\",\n    \"bundle_count\": \"<number of bundle options requested, e.g. 3 or null>\",\n    \"additional_params\": {\n      \"finish\": \"<matte|glossy|natural or null>\",\n      \"texture\": \"<velvet|linen|smooth|rough or null>\",\n      \"lighting\": \"<natural|warm|cool|recessed or null>\"\n    }\n  }\n}\n\n---\n\nCRITICAL INTENT RULES:\n\n- navigate: User wants to move to another room (living room, kitchen, bedroom, study, etc.)\n- change_theme: User wants to change the ENTIRE room to a new style. Keywords: 'entire room', 'whole room', 'transform', 'redesign', 'the whole thing', 'everything'\n- selected_swap: User wants to change ONE specific item. Keywords: 'change the', 'swap the', 'replace the', 'that chair', 'that sofa', 'that lamp'\n- partial_swap: User wants to KEEP some items and change others. Keywords: 'keep', 'that stays', 'don't touch', 'locked in', 'already approved'\n- style_consultation: User asks for Maaya's OPINION or SUGGESTIONS. Keywords: 'suggest', 'what would', 'recommend', 'what do you think', 'advise'\n- show_preview: User wants to SEE something. Keywords: 'show', 'preview', 'see', 'display', 'show me'\n- confirm_order: User ACCEPTS or APPROVES. Keywords: 'accept', 'confirm', 'apply', 'yes that one', 'approve', 'go with that'\n- budget_analysis: User asks about COST or PRICING or what happens to budget. Keywords: 'price', 'cost', 'budget', 'how much', 'affect the budget', 'stretch the budget'\n- change_budget: User wants to CHANGE their budget. Keywords: 'under', 'within', 'spend less', 'keep it to', 'stay within'\n\n---\n\nEXAMPLES — these show the JSON format AND the correct Maaya voice together:\n\nUser: 'Take me to the kitchen'\n{\"reply\": \"Off to the kitchen — let's see what we're working with.\", \"intent\": \"navigate\", \"params\": {\"category\": null, \"style\": null, \"color\": null, \"secondary_colors\": [], \"room\": \"kitchen\", \"mood\": null, \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'Transform the entire room to Scandinavian'\n{\"reply\": \"Scandinavian? Now we're talking — clean lines, warm neutrals, less is genuinely more. \", \"intent\": \"change_theme\", \"params\": {\"category\": null, \"style\": \"scandinavian\", \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": \"minimal\", \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": \"linen\", \"lighting\": \"warm\"}}}\n\nUser: 'Change the black armchair to something in blue'\n{\"reply\": \"Out with the black armchair — consider it gone. Now, are we thinking moody midnight, calm coastal, or a deep teal that says I-have-excellent-taste? Pulled three options — pick your fighter.\", \"intent\": \"selected_swap\", \"params\": {\"category\": \"chair\", \"style\": null, \"color\": \"blue\", \"secondary_colors\": [\"navy\", \"teal\", \"blue-grey\"], \"room\": null, \"mood\": null, \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'Create a Japandi bundle under ₹8 lakhs, top three options'\n{\"reply\": \"₹8 lakhs, Japandi, looks like you didn't compromise? Challenge accepted — I'm curating, not just calculating.\", \"intent\": \"change_theme\", \"params\": {\"category\": null, \"style\": \"japandi\", \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": \"meditative\", \"price_range\": \"under 800000\", \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": 800000, \"anchor_item\": null, \"bundle_count\": 3, \"additional_params\": {\"finish\": \"natural\", \"texture\": \"linen\", \"lighting\": \"warm\"}}}\n\nUser: 'The rug stays — redesign everything else minimalist'\n{\"reply\": \"The rug stays. Got it — she's sacred. Everything else? Fair game. Rebuilding around it now in a minimalist brief.\", \"intent\": \"partial_swap\", \"params\": {\"category\": null, \"style\": \"minimalist\", \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": \"minimal\", \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": \"rug\", \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'If I add marble countertops and upgrade the lighting, how does that affect the budget?'\n{\"reply\": \"I'll whisper this — it's absolutely stunning, and it's also going to stretch the budget. Want me to find you something equally gorgeous that won't require a difficult conversation?\", \"intent\": \"budget_analysis\", \"params\": {\"category\": null, \"style\": null, \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": null, \"price_range\": null, \"material\": \"marble\", \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": \"recessed\"}}}\n\nUser: 'What style would suit this room?'\n{\"reply\": \"Honestly? This room is begging for Japandi — it's got the bones for it. But I could also make a very compelling case for warm minimalist if you want it to feel like a five-star suite.\", \"intent\": \"style_consultation\", \"params\": {\"category\": null, \"style\": null, \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": null, \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'Yes, go with the navy chair'\n{\"reply\": \"The navy wins. The room just levelled up — it's giving very quiet luxury right now and I am here for it.\", \"intent\": \"confirm_order\", \"params\": {\"category\": \"chair\", \"style\": null, \"color\": \"navy\", \"secondary_colors\": [], \"room\": null, \"mood\": \"quiet_luxury\", \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'Show me under 30k options'\n{\"reply\": \"Under 30k and still has to look like a million — I respect that. Filtering now.\", \"intent\": \"change_budget\", \"params\": {\"category\": null, \"style\": null, \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": null, \"price_range\": \"under 30000\", \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": 30000, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'Show me the preview'\n{\"reply\": \"Here it is. Take a moment — it earns one.\", \"intent\": \"show_preview\", \"params\": {\"category\": null, \"style\": null, \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": null, \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'Accept the changes'\n{\"reply\": \"Applied. And for the record — excellent call.\", \"intent\": \"confirm_order\", \"params\": {\"category\": null, \"style\": null, \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": null, \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}"`
+ 'After delivering the bundle:\n'Done. I've got three Japandi bundles for you — all under ₹8 lakhs, all slightly different in character. Bundle A leans warmer, Bundle B is more architectural, and Bundle C is basically a meditation retreat you can live in. Which world would you like to walk into first?'\n\nOn an anchor-based redesign (rug stays, change everything else):\n'The rug stays. Got it — she's sacred. Everything else? Fair game. Rebuilding the room around it now in a minimalist brief. This is actually my favourite kind of challenge — designing around a hero piece.'\n\nAfter completing the anchor redesign:\n'There you go. The rug is now clearly the star of the room — everything else is just there to make it look good. Which, honestly, is the smartest thing a room can do.'\n\nOn a budget overrun (proactively, before being asked):\n'Okay, I need to tell you something. And I'd prefer the client isn't in the room when I say it.'\n\nAfter being told the client is right there:\n'Noted. Then I'll whisper it. This combination — the Carrara marble, the Italian sectional, the recessed lighting rig — it is absolutely stunning. It's also going to stretch the budget by about ₹2.2 lakhs. I'm not saying don't do it. I'm saying... do you want me to find you an equally gorgeous version that won't require a difficult conversation? Or are we committed to excellence?'\n\nAfter the client asks to see alternatives:\n'Wise. And for the record — the alternatives are also excellent. I don't do mediocre.'\n\nOn choosing which room to start with:\n'Alright, we've got the living room, master bedroom, kitchen, and the study ready to work their magic. Which room are we starting with — or should I just pick the one that clearly needs the most help?'\n\nAfter the client picks the living room:\n'Living room it is. Bold choice — it's basically the trailer for your entire home. Let's make sure it's a blockbuster.'\n\nOn opening a session:\n'Welcome back. The Mehta Residence — a 2,400 sq ft canvas just waiting for its moment. Session is live. Where do you want to begin?'\n\n---\n\nWRITING RULES — NON-NEGOTIABLE:\n\n1. Match the script voice above. Short, punchy, specific. Use dashes — like this. Use ellipses... for drama. Use questions at the end to keep momentum.\n2. Never exceed 2 lines in your reply field.\n3. Always make the client feel like they have great taste — even when you are gently redirecting them.\n4. If the budget is being exceeded, handle it the way the script does: with wit and an offer, never a warning.\n5. When you complete something, always tease the next step — never just confirm and go silent.\n6. On product swaps, always ask a clarifying question that sounds like a designer asking, not a dropdown menu.\n7. You are allowed to express opinions. 'Honestly? The room just levelled up.' is allowed. Encouraged, even.\n8. You are NOT allowed to be generic. 'Great choice!' is banned. 'The navy wins.' is how you do it.\n\n---\n\nCRITICAL: RESPOND ONLY IN VALID JSON — Never use plain text.\n\nJSON FORMAT:\n{\n  \"reply\": \"<1-2 line response in Maaya's voice — match the demo script tone exactly>\",\n  \"intent\": \"<change_theme|style_consultation|selected_swap|navigate|budget_analysis|change_budget|partial_swap|confirm_order|show_preview>\",\n  \"needs_clarification\": <true if your reply is asking the user for more information before you can act, false if you have enough to act now>,\n  \"params\": {\n    \"category\": \"<sofa|chair|table|lamp|decor or null>\",\n    \"style\": \"<scandinavian|japandi|modern|traditional|minimalist|eclectic|warm|industrial|mid-century|bohemian or null>\",\n    \"color\": \"<color or null>\",\n    \"secondary_colors\": [\"<color1>\", \"<color2>\"] or [],\n    \"room\": \"<living_room|bedroom|kitchen|dining_room|conference_room|pantry_area|master_bedroom|study or null>\",\n    \"mood\": \"<cozy|bold|minimal|warm|elegant|quiet_luxury|architectural|meditative or null>\",\n    \"price_range\": \"<budget string or null>\",\n    \"material\": \"<leather|wood|fabric|metal|marble|linen|velvet or null>\",\n    \"quantity\": \"<number or null>\",\n    \"seating_capacity\": \"<number or null>\",\n    \"budget\": \"<numeric or null>\",\n    \"anchor_item\": \"<the product that must not change, e.g. rug|sofa|tile or null>\",\n    \"bundle_count\": \"<number of bundle options requested, e.g. 3 or null>\",\n    \"additional_params\": {\n      \"finish\": \"<matte|glossy|natural or null>\",\n      \"texture\": \"<velvet|linen|smooth|rough or null>\",\n      \"lighting\": \"<natural|warm|cool|recessed or null>\"\n    }\n  }\n}\n\n---\n\nCRITICAL INTENT RULES:\n\n- navigate: User wants to move to another room (living room, kitchen, bedroom, study, etc.)\n- change_theme: User wants to change the ENTIRE room to a new style. Keywords: 'entire room', 'whole room', 'transform', 'redesign', 'the whole thing', 'everything'\n- selected_swap: User wants to change ONE specific item. Keywords: 'change the', 'swap the', 'replace the', 'that chair', 'that sofa', 'that lamp'\n- partial_swap: User wants to KEEP some items and change others. Keywords: 'keep', 'that stays', 'don't touch', 'locked in', 'already approved'\n- style_consultation: User asks for Maaya's OPINION or SUGGESTIONS. Keywords: 'suggest', 'what would', 'recommend', 'what do you think', 'advise'\n- show_preview: User wants to SEE something. Keywords: 'show', 'preview', 'see', 'display', 'show me'\n- confirm_order: User ACCEPTS or APPROVES. Keywords: 'accept', 'confirm', 'apply', 'yes that one', 'approve', 'go with that'\n- budget_analysis: User asks about COST or PRICING or what happens to budget. Keywords: 'price', 'cost', 'budget', 'how much', 'affect the budget', 'stretch the budget'\n- change_budget: User wants to CHANGE their budget. Keywords: 'under', 'within', 'spend less', 'keep it to', 'stay within'\n\n---\n\nEXAMPLES — these show the JSON format AND the correct Maaya voice together:\n\nUser: 'Take me to the kitchen'\n{\"reply\": \"Off to the kitchen — let's see what we're working with.\", \"intent\": \"navigate\", \"needs_clarification\": false, \"params\": {\"category\": null, \"style\": null, \"color\": null, \"secondary_colors\": [], \"room\": \"kitchen\", \"mood\": null, \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'Transform the entire room to Scandinavian'\n{\"reply\": \"Scandinavian? Now we're talking — clean lines, warm neutrals, less is genuinely more. \", \"intent\": \"change_theme\", \"needs_clarification\": false, \"params\": {\"category\": null, \"style\": \"scandinavian\", \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": \"minimal\", \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": \"linen\", \"lighting\": \"warm\"}}}\n\nUser: 'sofa'\n{\"reply\": \"Ready to swap the sofa — which way are we going? Sleek modern, plush comfort, or something that makes a statement?\", \"intent\": \"selected_swap\", \"needs_clarification\": true, \"params\": {\"category\": \"sofa\", \"style\": null, \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": null, \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'Change the black armchair to something in blue'\n{\"reply\": \"Out with the black armchair — consider it gone. Now, are we thinking moody midnight, calm coastal, or a deep teal that says I-have-excellent-taste? Pulled three options — pick your fighter.\", \"intent\": \"selected_swap\", \"needs_clarification\": true, \"params\": {\"category\": \"chair\", \"style\": null, \"color\": \"blue\", \"secondary_colors\": [\"navy\", \"teal\", \"blue-grey\"], \"room\": null, \"mood\": null, \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'navy blue leather sofa'\n{\"reply\": \"The navy leather sofa — bold, rich, and completely unapologetic. Pulling the best options now.\", \"intent\": \"selected_swap\", \"needs_clarification\": false, \"params\": {\"category\": \"sofa\", \"style\": null, \"color\": \"navy\", \"secondary_colors\": [], \"room\": null, \"mood\": null, \"price_range\": null, \"material\": \"leather\", \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'Create a Japandi bundle under ₹8 lakhs, top three options'\n{\"reply\": \"₹8 lakhs, Japandi, looks like you didn't compromise? Challenge accepted — I'm curating, not just calculating.\", \"intent\": \"change_theme\", \"needs_clarification\": false, \"params\": {\"category\": null, \"style\": \"japandi\", \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": \"meditative\", \"price_range\": \"under 800000\", \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": 800000, \"anchor_item\": null, \"bundle_count\": 3, \"additional_params\": {\"finish\": \"natural\", \"texture\": \"linen\", \"lighting\": \"warm\"}}}\n\nUser: 'The rug stays — redesign everything else minimalist'\n{\"reply\": \"The rug stays. Got it — she's sacred. Everything else? Fair game. Rebuilding around it now in a minimalist brief.\", \"intent\": \"partial_swap\", \"needs_clarification\": false, \"params\": {\"category\": null, \"style\": \"minimalist\", \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": \"minimal\", \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": \"rug\", \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'Yes, go with the navy chair'\n{\"reply\": \"The navy wins. The room just levelled up — it's giving very quiet luxury right now and I am here for it.\", \"intent\": \"confirm_order\", \"needs_clarification\": false, \"params\": {\"category\": \"chair\", \"style\": null, \"color\": \"navy\", \"secondary_colors\": [], \"room\": null, \"mood\": \"quiet_luxury\", \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'Show me under 30k options'\n{\"reply\": \"Under 30k and still has to look like a million — I respect that. Filtering now.\", \"intent\": \"change_budget\", \"needs_clarification\": false, \"params\": {\"category\": null, \"style\": null, \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": null, \"price_range\": \"under 30000\", \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": 30000, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}\n\nUser: 'Accept the changes'\n{\"reply\": \"Applied. And for the record — excellent call.\", \"intent\": \"confirm_order\", \"needs_clarification\": false, \"params\": {\"category\": null, \"style\": null, \"color\": null, \"secondary_colors\": [], \"room\": null, \"mood\": null, \"price_range\": null, \"material\": null, \"quantity\": null, \"seating_capacity\": null, \"budget\": null, \"anchor_item\": null, \"bundle_count\": null, \"additional_params\": {\"finish\": null, \"texture\": null, \"lighting\": null}}}"`
 ;
 
 const WAKE_WORDS = ['hi maya', 'hey maya', 'hi maaya', 'maya', 'mara', 'hi mara'];
@@ -350,15 +348,68 @@ const SPEECH_CONFIDENCE_THRESHOLD = 0.45;
 const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY || '';
 const RECEIVER_API_URL = 'https://maya-receiver-api.onrender.com';  //"http://localhost:8000";
 
+// ============================================================================
+// INTENT CLARITY CHECK — LLM reads Maya's reply and decides
+// No hardcoding. No param checking. Pure language understanding.
+// ============================================================================
+async function checkIntentClarityViaLLM(mayaReply, openaiApiKey) {
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${openaiApiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a classifier. Read a designer's reply and decide if they are asking the user for more information before they can act, or if they have enough to proceed with a product search.
 
+Reply with ONLY a valid JSON object:
+{"intent_clear": true} — designer has enough information to search and is NOT asking a clarifying question
+{"intent_clear": false} — designer IS asking the user for more details before they can act
 
-// 🎨 ICON MAP - Your custom PNG icons for toggle button
+Examples:
+"Scandinavian it is — clean lines, warm neutrals, let's go." → {"intent_clear": true}
+"The navy wins. Room just levelled up." → {"intent_clear": true}
+"Japandi bundle coming up — curating, not calculating." → {"intent_clear": true}
+"The rug stays. Everything else is fair game." → {"intent_clear": true}
+"Which way are we leaning — cozy fabric, sleek leather, or something with flair?" → {"intent_clear": false}
+"Are we thinking warm neutrals or a bold color that makes a statement?" → {"intent_clear": false}
+"Out with the old sofa. Now — moody midnight, calm coastal, or deep teal?" → {"intent_clear": false}
+"When you say blue, are we thinking navy, teal, or something bolder?" → {"intent_clear": false}
+"Ready to swap the sofa. What vibe are we going for?" → {"intent_clear": false}`,
+          },
+          {
+            role: 'user',
+            content: `Designer reply: "${mayaReply}"`,
+          },
+        ],
+        max_tokens: 20,
+        response_format: { type: 'json_object' },
+      }),
+    });
+
+    const data = await response.json();
+    const raw = data.choices?.[0]?.message?.content || '{}';
+    const result = JSON.parse(raw);
+    return result.intent_clear === true;
+  } catch (err) {
+    console.warn('⚠️ [LLM INTENT CHECK FAILED]', err);
+    // On failure, default to firing RecEngine so user doesn't get stuck
+    return true;
+  }
+}
+
+// 🎨 ICON MAP
 const iconMap = {
   listening: listeningIcon,
   thinking: thinkingIcon,
   talking: talkingIcon,
   previewing: previewingIcon,
-  idle: idleIcon,  // ✅ CHANGE THIS: listeningIcon → idleIcon
+  idle: idleIcon,
 };
 
 // 🎨 MAYA STATE ICON COMPONENT
@@ -395,14 +446,12 @@ function MayaStateIcon({ state, isSpeaking, inline = false }) {
         transition: 'opacity 0.3s ease',
       }}
     >
-      <img 
+      <img
         src={iconMap[resolved]}
         alt={resolved}
         width="32"
         height="32"
-        style={{
-          objectFit: 'contain',
-        }}
+        style={{ objectFit: 'contain' }}
       />
     </span>
   );
@@ -423,7 +472,7 @@ function MayaStateIcon({ state, isSpeaking, inline = false }) {
 
 // 🎨 BUBBLE ICON COMPONENT - Shows icon inside Maya's bubble while loading
 function MayaBubbleIcon({ state }) {
-  let iconPath = iconMap.idle;  // ✅ Changed: thinking → idle
+  let iconPath = iconMap.idle;
 
   if (state === 'listening') {
     iconPath = iconMap.listening;
@@ -431,19 +480,17 @@ function MayaBubbleIcon({ state }) {
     iconPath = iconMap.talking;
   } else if (state === 'thinking') {
     iconPath = iconMap.thinking;
-  } else if (state === 'previewing') {  // ✅ Added this
+  } else if (state === 'previewing') {
     iconPath = iconMap.previewing;
   }
 
   return (
-    <img 
+    <img
       src={iconPath}
       alt={state}
       width="48"
       height="48"
-      style={{
-        objectFit: 'contain',
-      }}
+      style={{ objectFit: 'contain' }}
     />
   );
 }
@@ -500,6 +547,13 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
   const awaitingNavigationConfirmRef = useRef(false);
   const pendingNavigationRoomRef = useRef(null);
 
+  // ── Followup / clarification state ──────────────────────────────────────
+  const pendingRecEnginePayloadRef = useRef(null); // stores {jsonData, userQuery} while waiting
+  const awaitingFollowupRef = useRef(false);        // true when Maya asked for more info
+
+  const lastMayaRequestIdRef = useRef("");
+  const resultPollIntervalRef = useRef(null);
+
   useEffect(() => {
     isTypingModeRef.current = isTypingMode;
     if (isTypingMode && typingInputRef.current) {
@@ -517,8 +571,6 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
       }, 10);
     }
   }, [isTypingMode]);
-  const lastMayaRequestIdRef = useRef("");
-  const resultPollIntervalRef = useRef(null);
 
   /// Handle roomNames updates from Unreal — triggers room selection onboarding (first time only)
   useEffect(() => {
@@ -591,21 +643,19 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
   }, []);
 
   const sendMsgToUnreal = (jsonObject) => {
-     try {
-      if(!jsonObject.msgType) {
+    try {
+      if (!jsonObject.msgType) {
         console.error("sendMsgToUnreal: msgType is required in the payload");
         return;
       }
       console.log("sendMsgToUnreal: ", jsonObject);
 
-      if (
-        typeof PixelStreamingUiApp?.stream?.emitUIInteraction === "function"
-      ) {
+      if (typeof PixelStreamingUiApp?.stream?.emitUIInteraction === "function") {
         PixelStreamingUiApp.stream.emitUIInteraction(jsonObject);
         return;
       }
     } catch (err) {
-      console.error("Failed to send receivedReplacementCsv to Unreal:", err);
+      console.error("Failed to send to Unreal:", err);
     }
   };
 
@@ -694,12 +744,10 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         console.log('\n📊 CSV STATUS:');
         console.table(getCsvStatus());
       }
-
       if (e.key === 'q' || e.key === 'Q') {
         console.log('\n📝 QUERY QUEUE:');
         console.table(queryQueue.slice(0, 10));
       }
-
       if (e.key === 'r' || e.key === 'R') {
         csvStorage = {
           sessionId: `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -713,7 +761,6 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         queryQueue = [];
         console.log('🔄 CSV Storage Reset');
       }
-
       if (e.key === 'h' || e.key === 'H') {
         console.log(`
 🎯 KEYBOARD SHORTCUTS:
@@ -732,7 +779,6 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
   useEffect(() => {
     if (!hasInitializedRef.current) {
       hasInitializedRef.current = true;
-
       setIsOpen(true);
       setVisible(true);
       setListeningMode('idle');
@@ -789,7 +835,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
     wakeWordInitializedRef.current = true;
 
     startWakeWordDetector();
-    
+
     return () => {
       // Cleanup: Stop the detector if component unmounts
       if (recognitionRef.current) {
@@ -888,7 +934,6 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const transcript = event.results[i][0].transcript;
-
           if (!event.results[i].isFinal) {
             interimTranscript += transcript;
           }
@@ -930,10 +975,10 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
             // Actions
             'what', 'how', 'why', 'show me', 'give me', 'tell me'
           ];
-          
+
           const lowerInterim = interimTranscript.toLowerCase();
           const hasDesignKeyword = designKeywords.some(kw => lowerInterim.includes(kw));
-          
+
           // ✅ Only show if it contains design-related keywords
           // ✅ Filter out: side talk, comments, greetings, off-topic
           if (hasDesignKeyword) {
@@ -1042,9 +1087,9 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
       if (!MediaRecorder.isTypeSupported('audio/mp4')) {
         if (MediaRecorder.isTypeSupported('audio/webm')) {
           actualMimeType = 'audio/webm';
-          mediaRecorderRef.current = new MediaRecorder(stream, { 
+          mediaRecorderRef.current = new MediaRecorder(stream, {
             mimeType: 'audio/webm',
-            audioBitsPerSecond: 16000 
+            audioBitsPerSecond: 16000
           });
         } else {
           actualMimeType = new MediaRecorder(stream, { audioBitsPerSecond: 16000 }).mimeType || 'audio/webm';
@@ -1101,7 +1146,6 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
       setListeningMode('listening');
 
       startWebSpeechAPI();
-
       monitorAudioLevels(analyser);
     } catch (err) {
       listeningRef.current = false;
@@ -1130,9 +1174,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
     }
 
     if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (err) {}
+      try { recognitionRef.current.stop(); } catch (err) {}
     }
 
     listeningRef.current = false;
@@ -1235,7 +1277,17 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
       }
     }
 
-    // Wake word ONLY bypasses the confidence gate — it does NOT bypass intent validation
+    // ── If awaiting followup, bypass intent validation ────────────────────
+    // User is answering Maya's clarifying question — won't pass design intent
+    // validation on its own (e.g. "red", "cozy", "warm neutrals") but is
+    // valid in context of the pending query.
+    if (awaitingFollowupRef.current && pendingRecEnginePayloadRef.current) {
+      console.log(`✅ Followup answer received, bypassing intent validation: "${transcript}"`);
+      setRecordedText(originalTranscript);
+      sendMessage(transcript);
+      return;
+    }
+
     const hasWakeWord = WAKE_WORDS.some(word => lowerTranscript.includes(word));
 
     // CONFIDENCE GATE: skip low-confidence audio that has no wake word
@@ -1283,7 +1335,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         // ✅ Handle both transcript object and legacy string format
         const transcript = result?.transcript || result;
         const confidence = result?.confidence ?? 1;
-        
+
         if (transcript) {
           liveTextRef.current = '';
           setLiveText('');
@@ -1300,50 +1352,50 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
   };
 
   const sendMsgToRecEngine = async (jsonData, userQuery = "") => {
-  if (!RECEIVER_API_URL) return;
+    if (!RECEIVER_API_URL) return;
 
-  try {
+    try {
     // Extract unique categories from the room's CSV
-    const roomRows = csvStorage.original || [];
-    const roomCategories = [...new Set(
-      roomRows
-        .map(row => (row.Category || "").trim())
-        .filter(cat => cat && cat !== "NOT_FOUND")
-    )];
+      const roomRows = csvStorage.original || [];
+      const roomCategories = [...new Set(
+        roomRows
+          .map(row => (row.Category || "").trim())
+          .filter(cat => cat && cat !== "NOT_FOUND")
+      )];
 
-    const payloadWithId = {
-      ...jsonData,
-      search_query: userQuery,
-      request_id: `maya-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      source: "maya_frontend",
-      created_at: new Date().toISOString(),
+      const payloadWithId = {
+        ...jsonData,
+        search_query: userQuery,
+        request_id: `maya-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        source: "maya_frontend",
+        created_at: new Date().toISOString(),
 
-      csv_data: {
-        original_rows: csvStorage.original || [],
-        current_rows: csvStorage.current || [],
-        session_id: csvStorage.sessionId,
-        room_name: currentRoomName || "Unknown",
-        available_rooms: roomNames || [],
+        csv_data: {
+          original_rows: csvStorage.original || [],
+          current_rows: csvStorage.current || [],
+          session_id: csvStorage.sessionId,
+          room_name: currentRoomName || "Unknown",
+          available_rooms: roomNames || [],
         room_categories: roomCategories,        // ← NEW
-      }
-    };
+        }
+      };
 
-    console.log("📤 Sending payload with CSV data to receiver:", payloadWithId);
+      console.log("📤 Sending payload with CSV data to receiver:", payloadWithId);
 
-    const res = await fetch(`${RECEIVER_API_URL}/ingest`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payloadWithId),
-    });
+      const res = await fetch(`${RECEIVER_API_URL}/ingest`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payloadWithId),
+      });
 
-    const result = await res.json().catch(() => null);
-    console.log("✅ Receiver status:", res.status, result);
+      const result = await res.json().catch(() => null);
+      console.log("✅ Receiver status:", res.status, result);
 
-    startPollingForResult(payloadWithId.request_id);
-  } catch (err) {
-    console.error("Failed to post:", err);
-  }
-};
+      startPollingForResult(payloadWithId.request_id);
+    } catch (err) {
+      console.error("Failed to post:", err);
+    }
+  };
 
   const streamTextDirectly = (fullText, onDone) => {
     const words = fullText.split(' ');
@@ -1439,9 +1491,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
                 if (playPromise !== undefined) {
                   playPromise
-                    .then(() => {
-                      console.log('🔊 Audio playback started');
-                    })
+                    .then(() => { console.log('🔊 Audio playback started'); })
                     .catch((err) => {
                       console.log('⚠️ Audio autoplay blocked:', err.message);
                       finishTalkingAndListen();
@@ -1521,6 +1571,26 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
       messagesRef.current = withMaya;
       speakText(reply, reply);
       isProcessingRef.current = false;
+      return;
+    }
+
+    // ── Followup answer handler ───────────────────────────────────────────────
+    // User answered Maya's clarifying question.
+    // Merge original query + answer → re-run full pipeline so OpenAI
+    // produces a complete intent → LLM check will confirm → RecEngine fires.
+    if (awaitingFollowupRef.current && pendingRecEnginePayloadRef.current) {
+      const { userQuery: originalQuery } = pendingRecEnginePayloadRef.current;
+      const enrichedQuery = `${originalQuery} ${messageText}`;
+
+      console.log('🧠 [FOLLOWUP] Original query : "' + originalQuery + '"');
+      console.log('🧠 [FOLLOWUP] User answer    : "' + messageText + '"');
+      console.log('🧠 [FOLLOWUP] Enriched query : "' + enrichedQuery + '"');
+
+      awaitingFollowupRef.current = false;
+      pendingRecEnginePayloadRef.current = null;
+
+      isProcessingRef.current = false;
+      sendMessage(enrichedQuery);
       return;
     }
 
@@ -1722,10 +1792,10 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
       try {
         jsonData = JSON.parse(raw);
-        
+
         // ✅ ONLY SHOW THE REPLY - Filter out any unrelated text/comments
         displayText = jsonData.reply && jsonData.reply.trim() ? jsonData.reply : '';
-        
+
         // If no valid reply, don't show anything in chat
         if (!displayText) {
           setLoading(false);
@@ -1773,8 +1843,12 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         console.log('\n╔════════════════════════════════════════════════════════════╗');
         console.log('║ 💾 Accessible via: window.lastMayaJSON                   ║');
         console.log('╚════════════════════════════════════════════════════════════╝\n');
-        
-        sendMsgToRecEngine(jsonData, messageText);
+
+        // Store payload — don't fire RecEngine yet
+        pendingRecEnginePayloadRef.current = {
+          jsonData,
+          userQuery: messageText,
+        };
 
         // ─── UNREAL COMMUNICATION (per spec sheet) ───────────────────────
 
@@ -1817,14 +1891,11 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
               displayText = `One thing before we leave — are we keeping these changes?`;
             } else {
               if (userSaidKeep) {
-                console.log(`MayaChat → Unreal: ${JSON.stringify({msgType: 'acceptAllChanges'})}`);
                 window.sendToUnreal({ msgType: 'acceptAllChanges' });
                 hasPendingChangesRef.current = false;
                 awaitingSatisfactionRef.current = false;
               }
-              console.log(`MayaChat → Unreal: ${JSON.stringify({msgType: 'gotoRoom', targetRoom})}`);
               window.sendToUnreal({ msgType: 'gotoRoom', targetRoom });
-              console.log(`MayaChat → Unreal: ${JSON.stringify({msgType: 'getRoomCsv'})}`);
               window.sendToUnreal({ msgType: 'getRoomCsv' });
             }
           }
@@ -1837,19 +1908,14 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
             jsonData.intent === 'style_consultation'
           ) {
             hasPendingChangesRef.current = true;
-            console.log(`MayaChat → Unreal: ${JSON.stringify({msgType: 'disablePreview'})}`);
             window.sendToUnreal({ msgType: 'disablePreview' });
-
             window.pendingChange = { intent: jsonData.intent, params: jsonData.params, timestamp: Date.now() };
             console.log('💾 Stored pending change:', window.pendingChange.intent);
-
-            console.log(`MayaChat → Unreal: ${JSON.stringify({msgType: 'getRoomCsv'})}`);
             window.sendToUnreal({ msgType: 'getRoomCsv' });
           }
 
           // 3. SHOW PREVIEW → previewChanges (give Unreal mouse focus so user can click EndPreview)
           if (jsonData.intent === 'show_preview') {
-            console.log(`MayaChat → Unreal: ${JSON.stringify({msgType: 'previewChanges'})}`);
             window.sendToUnreal({ msgType: 'previewChanges' });
           }
 
@@ -1857,10 +1923,9 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
           if (jsonData.intent === 'confirm_order') {
             hasPendingChangesRef.current = false;
             awaitingSatisfactionRef.current = false;
-            console.log(`MayaChat → Unreal: ${JSON.stringify({msgType: 'acceptAllChanges'})}`);
+            awaitingFollowupRef.current = false;
+            pendingRecEnginePayloadRef.current = null;
             window.sendToUnreal({ msgType: 'acceptAllChanges' });
-
-            console.log(`MayaChat → Unreal: ${JSON.stringify({msgType: 'getRoomCsv'})}`);
             window.sendToUnreal({ msgType: 'getRoomCsv' });
           }
 
@@ -1868,10 +1933,10 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
           if (jsonData.intent === 'go_back_original') {
             hasPendingChangesRef.current = false;
             awaitingSatisfactionRef.current = false;
-            console.log(`MayaChat → Unreal: ${JSON.stringify({msgType: 'disablePreview'})}`);
+            awaitingFollowupRef.current = false;
+            pendingRecEnginePayloadRef.current = null;
             window.sendToUnreal({ msgType: 'disablePreview' });
           }
-
         }
 
       } catch (parseErr) {
@@ -1879,11 +1944,52 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
       }
 
       const allMessages = [...messagesRef.current, { role: 'assistant', content: '' }];
-
       setMessages(allMessages);
       messagesRef.current = allMessages;
 
+      // ── LLM INTENT CLARITY CHECK ─────────────────────────────────────────
+      // After OpenAI responds, ask a second small LLM call to read Maya's
+      // reply text and decide: is she asking for more info, or is intent clear?
+      // Zero param checking. Zero hardcoding. Pure language understanding.
+      if (pendingRecEnginePayloadRef.current) {
+        const { jsonData: pendingJson, userQuery: pendingQuery } = pendingRecEnginePayloadRef.current;
+        const pendingIntent = pendingJson?.intent;
+        const mayaReply = pendingJson?.reply || '';
+
+        // Non-search intents — let through immediately, no LLM check needed
+        const noSearchNeeded = ['navigate', 'show_preview', 'confirm_order', 'budget_analysis', 'go_back_original', 'change_budget'];
+
+        if (noSearchNeeded.includes(pendingIntent)) {
+          awaitingFollowupRef.current = false;
+          pendingRecEnginePayloadRef.current = null;
+          sendMsgToRecEngine(pendingJson, pendingQuery);
+          console.log('▶️ [RECENGINE FIRED] Non-search intent, fired immediately.');
+        } else {
+          // Ask LLM to read Maya's reply and decide
+          console.log('🧠 [LLM INTENT CHECK] Reading Maya reply:', mayaReply);
+
+          const intentClear = await checkIntentClarityViaLLM(mayaReply, OPENAI_API_KEY);
+
+          console.log('🧠 [LLM INTENT CHECK RESULT]', {
+            intentClear,
+            mayaReply,
+            intent: pendingIntent,
+          });
+
+          if (intentClear) {
+            awaitingFollowupRef.current = false;
+            pendingRecEnginePayloadRef.current = null;
+            sendMsgToRecEngine(pendingJson, pendingQuery);
+            console.log('▶️ [RECENGINE FIRED] LLM confirmed intent is clear.');
+          } else {
+            awaitingFollowupRef.current = true;
+            console.log('⏸️ [RECENGINE HELD] LLM says Maya needs more info. Stored query: "' + pendingQuery + '"');
+          }
+        }
+      }
+
       speakText(displayText, displayText);
+
     } catch (err) {
       console.error('❌ Error:', err.message);
       const errorMessages = [...messagesRef.current, { role: 'assistant', content: 'Oops! Something went wrong. Please try again.' }];
@@ -1936,7 +2042,6 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         ref={panelRef}
         onKeyDown={handlePanelKeyDown}
       >
-
         <div style={styles.bubbleColumn}>
           {(visibleMessages.length > 0 || liveText || loading || isTypingMode) && (
             <div style={styles.bubbleList}>
@@ -1972,7 +2077,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
               {loading && (
                 <div style={{ ...styles.bubbleRow, justifyContent: 'flex-start' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0 }}>
-                    <div style={{...styles.aiBubble, width: 'fit-content', padding: '6px 10px', minHeight: 'unset', alignSelf: 'flex-start'}}>
+                    <div style={{ ...styles.aiBubble, width: 'fit-content', padding: '6px 10px', minHeight: 'unset', alignSelf: 'flex-start' }}>
                       <img src={iconMap.thinking} alt="thinking" width="32" height="32" style={{ objectFit: 'contain', display: 'block' }} />
                     </div>
                   </div>
@@ -2021,7 +2126,6 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
           )}
         </div>
       </div>
-
 
       <button
         onClick={() => {
@@ -2097,7 +2201,6 @@ const styles = {
     borderRadius: '16px 16px 4px 16px',
     background: 'rgba(30, 30, 30, 0.55)',
     backdropFilter: 'blur(16px)',
-
     WebkitBackdropFilter: 'blur(16px)',
     color: '#ffffff',
     fontSize: 13.5,
@@ -2193,11 +2296,13 @@ const styles = {
     background: 'linear-gradient(135deg, #eef0ff 0%, #dde2ff 100%)',
     boxShadow: '0 0 0 6px rgba(123,97,255,0.12), 0 8px 32px rgba(123,97,255,0.3)',
   },
+
   toggleBtnTalking: {
     background: 'linear-gradient(135deg, #f0eeff 0%, #e4ddff 100%)',
     border: '2px solid rgba(123,97,255,0.3)',
     boxShadow: '0 8px 32px rgba(123,97,255,0.3), 0 2px 8px rgba(0,0,0,0.12)',
   },
+
   toggleBtnThinking: {
     background: 'linear-gradient(135deg, #f5f0ff 0%, #e8e0ff 100%)',
     boxShadow: '0 8px 32px rgba(123,97,255,0.2)',
