@@ -710,6 +710,12 @@ export default function Experience() {
         }
 
         if (msg.type === "finishedParsingReplacementCsv") {
+          // TODO: Enable the transforming 3..2..1 transition in UI
+          const previewChangesJson = {
+            msgType: "previewChanges",
+          };
+          sendMsgToUnreal(previewChangesJson);
+          
           console.log("✅ Experience.jsx: finishedParsingReplacementCsv — dispatching CustomEvent");
           window.dispatchEvent(new CustomEvent('finishedParsingReplacementCsv'));
           return;
