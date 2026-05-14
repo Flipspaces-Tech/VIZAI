@@ -499,6 +499,8 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
   const hasPendingChangesRef = useRef(false);
   const awaitingNavigationConfirmRef = useRef(false);
   const pendingNavigationRoomRef = useRef(null);
+  const currentDesignPromptRef = useRef(null);
+  const lastRecEngineResponseRef = useRef(null);
 
   useEffect(() => {
     isTypingModeRef.current = isTypingMode;
@@ -570,15 +572,15 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
       const cleanName = (n) => n.replace(/vizwalkai_db_/gi, '').replace(/_product_ai_sku/gi, '').replace(/[_-]/g, ' ').toLowerCase().trim();
       let question;
       if (cats.length === 0) {
-        question = "There it is. Does the room feel right, or shall we keep going?";
+        question = "The room has been updated. Are you happy with how it looks, or would you like to make any changes?";
       } else if (cats.length === 1) {
-        question = `There it is — your ${cleanName(cats[0])} is done. Does it land, or shall we push further?`;
+        question = `Your ${cleanName(cats[0])} has been updated. Are you happy with this, or would you like to explore other options?`;
       } else if (cats.length <= 3) {
         const last = cleanName(cats[cats.length - 1]);
         const rest = cats.slice(0, -1).map(cleanName).join(', ');
-        question = `Done — ${rest} and ${last}, all updated. Does it land, or is there something you'd change?`;
+        question = `The ${rest} and ${last} have been updated. Does this look good to you, or would you like to try something different?`;
       } else {
-        question = "There it is — the room's been updated. Does it land, or shall we push further?";
+        question = "The room has been refreshed. Are you satisfied with the result, or would you like to adjust anything?";
       }
       const newMsgs = [...messagesRef.current, { role: 'assistant', content: '' }];
       setMessages(newMsgs);
@@ -850,7 +852,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
       };
 
       recognition.onend = () => {
-        console.log('Wake word detector ended, hadError:', hadError);
+        if (bShowWakeWordLogs) console.log('Wake word detector ended, hadError:', hadError);
         if (recognitionRef.current === recognition) {
           recognitionRef.current = null;
         }
@@ -980,6 +982,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
           setCSVStatus(getCsvStatus());
 
           window.lastMayaSearchResult = data.data;
+          lastRecEngineResponseRef.current = data.data;
 
           clearInterval(resultPollIntervalRef.current);
           resultPollIntervalRef.current = null;
@@ -1299,7 +1302,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
     processSTTQueue();
   };
 
-  const sendMsgToRecEngine = async (jsonData, userQuery = "") => {
+  const sendMsgToRecEngine = async (jsonData, userQuery = "", excludeSkus = []) => {
   if (!RECEIVER_API_URL) return;
 
   try {
@@ -1317,6 +1320,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
       request_id: `maya-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       source: "maya_frontend",
       created_at: new Date().toISOString(),
+      ...(excludeSkus.length > 0 && { exclude_skus: excludeSkus }),
 
       csv_data: {
         original_rows: csvStorage.original || [],
@@ -1552,8 +1556,76 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         isProcessingRef.current = false;
         return;
       }
-      // User wants refinements — clear flag and let normal AI flow handle it
+
+      // User said no — determine intent: navigate away or try a different option
       awaitingSatisfactionRef.current = false;
+
+      const withUser = [...messagesRef.current, { role: 'user', content: messageText }];
+      setMessages(withUser);
+      messagesRef.current = withUser;
+      setInput('');
+      setRecordedText('');
+
+      const navKeywords = ['go to', 'take me to', 'navigate', 'head to', 'different room', 'another room', 'move to', "let's go", 'lets go', 'change room', 'switch room'];
+      const isNavigationNo = navKeywords.some(kw => lower.includes(kw));
+
+      const altKeywords = ['different', 'another option', 'something else', 'try again', 'alternative', 'more option', 'other option', 'show me more', 'other one'];
+      const isDifferentOption = !isNavigationNo && altKeywords.some(kw => lower.includes(kw));
+
+      if (isNavigationNo) {
+        hasPendingChangesRef.current = false;
+        if (typeof window.sendToUnreal === 'function') {
+          window.sendToUnreal({ msgType: 'disablePreview' });
+        }
+        const rooms = availableRoomsRef.current;
+        const normStr = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const userNorm = normStr(lower);
+        const foundRoom = rooms.find(r =>
+          userNorm.includes(normStr(r.display)) || userNorm.includes(normStr(r.original))
+        );
+        let noReply;
+        if (foundRoom) {
+          if (typeof window.sendToUnreal === 'function') {
+            window.sendToUnreal({ msgType: 'gotoRoom', targetRoom: foundRoom.original });
+            window.sendToUnreal({ msgType: 'getRoomCsv' });
+          }
+          noReply = `On our way to the ${foundRoom.display}.`;
+        } else {
+          awaitingRoomSelectionRef.current = true;
+          noReply = "Of course — which room shall we head to?";
+        }
+        const withMayaNav = [...messagesRef.current, { role: 'assistant', content: '' }];
+        setMessages(withMayaNav);
+        messagesRef.current = withMayaNav;
+        speakText(noReply, noReply);
+        isProcessingRef.current = false;
+        return;
+      }
+
+      if (isDifferentOption) {
+        const lastResponse = lastRecEngineResponseRef.current;
+        const excludeSkus = lastResponse?.categories?.map(c => c.skus?.[0]).filter(Boolean) || [];
+        const prompt = currentDesignPromptRef.current;
+        const noReply = "Noted — pulling a fresh set of options for you.";
+        const withMayaAlt = [...messagesRef.current, { role: 'assistant', content: '' }];
+        setMessages(withMayaAlt);
+        messagesRef.current = withMayaAlt;
+        speakText(noReply, noReply);
+        if (prompt) {
+          sendMsgToRecEngine(prompt.jsonData, prompt.userQuery, excludeSkus);
+        }
+        isProcessingRef.current = false;
+        return;
+      }
+
+      // Generic no — just ask what to change
+      const noReply = "Of course — what would you like to change?";
+      const withMaya = [...messagesRef.current, { role: 'assistant', content: '' }];
+      setMessages(withMaya);
+      messagesRef.current = withMaya;
+      speakText(noReply, noReply);
+      isProcessingRef.current = false;
+      return;
     }
 
     if (awaitingRoomSelectionRef.current) {
@@ -1774,6 +1846,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         console.log('║ 💾 Accessible via: window.lastMayaJSON                   ║');
         console.log('╚════════════════════════════════════════════════════════════╝\n');
         
+        currentDesignPromptRef.current = { jsonData, userQuery: messageText };
         sendMsgToRecEngine(jsonData, messageText);
 
         // ─── UNREAL COMMUNICATION (per spec sheet) ───────────────────────
