@@ -26,7 +26,8 @@ let csvStorage = {
 };
 
 let queryQueue = [];
-let apiResults = {}; 
+let apiResults = {};
+let lastChangedCategories = [];
 
 // ============================================================================
 // GOOGLE SHEETS CONFIGURATION
@@ -241,6 +242,7 @@ function onReceivedMsgFromRecEngine(apiResponse, sendUpdatedCSVRowsToUnreal) {
   const matchedCategories = new Set(
     apiResponse.categories.map(c => c.category.toUpperCase())
   );
+  lastChangedCategories = apiResponse.categories.map(c => c.category);
 
   const rowsToSend = updatedRows.filter((row) => {
     const matched = matchedCategories.has((row.Category || "").toUpperCase());
@@ -493,6 +495,10 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
   const pendingRoomConfirmRef = useRef(null);
   const isTypingModeRef = useRef(false);
   const roomNamesHandledRef = useRef(false);
+  const awaitingSatisfactionRef = useRef(false);
+  const hasPendingChangesRef = useRef(false);
+  const awaitingNavigationConfirmRef = useRef(false);
+  const pendingNavigationRoomRef = useRef(null);
 
   useEffect(() => {
     isTypingModeRef.current = isTypingMode;
@@ -553,6 +559,35 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
     };
     window.addEventListener('gotoRoomFinished', handleGotoRoomFinished);
     return () => window.removeEventListener('gotoRoomFinished', handleGotoRoomFinished);
+  }, []);
+
+  useEffect(() => {
+    const handleFinishedParsing = () => {
+      hasPendingChangesRef.current = true;
+      awaitingSatisfactionRef.current = true;
+
+      const cats = lastChangedCategories;
+      const cleanName = (n) => n.replace(/vizwalkai_db_/gi, '').replace(/_product_ai_sku/gi, '').replace(/[_-]/g, ' ').toLowerCase().trim();
+      let question;
+      if (cats.length === 0) {
+        question = "There it is. Does the room feel right, or shall we keep going?";
+      } else if (cats.length === 1) {
+        question = `There it is — your ${cleanName(cats[0])} is done. Does it land, or shall we push further?`;
+      } else if (cats.length <= 3) {
+        const last = cleanName(cats[cats.length - 1]);
+        const rest = cats.slice(0, -1).map(cleanName).join(', ');
+        question = `Done — ${rest} and ${last}, all updated. Does it land, or is there something you'd change?`;
+      } else {
+        question = "There it is — the room's been updated. Does it land, or shall we push further?";
+      }
+      const newMsgs = [...messagesRef.current, { role: 'assistant', content: '' }];
+      setMessages(newMsgs);
+      messagesRef.current = newMsgs;
+      speakText(question, question);
+    };
+
+    window.addEventListener('finishedParsingReplacementCsv', handleFinishedParsing);
+    return () => window.removeEventListener('finishedParsingReplacementCsv', handleFinishedParsing);
   }, []);
 
   const sendMsgToUnreal = (jsonObject) => {
@@ -1449,6 +1484,73 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
     stopListeningImmediately();
     setListeningMode('thinking');
 
+    // ── Navigation confirmation handler ──────────────────────────────────────
+    if (awaitingNavigationConfirmRef.current) {
+      const lower = messageText.toLowerCase();
+      const isYes = ['yes', 'yeah', 'yep', 'sure', 'ok', 'okay', 'yup', 'keep', 'save', 'accept', 'lock'].some(w => lower.includes(w));
+
+      const withUser = [...messagesRef.current, { role: 'user', content: messageText }];
+      setMessages(withUser);
+      messagesRef.current = withUser;
+      setInput('');
+      setRecordedText('');
+
+      const room = pendingNavigationRoomRef.current;
+      pendingNavigationRoomRef.current = null;
+      awaitingNavigationConfirmRef.current = false;
+      hasPendingChangesRef.current = false;
+      awaitingSatisfactionRef.current = false;
+
+      if (isYes && typeof window.sendToUnreal === 'function') {
+        window.sendToUnreal({ msgType: 'acceptAllChanges' });
+      }
+      if (room && typeof window.sendToUnreal === 'function') {
+        window.sendToUnreal({ msgType: 'gotoRoom', targetRoom: room.original });
+      }
+
+      const reply = isYes
+        ? `Locked in. Off to the ${room?.display || 'next room'} now.`
+        : `Got it — off to the ${room?.display || 'next room'}.`;
+      const withMaya = [...messagesRef.current, { role: 'assistant', content: '' }];
+      setMessages(withMaya);
+      messagesRef.current = withMaya;
+      speakText(reply, reply);
+      isProcessingRef.current = false;
+      return;
+    }
+
+    // ── Satisfaction check handler ────────────────────────────────────────────
+    if (awaitingSatisfactionRef.current) {
+      const lower = messageText.toLowerCase();
+      const isYes = ['yes', 'yeah', 'yep', 'sure', 'ok', 'okay', 'yup', 'happy', 'satisfied', 'love', 'perfect', 'looks good', 'accept', 'apply', 'confirm', 'great'].some(w => lower.includes(w));
+
+      if (isYes) {
+        awaitingSatisfactionRef.current = false;
+        hasPendingChangesRef.current = false;
+
+        const withUser = [...messagesRef.current, { role: 'user', content: messageText }];
+        setMessages(withUser);
+        messagesRef.current = withUser;
+        setInput('');
+        setRecordedText('');
+
+        if (typeof window.sendToUnreal === 'function') {
+          window.sendToUnreal({ msgType: 'acceptAllChanges' });
+          window.sendToUnreal({ msgType: 'getRoomCsv' });
+        }
+
+        const reply = "Applied. And for the record — excellent call.";
+        const withMaya = [...messagesRef.current, { role: 'assistant', content: '' }];
+        setMessages(withMaya);
+        messagesRef.current = withMaya;
+        speakText(reply, reply);
+        isProcessingRef.current = false;
+        return;
+      }
+      // User wants refinements — clear flag and let normal AI flow handle it
+      awaitingSatisfactionRef.current = false;
+    }
+
     if (awaitingRoomSelectionRef.current) {
       const norm = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
       const navPrefixes = ['go to ', 'take me to ', 'navigate to ', 'head to ', "let's go to ", 'lets go to ', 'teleport to ', 'move to ', 'i want to go to ', 'can we go to '];
@@ -1515,7 +1617,13 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         pendingRoomConfirmRef.current = partialMatch;
         addMayaReply(`Do you mean the ${partialMatch.display}?`);
       } else {
-        addMayaReply(`Hmm, I didn't catch that. Which room would you like to go to?`);
+        const roomList = availableRoomsRef.current.map(r => r.display);
+        const suggestion = roomList.length === 0
+          ? `Which room would you like to go to?`
+          : roomList.length <= 3
+          ? `Did you mean the ${roomList.join(' or the ')}?`
+          : `We've got — ${roomList.join(', ')}. Which one did you mean?`;
+        addMayaReply(`No ${cleanInput} on my list. ${suggestion}`);
       }
       return;
     }
@@ -1539,17 +1647,29 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
           const dnStem = dn.replace(/s$/, '');
           const onStem = on.replace(/s$/, '');
           if (uNorm === dn || uNorm === on || uStem === dnStem || uStem === onStem || dn.includes(uStem) || uStem.includes(dnStem)) {
-            window.sendToUnreal({ msgType: 'gotoRoom', targetRoom: room.original });
             const withUser = [...messagesRef.current, { role: 'user', content: messageText }];
             setMessages(withUser);
             messagesRef.current = withUser;
             setInput('');
             setRecordedText('');
-            const reply = `Off to the ${room.display}!`;
-            const withMaya = [...withUser, { role: 'assistant', content: '' }];
-            setMessages(withMaya);
-            messagesRef.current = withMaya;
-            speakText(reply, reply);
+
+            if (hasPendingChangesRef.current) {
+              pendingNavigationRoomRef.current = room;
+              awaitingNavigationConfirmRef.current = true;
+              awaitingSatisfactionRef.current = false;
+              const confirmMsg = `One thing before we leave — are we keeping these changes?`;
+              const withMaya = [...messagesRef.current, { role: 'assistant', content: '' }];
+              setMessages(withMaya);
+              messagesRef.current = withMaya;
+              speakText(confirmMsg, confirmMsg);
+            } else {
+              window.sendToUnreal({ msgType: 'gotoRoom', targetRoom: room.original });
+              const reply = `Off to the ${room.display}!`;
+              const withMaya = [...messagesRef.current, { role: 'assistant', content: '' }];
+              setMessages(withMaya);
+              messagesRef.current = withMaya;
+              speakText(reply, reply);
+            }
             isProcessingRef.current = false;
             return;
           }
@@ -1655,17 +1775,53 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
         if (typeof window.sendToUnreal === 'function') {
 
-          // 1. NAVIGATE → gotoRoom + getRoomCsv (fresh CSV for new room)
+          // 1. NAVIGATE → validate room, then gotoRoom + getRoomCsv
           if (jsonData.intent === 'navigate' && jsonData.params?.room) {
             const unrealRoomName = jsonData.params.room
               .split('_')
               .map(w => w.charAt(0).toUpperCase() + w.slice(1))
               .join('');
-            console.log(`MayaChat → Unreal: ${JSON.stringify({msgType: 'gotoRoom', targetRoom: unrealRoomName})}`);
-            window.sendToUnreal({ msgType: 'gotoRoom', targetRoom: unrealRoomName });
 
-            console.log(`MayaChat → Unreal: ${JSON.stringify({msgType: 'getRoomCsv'})}`);
-            window.sendToUnreal({ msgType: 'getRoomCsv' });
+            const availableRooms = availableRoomsRef.current;
+            const normStr = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const uNorm = normStr(unrealRoomName);
+            const foundRoom = availableRooms.length > 0
+              ? availableRooms.find(r =>
+                  normStr(r.original).includes(uNorm) ||
+                  uNorm.includes(normStr(r.original)) ||
+                  normStr(r.display).includes(uNorm) ||
+                  uNorm.includes(normStr(r.display))
+                )
+              : null;
+
+            const targetRoom = foundRoom ? foundRoom.original : unrealRoomName;
+            const roomToUse = foundRoom || { original: targetRoom, display: jsonData.params.room.replace(/_/g, ' ') };
+            const lowerMsg = messageText.toLowerCase();
+            const userSaidKeep = ['keep', 'save', 'accept', 'lock', 'confirm'].some(w => lowerMsg.includes(w));
+
+            if (availableRooms.length > 0 && !foundRoom) {
+              const roomList = availableRooms.map(r => r.display);
+              const suggestion = roomList.length <= 3
+                ? `Did you mean the ${roomList.join(' or the ')}?`
+                : `We've got — ${roomList.join(', ')}. Which one did you mean?`;
+              displayText = `No ${jsonData.params.room.replace(/_/g, ' ')} on my list — ${suggestion}`;
+            } else if (hasPendingChangesRef.current && !userSaidKeep) {
+              pendingNavigationRoomRef.current = roomToUse;
+              awaitingNavigationConfirmRef.current = true;
+              awaitingSatisfactionRef.current = false;
+              displayText = `One thing before we leave — are we keeping these changes?`;
+            } else {
+              if (userSaidKeep) {
+                console.log(`MayaChat → Unreal: ${JSON.stringify({msgType: 'acceptAllChanges'})}`);
+                window.sendToUnreal({ msgType: 'acceptAllChanges' });
+                hasPendingChangesRef.current = false;
+                awaitingSatisfactionRef.current = false;
+              }
+              console.log(`MayaChat → Unreal: ${JSON.stringify({msgType: 'gotoRoom', targetRoom})}`);
+              window.sendToUnreal({ msgType: 'gotoRoom', targetRoom });
+              console.log(`MayaChat → Unreal: ${JSON.stringify({msgType: 'getRoomCsv'})}`);
+              window.sendToUnreal({ msgType: 'getRoomCsv' });
+            }
           }
 
           // 2. CHANGE INTENTS → disablePreview (clear any active preview) + getRoomCsv
@@ -1675,6 +1831,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
             jsonData.intent === 'partial_swap' ||
             jsonData.intent === 'style_consultation'
           ) {
+            hasPendingChangesRef.current = true;
             console.log(`MayaChat → Unreal: ${JSON.stringify({msgType: 'disablePreview'})}`);
             window.sendToUnreal({ msgType: 'disablePreview' });
 
@@ -1693,6 +1850,8 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
           // 4. CONFIRM ORDER → acceptAllChanges + getRoomCsv (next change uses accepted state as base)
           if (jsonData.intent === 'confirm_order') {
+            hasPendingChangesRef.current = false;
+            awaitingSatisfactionRef.current = false;
             console.log(`MayaChat → Unreal: ${JSON.stringify({msgType: 'acceptAllChanges'})}`);
             window.sendToUnreal({ msgType: 'acceptAllChanges' });
 
@@ -1702,6 +1861,8 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
           // 5. GO BACK TO ORIGINAL → disablePreview
           if (jsonData.intent === 'go_back_original') {
+            hasPendingChangesRef.current = false;
+            awaitingSatisfactionRef.current = false;
             console.log(`MayaChat → Unreal: ${JSON.stringify({msgType: 'disablePreview'})}`);
             window.sendToUnreal({ msgType: 'disablePreview' });
           }
