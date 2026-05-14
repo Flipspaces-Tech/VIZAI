@@ -1266,27 +1266,32 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
   const sendMsgToRecEngine = async (jsonData, userQuery = "") => {
   if (!RECEIVER_API_URL) return;
-  
 
   try {
+    // Extract unique categories from the room's CSV
+    const roomRows = csvStorage.original || [];
+    const roomCategories = [...new Set(
+      roomRows
+        .map(row => (row.Category || "").trim())
+        .filter(cat => cat && cat !== "NOT_FOUND")
+    )];
+
     const payloadWithId = {
       ...jsonData,
       search_query: userQuery,
       request_id: `maya-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       source: "maya_frontend",
       created_at: new Date().toISOString(),
-      
-      // ✅ ADD THIS NEW SECTION:
+
       csv_data: {
         original_rows: csvStorage.original || [],
         current_rows: csvStorage.current || [],
         session_id: csvStorage.sessionId,
         room_name: currentRoomName || "Unknown",
         available_rooms: roomNames || [],
+        room_categories: roomCategories,        // ← NEW
       }
-      
     };
-    console.log("CSV + QUERY");
 
     console.log("📤 Sending payload with CSV data to receiver:", payloadWithId);
 
