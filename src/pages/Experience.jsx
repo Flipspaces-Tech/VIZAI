@@ -682,7 +682,10 @@ export default function Experience() {
 
         // Once scene is loaded, ask Unreal for the roomSkuCsv and roomNames
         if(msg.type === "sceneLoaded") {
-          console.log("Scene loaded in Unreal, requesting roomSkuCsv and roomNames...");
+          console.log("Scene loaded in Unreal, requesting roomSkuCsv and roomNames... currentRoomName=", msg.currentRoom);
+
+          // Read currentRoom from the message if available and store in state
+          setCurrentRoomName(msg.currentRoom || "");
 
           let getRoomCsvJson = {
             msgType: "getRoomCsv",
