@@ -550,6 +550,15 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
   // ── Followup / clarification state ──────────────────────────────────────
   const pendingRecEnginePayloadRef = useRef(null); // stores {jsonData, userQuery} while waiting
   const awaitingFollowupRef = useRef(false);        // true when Maya asked for more info
+  const followupCountRef = useRef(0);               // number of clarifications asked for current design prompt
+  const maxFollowupsPerDesignPromptRef = useRef(1); // one clarification max per design prompt
+
+  const resetFollowupCounterForNextPrompt = () => {
+    followupCountRef.current = 0;
+    awaitingFollowupRef.current = false;
+    pendingRecEnginePayloadRef.current = null;
+    console.log('🔄 [FOLLOWUP COUNTER RESET] Ready for next design prompt.');
+  };
 
   const lastMayaRequestIdRef = useRef("");
   const resultPollIntervalRef = useRef(null);
@@ -1565,6 +1574,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
       awaitingNavigationConfirmRef.current = false;
       hasPendingChangesRef.current = false;
       awaitingSatisfactionRef.current = false;
+      resetFollowupCounterForNextPrompt();
 
       const unrealSend = typeof window.sendToUnreal === 'function' ? window.sendToUnreal : sendMsgToUnreal;
       if (isYes) {
@@ -1588,22 +1598,53 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
     }
 
     // ── Followup answer handler ───────────────────────────────────────────────
-    // User answered Maya's clarifying question.
-    // Merge original query + answer → re-run full pipeline so OpenAI
-    // produces a complete intent → LLM check will confirm → RecEngine fires.
+    // User answered Maya's single style/color clarification.
+    // IMPORTANT: Do NOT send this back into OpenAI again.
+    // Merge original prompt + answer and fire the existing RecEngine/Unreal flow directly.
     if (awaitingFollowupRef.current && pendingRecEnginePayloadRef.current) {
-      const { userQuery: originalQuery } = pendingRecEnginePayloadRef.current;
-      const enrichedQuery = `${originalQuery} ${messageText}`;
+      const { jsonData: originalJson, userQuery: originalQuery } = pendingRecEnginePayloadRef.current;
+      const preferenceAnswer = messageText.trim();
+      const clarificationQuestion = originalJson.reply || '';
+
+      // No fixed style/color wording here. We keep the original user request,
+      // the dynamic question Maya/LLM asked, and the user's answer.
+      const enrichedQuery = [originalQuery, clarificationQuestion, preferenceAnswer]
+        .filter(Boolean)
+        .join(' ');
+
+      const enrichedJson = {
+        ...originalJson,
+        needs_clarification: false,
+        params: {
+          ...(originalJson.params || {}),
+          additional_params: {
+            ...(originalJson.params?.additional_params || {}),
+            clarification_question: clarificationQuestion || null,
+            clarification_answer: preferenceAnswer,
+          },
+        },
+      };
 
       console.log('🧠 [FOLLOWUP] Original query : "' + originalQuery + '"');
-      console.log('🧠 [FOLLOWUP] User answer    : "' + messageText + '"');
-      console.log('🧠 [FOLLOWUP] Enriched query : "' + enrichedQuery + '"');
+      console.log('🧠 [FOLLOWUP] User answer    : "' + preferenceAnswer + '"');
+      console.log('🧠 [FOLLOWUP] Count used     : ' + followupCountRef.current + '/' + maxFollowupsPerDesignPromptRef.current);
+      console.log('🧠 [FOLLOWUP] Sending query  : "' + enrichedQuery + '"');
 
       awaitingFollowupRef.current = false;
       pendingRecEnginePayloadRef.current = null;
+      currentDesignPromptRef.current = { jsonData: enrichedJson, userQuery: enrichedQuery };
+
+      const withUser = [...messagesRef.current, { role: 'user', content: messageText }];
+      setMessages(withUser);
+      messagesRef.current = withUser;
+      setInput('');
+      setRecordedText('');
+
+      // Do not add another fixed assistant line here. The next spoken message
+      // should come from the normal Unreal/result/satisfaction flow.
+      await sendMsgToRecEngine(enrichedJson, enrichedQuery);
 
       isProcessingRef.current = false;
-      sendMessage(enrichedQuery);
       return;
     }
 
@@ -1615,6 +1656,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
       if (isYes) {
         awaitingSatisfactionRef.current = false;
         hasPendingChangesRef.current = false;
+        resetFollowupCounterForNextPrompt();
 
         const withUser = [...messagesRef.current, { role: 'user', content: messageText }];
         setMessages(withUser);
@@ -1637,6 +1679,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
       // User said no — determine intent: navigate away or try a different option
       awaitingSatisfactionRef.current = false;
+      resetFollowupCounterForNextPrompt();
 
       const withUser = [...messagesRef.current, { role: 'user', content: messageText }];
       setMessages(withUser);
@@ -1946,9 +1989,24 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
           userQuery: messageText,
         };
 
-        // ─── UNREAL COMMUNICATION (per spec sheet) ───────────────────────
+        const searchIntentsThatMayNeedPreference = [
+          'change_theme',
+          'selected_swap',
+          'partial_swap',
+          'style_consultation',
+        ];
 
-        if (typeof window.sendToUnreal === 'function') {
+        const canAskAnotherFollowupBeforeUnreal =
+          followupCountRef.current < maxFollowupsPerDesignPromptRef.current;
+
+        const shouldAskStyleColorPreference =
+          searchIntentsThatMayNeedPreference.includes(jsonData.intent) &&
+          jsonData.needs_clarification === true &&
+          canAskAnotherFollowupBeforeUnreal;
+
+        // ─── UNREAL COMMUNICATION (per spec sheet) ───────────────────────
+        // If Maya needs style/color preference, hold Unreal/RecEngine until the user answers.
+        if (typeof window.sendToUnreal === 'function' && !shouldAskStyleColorPreference) {
 
           // 1. NAVIGATE → validate room, then gotoRoom + getRoomCsv
           if (jsonData.intent === 'navigate' && jsonData.params?.room) {
@@ -2014,8 +2072,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
           if (jsonData.intent === 'confirm_order') {
             hasPendingChangesRef.current = false;
             awaitingSatisfactionRef.current = false;
-            awaitingFollowupRef.current = false;
-            pendingRecEnginePayloadRef.current = null;
+            resetFollowupCounterForNextPrompt();
             window.sendToUnreal({ msgType: 'acceptAllChanges' });
             window.sendToUnreal({ msgType: 'getRoomCsv' });
           }
@@ -2024,8 +2081,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
           if (jsonData.intent === 'go_back_original') {
             hasPendingChangesRef.current = false;
             awaitingSatisfactionRef.current = false;
-            awaitingFollowupRef.current = false;
-            pendingRecEnginePayloadRef.current = null;
+            resetFollowupCounterForNextPrompt();
             window.sendToUnreal({ msgType: 'disablePreview' });
           }
         }
@@ -2038,44 +2094,78 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
       setMessages(allMessages);
       messagesRef.current = allMessages;
 
-      // ── LLM INTENT CLARITY CHECK ─────────────────────────────────────────
-      // After OpenAI responds, ask a second small LLM call to read Maya's
-      // reply text and decide: is she asking for more info, or is intent clear?
-      // Zero param checking. Zero hardcoding. Pure language understanding.
+      // ── SINGLE CLARIFICATION GATE ───────────────────────────────────────
+      // Product/design requests may ask exactly one style/color preference question.
+      // Once the user answers, the followup handler above sends directly to RecEngine/Unreal.
       if (pendingRecEnginePayloadRef.current) {
         const { jsonData: pendingJson, userQuery: pendingQuery } = pendingRecEnginePayloadRef.current;
         const pendingIntent = pendingJson?.intent;
-        const mayaReply = pendingJson?.reply || '';
 
-        // Non-search intents — let through immediately, no LLM check needed
         const noSearchNeeded = ['navigate', 'show_preview', 'confirm_order', 'budget_analysis', 'go_back_original', 'change_budget'];
+        const searchIntentsThatMayNeedPreference = [
+          'change_theme',
+          'selected_swap',
+          'partial_swap',
+          'style_consultation',
+        ];
+
+        const clarificationRequested =
+          searchIntentsThatMayNeedPreference.includes(pendingIntent) &&
+          pendingJson?.needs_clarification === true;
+
+        const canAskAnotherFollowup =
+          followupCountRef.current < maxFollowupsPerDesignPromptRef.current;
+
+        const shouldAskStyleColorPreference =
+          clarificationRequested && canAskAnotherFollowup;
+
+        const clarificationLimitReached =
+          clarificationRequested && !canAskAnotherFollowup;
 
         if (noSearchNeeded.includes(pendingIntent)) {
           awaitingFollowupRef.current = false;
           pendingRecEnginePayloadRef.current = null;
           sendMsgToRecEngine(pendingJson, pendingQuery);
           console.log('▶️ [RECENGINE FIRED] Non-search intent, fired immediately.');
+        } else if (shouldAskStyleColorPreference) {
+          followupCountRef.current += 1;
+          awaitingFollowupRef.current = true;
+
+          // Use Maya/LLM's own generated clarification question.
+          // The frontend only controls how many times this can happen.
+          displayText = pendingJson.reply || displayText;
+
+          console.log(
+            '⏸️ [RECENGINE HELD] Dynamic followup ' +
+              followupCountRef.current +
+              '/' +
+              maxFollowupsPerDesignPromptRef.current +
+              '. Stored query: "' +
+              pendingQuery +
+              '"'
+          );
+        } else if (clarificationLimitReached) {
+          awaitingFollowupRef.current = false;
+          pendingRecEnginePayloadRef.current = null;
+
+          const forcedJson = {
+            ...pendingJson,
+            needs_clarification: false,
+          };
+
+          sendMsgToRecEngine(forcedJson, pendingQuery);
+          console.log(
+            '▶️ [RECENGINE FIRED] Clarification limit reached (' +
+              followupCountRef.current +
+              '/' +
+              maxFollowupsPerDesignPromptRef.current +
+              '), forcing send.'
+          );
         } else {
-          // Ask LLM to read Maya's reply and decide
-          console.log('🧠 [LLM INTENT CHECK] Reading Maya reply:', mayaReply);
-
-          const intentClear = await checkIntentClarityViaLLM(mayaReply, OPENAI_API_KEY);
-
-          console.log('🧠 [LLM INTENT CHECK RESULT]', {
-            intentClear,
-            mayaReply,
-            intent: pendingIntent,
-          });
-
-          if (intentClear) {
-            awaitingFollowupRef.current = false;
-            pendingRecEnginePayloadRef.current = null;
-            sendMsgToRecEngine(pendingJson, pendingQuery);
-            console.log('▶️ [RECENGINE FIRED] LLM confirmed intent is clear.');
-          } else {
-            awaitingFollowupRef.current = true;
-            console.log('⏸️ [RECENGINE HELD] LLM says Maya needs more info. Stored query: "' + pendingQuery + '"');
-          }
+          awaitingFollowupRef.current = false;
+          pendingRecEnginePayloadRef.current = null;
+          sendMsgToRecEngine(pendingJson, pendingQuery);
+          console.log('▶️ [RECENGINE FIRED] Intent has enough detail, fired immediately.');
         }
       }
 
