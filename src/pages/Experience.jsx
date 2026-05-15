@@ -334,6 +334,7 @@ export default function Experience() {
   const userInteractedRef = useRef(false);
   const pendingSequenceRef = useRef(false);
   const sequenceRunningRef = useRef(false);
+  const finishedParsingTimerRef = useRef(null);
 
   const [phase, setPhase] = useState("connecting");
 
@@ -711,13 +712,18 @@ export default function Experience() {
 
         if (msg.type === "finishedParsingReplacementCsv") {
           // TODO: Enable the transforming 3..2..1 transition in UI
-          const previewChangesJson = {
-            msgType: "previewChanges",
-          };
-          sendMsgToUnreal(previewChangesJson);
-          
-          console.log("✅ Experience.jsx: finishedParsingReplacementCsv — dispatching CustomEvent");
-          window.dispatchEvent(new CustomEvent('finishedParsingReplacementCsv'));
+          // Debounce: Unreal fires this once per category in the batch; only send
+          // previewChanges + CustomEvent once after all categories have finished.
+          clearTimeout(finishedParsingTimerRef.current);
+          finishedParsingTimerRef.current = setTimeout(() => {
+            const previewChangesJson = {
+              msgType: "previewChanges",
+            };
+            sendMsgToUnreal(previewChangesJson);
+            console.log("✅ Experience.jsx: finishedParsingReplacementCsv — dispatching CustomEvent");
+            window.dispatchEvent(new CustomEvent('finishedParsingReplacementCsv'));
+            finishedParsingTimerRef.current = null;
+          }, 300);
           return;
         }
 

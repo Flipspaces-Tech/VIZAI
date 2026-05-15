@@ -1404,7 +1404,12 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
       const result = await res.json().catch(() => null);
       console.log("✅ Receiver status:", res.status, result);
 
-      startPollingForResult(payloadWithId.request_id);
+      // Non-search intents (navigate, confirm_order, etc.) only need to notify the
+      // backend — they must NOT apply furniture recommendations from the response.
+      const noSearchIntents = ['navigate', 'show_preview', 'confirm_order', 'budget_analysis', 'go_back_original', 'change_budget'];
+      if (!noSearchIntents.includes(jsonData.intent)) {
+        startPollingForResult(payloadWithId.request_id);
+      }
     } catch (err) {
       console.error("Failed to post:", err);
     }
@@ -1570,11 +1575,14 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
       awaitingSatisfactionRef.current = false;
       resetFollowupCounterForNextPrompt();
 
-      if (isYes && typeof window.sendToUnreal === 'function') {
-        window.sendToUnreal({ msgType: 'acceptAllChanges' });
+      const unrealSend = typeof window.sendToUnreal === 'function' ? window.sendToUnreal : sendMsgToUnreal;
+      if (isYes) {
+        unrealSend({ msgType: 'acceptAllChanges' });
+      } else {
+        unrealSend({ msgType: 'disablePreview' });
       }
-      if (room && typeof window.sendToUnreal === 'function') {
-        window.sendToUnreal({ msgType: 'gotoRoom', targetRoom: room.original });
+      if (room) {
+        unrealSend({ msgType: 'gotoRoom', targetRoom: room.original });
       }
 
       const reply = isYes
@@ -1655,10 +1663,9 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         setInput('');
         setRecordedText('');
 
-        if (typeof window.sendToUnreal === 'function') {
-          window.sendToUnreal({ msgType: 'acceptAllChanges' });
-          window.sendToUnreal({ msgType: 'getRoomCsv' });
-        }
+        const unrealSend = typeof window.sendToUnreal === 'function' ? window.sendToUnreal : sendMsgToUnreal;
+        unrealSend({ msgType: 'acceptAllChanges' });
+        unrealSend({ msgType: 'getRoomCsv' });
 
         const reply = "Applied. And for the record — excellent call.";
         const withMaya = [...messagesRef.current, { role: 'assistant', content: '' }];
@@ -1686,31 +1693,46 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
       const isDifferentOption = !isNavigationNo && altKeywords.some(kw => lower.includes(kw));
 
       if (isNavigationNo) {
-        hasPendingChangesRef.current = false;
-        if (typeof window.sendToUnreal === 'function') {
-          window.sendToUnreal({ msgType: 'disablePreview' });
-        }
         const rooms = availableRoomsRef.current;
         const normStr = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
         const userNorm = normStr(lower);
         const foundRoom = rooms.find(r =>
           userNorm.includes(normStr(r.display)) || userNorm.includes(normStr(r.original))
         );
-        let noReply;
-        if (foundRoom) {
-          if (typeof window.sendToUnreal === 'function') {
-            window.sendToUnreal({ msgType: 'gotoRoom', targetRoom: foundRoom.original });
-            window.sendToUnreal({ msgType: 'getRoomCsv' });
-          }
-          noReply = `On our way to the ${foundRoom.display}.`;
+
+        const noKeywords = ['no', 'nope', 'nah', 'don\'t', 'dont', 'not happy', 'not satisfied', 'discard', 'revert'];
+        const isExplicitNo = noKeywords.some(kw => lower.includes(kw));
+        const unrealSend = typeof window.sendToUnreal === 'function' ? window.sendToUnreal : sendMsgToUnreal;
+
+        if (foundRoom && isExplicitNo) {
+          hasPendingChangesRef.current = false;
+          unrealSend({ msgType: 'disablePreview' });
+          unrealSend({ msgType: 'gotoRoom', targetRoom: foundRoom.original });
+          unrealSend({ msgType: 'getRoomCsv' });
+          const withMayaNav = [...messagesRef.current, { role: 'assistant', content: '' }];
+          setMessages(withMayaNav);
+          messagesRef.current = withMayaNav;
+          speakText(`On our way to the ${foundRoom.display}.`, `On our way to the ${foundRoom.display}.`);
+        } else if (foundRoom) {
+          pendingNavigationRoomRef.current = foundRoom;
+          awaitingNavigationConfirmRef.current = true;
+          const cleanName = (n) => n.replace(/vizwalkai_db_/gi, '').replace(/_product_ai_sku/gi, '').replace(/[_-]/g, ' ').toLowerCase().trim();
+          const cats = lastChangedCategories;
+          const itemDesc = cats.length === 1 ? `the ${cleanName(cats[0])} update` : 'these updates';
+          const confirmMsg = `Sure! Just to confirm — are we keeping ${itemDesc} as we head to the ${foundRoom.display}?`;
+          const withMayaNav = [...messagesRef.current, { role: 'assistant', content: '' }];
+          setMessages(withMayaNav);
+          messagesRef.current = withMayaNav;
+          speakText(confirmMsg, confirmMsg);
         } else {
+          hasPendingChangesRef.current = false;
+          unrealSend({ msgType: 'disablePreview' });
           awaitingRoomSelectionRef.current = true;
-          noReply = "Of course — which room shall we head to?";
+          const withMayaNav = [...messagesRef.current, { role: 'assistant', content: '' }];
+          setMessages(withMayaNav);
+          messagesRef.current = withMayaNav;
+          speakText("Of course — which room shall we head to?", "Of course — which room shall we head to?");
         }
-        const withMayaNav = [...messagesRef.current, { role: 'assistant', content: '' }];
-        setMessages(withMayaNav);
-        messagesRef.current = withMayaNav;
-        speakText(noReply, noReply);
         isProcessingRef.current = false;
         return;
       }
@@ -2327,7 +2349,7 @@ const styles = {
   overlayRoot: {
     position: 'fixed',
     inset: 0,
-    pointerEvents: 'auto',
+    pointerEvents: 'none',
     zIndex: 9999,
     display: 'flex',
     flexDirection: 'column',
