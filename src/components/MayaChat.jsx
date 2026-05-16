@@ -269,6 +269,8 @@ function onReceivedMsgFromRecEngine(apiResponse, sendUpdatedCSVRowsToUnreal) {
   console.log(csvRowsArray.slice(0, 3));
 
   // ========== SEND TO UNREAL VIA EXPERIENCE.JSX ==========
+  const blurEl = document.getElementById('maya-blur-overlay');
+  if (blurEl) { blurEl.style.opacity = '1'; blurEl.style.pointerEvents = 'all'; }
   sendUpdatedCSVRowsToUnreal(csvRowsArray);
 }
 
@@ -626,6 +628,10 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
   useEffect(() => {
     const handleFinishedParsing = () => {
+      setTimeout(() => {
+        const blurEl = document.getElementById('maya-blur-overlay');
+        if (blurEl) { blurEl.style.opacity = '0'; blurEl.style.pointerEvents = 'none'; }
+      }, 2000);
       hasPendingChangesRef.current = true;
       awaitingSatisfactionRef.current = true;
 
@@ -1406,7 +1412,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
       // Non-search intents (navigate, confirm_order, etc.) only need to notify the
       // backend — they must NOT apply furniture recommendations from the response.
-      const noSearchIntents = ['navigate', 'show_preview', 'confirm_order', 'budget_analysis', 'go_back_original', 'change_budget'];
+      const noSearchIntents = ['navigate', 'confirm_order', 'budget_analysis', 'go_back_original', 'change_budget'];
       if (!noSearchIntents.includes(jsonData.intent)) {
         awaitingSatisfactionRef.current = true;
         startPollingForResult(payloadWithId.request_id);
@@ -2101,7 +2107,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         const { jsonData: pendingJson, userQuery: pendingQuery } = pendingRecEnginePayloadRef.current;
         const pendingIntent = pendingJson?.intent;
 
-        const noSearchNeeded = ['navigate', 'show_preview', 'confirm_order', 'budget_analysis', 'go_back_original', 'change_budget'];
+        const noSearchNeeded = ['navigate', 'confirm_order', 'budget_analysis', 'go_back_original', 'change_budget'];
         const searchIntentsThatMayNeedPreference = [
           'change_theme',
           'selected_swap',
@@ -2218,6 +2224,31 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
           30%            { transform: translateY(-5px); opacity: 1; }
         }
       `}</style>
+      <div
+        id="maya-blur-overlay"
+        style={{
+          position: 'fixed',
+          inset: 0,
+          backdropFilter: 'blur(18px)',
+          WebkitBackdropFilter: 'blur(18px)',
+          zIndex: 9999,
+          pointerEvents: 'none',
+          opacity: 0,
+          transition: 'opacity 0.4s ease',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <span style={{
+          color: '#ffffff',
+          fontSize: 24,
+          fontWeight: 400,
+          letterSpacing: '0.04em',
+        }}>
+          Transforming your scene...
+        </span>
+      </div>
       <div
         style={styles.overlayRoot}
         ref={panelRef}
@@ -2346,7 +2377,7 @@ const styles = {
     position: 'fixed',
     inset: 0,
     pointerEvents: 'none',
-    zIndex: 9999,
+    zIndex: 9998,
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'flex-end',
