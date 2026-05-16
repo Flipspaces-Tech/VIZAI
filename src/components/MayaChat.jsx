@@ -39,7 +39,7 @@ const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbw_elUc3irWx6y
 // CSV STORAGE FUNCTIONS
 // ============================================================================
 
-function storeRoomCSV(parsedRows) {
+function storeRoomCSV(parsedRows, currentRoomName) {
   console.log('\n╔════════════════════════════════════════╗');
   console.log('║ 📥 CSV RECEIVED FROM UNREAL            ║');
   console.log('╚════════════════════════════════════════╝\n');
@@ -57,6 +57,9 @@ function storeRoomCSV(parsedRows) {
   window.csvStorage = csvStorage;
 
   console.log(`✅ CSV Stored Successfully: ${csvStorage.original.length} data rows\n`);
+
+  // ✅ Auto price summary: logs by default as soon as CSV arrives from Unreal.
+  logPriceSummaryToConsole(csvStorage.current || csvStorage.original || [], currentRoomName, 'CSV_RECEIVED_FROM_UNREAL');
 
   const exported = {
     csvRows: csvStorage.current,
@@ -83,7 +86,7 @@ function storeRoomCSV(parsedRows) {
 // FIXED: onReceivedMsgFromRecEngine() - NO DOUBLE ESCAPING
 // ============================================================================
 
-function onReceivedMsgFromRecEngine(apiResponse, sendUpdatedCSVRowsToUnreal) {
+function onReceivedMsgFromRecEngine(apiResponse, sendUpdatedCSVRowsToUnreal, currentRoomName) {
   console.log("\n╔════════════════════════════════════════════════════╗");
   console.log("║ 🎯 POPULATING RECOMMENDATIONS FROM API             ║");
   console.log("╚════════════════════════════════════════════════════╝\n");
@@ -155,18 +158,52 @@ function onReceivedMsgFromRecEngine(apiResponse, sendUpdatedCSVRowsToUnreal) {
 
     console.log(`   Finish type: ${isStaticMesh ? "StaticMesh" : "Non-StaticMesh (FAbric/BodyFabric/etc)"}`);
 
-    if (apiCategory && apiCategory.skus && apiCategory.skus.length > 0) {
-      const apiSku = apiCategory.skus[0];
+    // ========== PICK TOP API ITEM ==========
+    // New preferred format from RecEngine:
+    // items: [{ sku, price, name/displayName/productName, type, category }]
+    // Old fallback format:
+    // skus: ["CH11", "CH04", ...]
+    const apiItems = Array.isArray(apiCategory?.items) ? apiCategory.items : [];
+    const apiSkus = Array.isArray(apiCategory?.skus) ? apiCategory.skus : [];
+    const topApiItem = apiItems.length > 0
+      ? apiItems[0]
+      : (apiSkus.length > 0 ? { sku: apiSkus[0] } : null);
+
+    const apiSku = String(topApiItem?.sku || "").trim();
+    const apiPrice = topApiItem?.price ?? "";
+    const apiName = String(
+      topApiItem?.name ||
+      topApiItem?.displayName ||
+      topApiItem?.DisplayName ||
+      topApiItem?.productName ||
+      topApiItem?.ProductName ||
+      ""
+    ).trim();
+
+    if (apiCategory && apiSku) {
       console.log(`   → Top API SKU: "${apiSku}"`);
+      console.log(`   → Top API Price: "${apiPrice}"`);
+      console.log(`   → Top API Name: "${apiName || "NOT PROVIDED"}"`);
 
       if (isStaticMesh) {
-        // ✅ StaticMeshComponent0 rows: UpdatedProductSKU = original ProductSKU
+        // StaticMeshComponent rows: keep original product row values.
+        // Only UpdatedFinishes gets the API SKU replacement below.
+        updatedProductName = productName;
         updatedProductSKU = productSku;
+        updatedProductPrice = productPrice;
+        console.log(`   → UpdatedProductName: "${updatedProductName}" (original, StaticMesh row)`);
         console.log(`   → UpdatedProductSKU: "${updatedProductSKU}" (original, StaticMesh row)`);
+        console.log(`   → UpdatedProductPrice: "${updatedProductPrice}" (original, StaticMesh row)`);
       } else {
-        // ✅ Non-StaticMesh rows (FAbric, BodyFabric, TableTop, etc.): UpdatedProductSKU = top API SKU
+        // Non-StaticMesh rows: update name, SKU, and price from top API item.
+        updatedProductName = apiName || productName;
         updatedProductSKU = apiSku;
-        console.log(`   → UpdatedProductSKU: "${updatedProductSKU}" (API SKU, non-StaticMesh row)`);
+        updatedProductPrice = apiPrice !== "" && apiPrice !== null && apiPrice !== undefined
+          ? String(apiPrice)
+          : productPrice;
+        console.log(`   → UpdatedProductName: "${updatedProductName}" (API item, non-StaticMesh row)`);
+        console.log(`   → UpdatedProductSKU: "${updatedProductSKU}" (API item, non-StaticMesh row)`);
+        console.log(`   → UpdatedProductPrice: "${updatedProductPrice}" (API item, non-StaticMesh row)`);
       }
 
       if (finishes && finishes.trim()) {
@@ -184,13 +221,13 @@ function onReceivedMsgFromRecEngine(apiResponse, sendUpdatedCSVRowsToUnreal) {
           if (!partName) return "";
 
           if (partName.toLowerCase().startsWith("staticmeshcomponent")) {
-            // ✅ StaticMesh parts → replace SKU with top API SKU
+            // StaticMesh parts -> replace SKU with top API SKU
             const rebuilt = `${partName}:NOT_FOUND:${apiSku}`;
             console.log(`   Part "${part.trim()}" → "${rebuilt}" (StaticMesh → API SKU)`);
             return rebuilt;
           }
 
-          // ✅ Non-StaticMesh parts (FAbric, BodyFabric, TableTop, etc.) → copy as-is
+          // Non-StaticMesh parts (FAbric, BodyFabric, TableTop, etc.) -> copy as-is
           console.log(`   Part "${part.trim()}" → kept as-is (non-StaticMesh)`);
           return part.trim();
         });
@@ -237,6 +274,14 @@ function onReceivedMsgFromRecEngine(apiResponse, sendUpdatedCSVRowsToUnreal) {
 
     return updatedRow;
   });
+
+  // Store the full updated state so price queries use the latest accepted/preview values.
+  csvStorage.current = updatedRows;
+  csvStorage.currentState = 'recommendations_applied';
+  window.csvStorage = csvStorage;
+
+  // ✅ Auto price summary: logs by default after recommendation updates the CSV state.
+  logPriceSummaryToConsole(csvStorage.current || [], currentRoomName, 'RECOMMENDATIONS_APPLIED');
 
   // ========== FILTER: ONLY SEND ROWS WHOSE CATEGORY MATCHED THE API ==========
   const matchedCategories = new Set(
@@ -346,7 +391,7 @@ const SILENCE_TIMEOUT = 2000;
 const NOISE_THRESHOLD = 50;
 const SPEECH_CONFIDENCE_THRESHOLD = 0.45;
 const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY || '';
-const RECEIVER_API_URL = 'https://maya-receiver-api.onrender.com';  //"http://localhost:8000";
+const RECEIVER_API_URL = 'http://localhost:8000';  //"http://localhost:8000"; https://maya-receiver-api.onrender.com
 
 // ============================================================================
 // INTENT CLARITY CHECK — LLM reads Maya's reply and decides
@@ -493,6 +538,527 @@ function MayaBubbleIcon({ state }) {
       style={{ objectFit: 'contain' }}
     />
   );
+}
+
+
+// ============================================================================
+// PRICE / BUDGET CALCULATION HELPERS
+// ============================================================================
+
+function normalizePriceText(value) {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/[_-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function compactText(value) {
+  return normalizePriceText(value).replace(/[^a-z0-9]/g, '');
+}
+
+function parseCsvNumber(value) {
+  if (value === null || value === undefined) return 0;
+
+  const raw = String(value).trim();
+  if (!raw || raw.toUpperCase() === 'NOT_FOUND') return 0;
+
+  const cleaned = raw
+    .replace(/₹/g, '')
+    .replace(/,/g, '')
+    .replace(/\s+/g, '')
+    .trim();
+
+  // IMPORTANT:
+  // CSV price/quantity must be a clean positive number only.
+  // Do NOT extract numbers from SKU/finish strings like P-LIG-DEC-WALL-3306028.
+  if (!/^\d+(\.\d+)?$/.test(cleaned)) return 0;
+
+  const num = Number(cleaned);
+  return Number.isFinite(num) ? Math.max(0, num) : 0;
+}
+
+function formatINR(value) {
+  const rounded = Math.round(Number(value || 0));
+  return `₹${rounded.toLocaleString('en-IN')}`;
+}
+
+function getRowField(row, names) {
+  for (const name of names) {
+    if (row && Object.prototype.hasOwnProperty.call(row, name)) return row[name];
+  }
+  return '';
+}
+
+function getEffectiveUnitPrice(row) {
+  // PRICE SUMMARY RULE:
+  // Use ONLY the original CSV calculation column: ProductPrice.
+  // Do NOT use UpdatedProductPrice, Area, SKU, or Finishes for calculation.
+  return parseCsvNumber(getRowField(row, [
+    'ProductPrice',
+    'productPrice',
+  ]));
+}
+
+function getEffectiveQuantity(row) {
+  // PRICE SUMMARY RULE:
+  // Use ONLY the original CSV calculation column: ProductQuantity.
+  // Do NOT use UpdatedProductQuantity or Area for calculation.
+  const qty = parseCsvNumber(getRowField(row, [
+    'ProductQuantity',
+    'productQuantity',
+  ]));
+
+  return qty > 0 ? qty : 1;
+}
+
+function getEffectiveProductName(row) {
+  // Display only original ProductName in price summary.
+  return String(getRowField(row, [
+    'ProductName',
+    'productName',
+  ]) || '').trim();
+}
+
+function getEffectiveProductSKU(row) {
+  // Display only original ProductSKU in price summary.
+  return String(getRowField(row, [
+    'ProductSKU',
+    'productSku',
+  ]) || '').trim();
+}
+
+function getPriceRowsFromStorage() {
+  const rows = csvStorage.current || csvStorage.original || [];
+  return Array.isArray(rows) ? rows : [];
+}
+
+function getKnownCategoriesFromRows(rows) {
+  const set = new Set();
+  rows.forEach((row) => {
+    const cat = String(getRowField(row, ['Category', 'category']) || '').trim();
+    if (cat && cat.toUpperCase() !== 'NOT_FOUND') set.add(cat);
+  });
+  return [...set];
+}
+
+function findRoomInPrompt(messageText, roomNamesList = [], rows = []) {
+  const textCompact = compactText(messageText);
+  const candidates = [];
+
+  (roomNamesList || []).forEach((room) => {
+    if (!room) return;
+    candidates.push(String(room));
+    candidates.push(String(room).replace(/([a-z])([A-Z])/g, '$1 $2'));
+  });
+
+  rows.forEach((row) => {
+    const space = String(getRowField(row, ['SpaceName', 'spaceName', 'RoomName', 'roomName']) || '').trim();
+    if (space) {
+      candidates.push(space);
+      candidates.push(space.replace(/([a-z])([A-Z])/g, '$1 $2'));
+    }
+  });
+
+  const unique = [...new Set(candidates.filter(Boolean))];
+  return unique.find((room) => textCompact.includes(compactText(room))) || '';
+}
+
+function findCategoryInPrompt(messageText, rows = []) {
+  const textCompact = compactText(messageText);
+  const categories = getKnownCategoriesFromRows(rows);
+
+  const aliasMap = {
+    'conference table': ['conference table', 'conferencetable', 'meeting table'],
+    'accentwall': ['accent wall', 'accentwall', 'feature wall'],
+    'planters': ['planter', 'planters', 'plant'],
+    'painting': ['painting', 'paintings', 'art', 'artwork'],
+    'chair': ['chair', 'chairs', 'seating'],
+    'sofa': ['sofa', 'sofas', 'couch'],
+    'floor': ['floor', 'flooring'],
+    'wall': ['wall', 'walls'],
+    'ceiling': ['ceiling'],
+    'light': ['light', 'lights', 'lighting'],
+    'table': ['table', 'tables'],
+  };
+
+  for (const category of categories) {
+    const catCompact = compactText(category);
+    const catNormal = normalizePriceText(category);
+    const aliases = aliasMap[catCompact] || aliasMap[catNormal] || [category];
+    if (aliases.some((alias) => textCompact.includes(compactText(alias)))) {
+      return category;
+    }
+  }
+
+  for (const [key, aliases] of Object.entries(aliasMap)) {
+    if (aliases.some((alias) => textCompact.includes(compactText(alias)))) {
+      const matchedExisting = categories.find((cat) => compactText(cat) === compactText(key));
+      return matchedExisting || key;
+    }
+  }
+
+  return '';
+}
+
+function detectPricePrompt(messageText, currentRoomName, roomNamesList = []) {
+  const rows = getPriceRowsFromStorage();
+  const text = normalizePriceText(messageText);
+
+  const isPricePrompt = [
+    'price',
+    'cost',
+    'budget',
+    'total',
+    'how much',
+    'amount',
+    'estimate',
+    'quotation',
+    'quote',
+  ].some((word) => text.includes(word));
+
+  if (!isPricePrompt) return null;
+  if (!rows.length) {
+    return { scope: 'missing_csv', roomName: '', category: '' };
+  }
+
+  const foundRoom = findRoomInPrompt(messageText, roomNamesList, rows);
+  const foundCategory = findCategoryInPrompt(messageText, rows);
+
+  const asksEntireLevel = [
+    'entire level',
+    'whole level',
+    'full level',
+    'overall',
+    'all rooms',
+    'entire floor',
+    'whole floor',
+    'complete level',
+    'total level',
+    'full project',
+  ].some((phrase) => text.includes(phrase));
+
+  const asksCurrentRoom = [
+    'current room',
+    'this room',
+    'current space',
+    'this space',
+    'here',
+  ].some((phrase) => text.includes(phrase));
+
+  if (asksEntireLevel && !foundRoom) {
+    return {
+      scope: foundCategory ? 'level_category' : 'level',
+      roomName: '',
+      category: foundCategory || '',
+    };
+  }
+
+  if (foundCategory) {
+    return {
+      scope: 'category',
+      roomName: foundRoom || currentRoomName || '',
+      category: foundCategory,
+    };
+  }
+
+  if (foundRoom || asksCurrentRoom) {
+    return {
+      scope: 'room',
+      roomName: foundRoom || currentRoomName || '',
+      category: '',
+    };
+  }
+
+  return {
+    scope: 'level',
+    roomName: '',
+    category: '',
+  };
+}
+
+function calculateCsvPrice({ rows, roomName = '', category = '' }) {
+  const roomFilter = compactText(roomName);
+  const categoryFilter = compactText(category);
+
+  let matchedRows = Array.isArray(rows) ? [...rows] : [];
+
+  if (roomFilter) {
+    matchedRows = matchedRows.filter((row) => {
+      const rowRoom = compactText(getRowField(row, ['SpaceName', 'spaceName', 'RoomName', 'roomName']));
+      return rowRoom === roomFilter || rowRoom.includes(roomFilter) || roomFilter.includes(rowRoom);
+    });
+  }
+
+  if (categoryFilter) {
+    matchedRows = matchedRows.filter((row) => {
+      const rowCategory = compactText(getRowField(row, ['Category', 'category']));
+      return rowCategory === categoryFilter || rowCategory.includes(categoryFilter) || categoryFilter.includes(rowCategory);
+    });
+  }
+
+  let total = 0;
+  const breakdownMap = new Map();
+
+  matchedRows.forEach((row) => {
+    const unitPrice = getEffectiveUnitPrice(row);
+    const qty = getEffectiveQuantity(row);
+    const lineTotal = Math.max(0, unitPrice * qty);
+    const rowCategory = String(getRowField(row, ['Category', 'category']) || 'Unknown').trim() || 'Unknown';
+
+    total += lineTotal;
+
+    const existing = breakdownMap.get(rowCategory) || {
+      category: rowCategory,
+      total: 0,
+      rows: 0,
+      quantity: 0,
+      items: [],
+    };
+
+    existing.total += lineTotal;
+    existing.rows += 1;
+    existing.quantity += qty;
+    existing.items.push({
+      room: String(getRowField(row, ['SpaceName', 'spaceName', 'RoomName', 'roomName']) || '').trim(),
+      category: rowCategory,
+      name: getEffectiveProductName(row),
+      sku: getEffectiveProductSKU(row),
+      unitPrice,
+      quantity: qty,
+      lineTotal,
+    });
+
+    breakdownMap.set(rowCategory, existing);
+  });
+
+  const breakdown = [...breakdownMap.values()].sort((a, b) => b.total - a.total);
+
+  return {
+    total,
+    matchedRowsCount: matchedRows.length,
+    breakdown,
+    matchedRows,
+  };
+}
+
+
+function rowsToConsoleBreakdown(rows = []) {
+  return (Array.isArray(rows) ? rows : []).map((row, index) => {
+    const unitPrice = getEffectiveUnitPrice(row);
+    const quantity = getEffectiveQuantity(row);
+    const lineTotal = Math.max(0, unitPrice * quantity);
+
+    return {
+      '#': index + 1,
+      SpaceName: String(getRowField(row, ['SpaceName', 'spaceName', 'RoomName', 'roomName']) || '').trim(),
+      Category: String(getRowField(row, ['Category', 'category']) || '').trim(),
+      ProductName: getEffectiveProductName(row),
+      SKU: getEffectiveProductSKU(row),
+      Quantity: quantity,
+      UnitPrice: unitPrice,
+      LineTotal: lineTotal,
+      LineTotalFormatted: formatINR(lineTotal),
+    };
+  });
+}
+
+function categoryTotalsToConsoleTable(priceResult) {
+  const rows = {};
+  (priceResult?.breakdown || []).forEach((b) => {
+    rows[b.category] = {
+      rows: b.rows,
+      quantity: b.quantity,
+      total: b.total,
+      formatted: formatINR(b.total),
+    };
+  });
+  return rows;
+}
+
+function roomTotalsToConsoleTable(rows = []) {
+  const roomMap = new Map();
+
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const roomName = String(getRowField(row, ['SpaceName', 'spaceName', 'RoomName', 'roomName']) || 'Unknown').trim() || 'Unknown';
+    const category = String(getRowField(row, ['Category', 'category']) || 'Unknown').trim() || 'Unknown';
+    const unitPrice = getEffectiveUnitPrice(row);
+    const quantity = getEffectiveQuantity(row);
+    const lineTotal = Math.max(0, unitPrice * quantity);
+
+    const existing = roomMap.get(roomName) || {
+      room: roomName,
+      rows: 0,
+      quantity: 0,
+      total: 0,
+      formatted: formatINR(0),
+      categories: {},
+    };
+
+    existing.rows += 1;
+    existing.quantity += quantity;
+    existing.total += lineTotal;
+    existing.formatted = formatINR(existing.total);
+
+    if (!existing.categories[category]) {
+      existing.categories[category] = {
+        rows: 0,
+        quantity: 0,
+        total: 0,
+        formatted: formatINR(0),
+      };
+    }
+
+    existing.categories[category].rows += 1;
+    existing.categories[category].quantity += quantity;
+    existing.categories[category].total += lineTotal;
+    existing.categories[category].formatted = formatINR(existing.categories[category].total);
+
+    roomMap.set(roomName, existing);
+  });
+
+  const table = {};
+  [...roomMap.values()]
+    .sort((a, b) => b.total - a.total)
+    .forEach((room) => {
+      table[room.room] = {
+        rows: room.rows,
+        quantity: room.quantity,
+        total: room.total,
+        formatted: room.formatted,
+      };
+    });
+
+  return table;
+}
+
+function logEveryRoomCategoryTotals(rows = []) {
+  const roomMap = new Map();
+
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const roomName = String(getRowField(row, ['SpaceName', 'spaceName', 'RoomName', 'roomName']) || 'Unknown').trim() || 'Unknown';
+    const category = String(getRowField(row, ['Category', 'category']) || 'Unknown').trim() || 'Unknown';
+    const unitPrice = getEffectiveUnitPrice(row);
+    const quantity = getEffectiveQuantity(row);
+    const lineTotal = Math.max(0, unitPrice * quantity);
+
+    if (!roomMap.has(roomName)) roomMap.set(roomName, new Map());
+    const categoryMap = roomMap.get(roomName);
+
+    const existing = categoryMap.get(category) || {
+      rows: 0,
+      quantity: 0,
+      total: 0,
+      formatted: formatINR(0),
+    };
+
+    existing.rows += 1;
+    existing.quantity += quantity;
+    existing.total += lineTotal;
+    existing.formatted = formatINR(existing.total);
+
+    categoryMap.set(category, existing);
+  });
+
+  [...roomMap.entries()].forEach(([roomName, categoryMap]) => {
+    const roomCategoryTable = {};
+    [...categoryMap.entries()]
+      .sort((a, b) => b[1].total - a[1].total)
+      .forEach(([category, data]) => {
+        roomCategoryTable[category] = data;
+      });
+
+    console.log(`💰 Category totals for room: ${roomName}`);
+    console.table(roomCategoryTable);
+  });
+}
+
+function logPriceSummaryToConsole(rows = [], currentRoomName, source = 'AUTO') {
+  const safeRows = Array.isArray(rows) ? rows : [];
+
+  console.log('\n╔════════════════════════════════════════════════════╗');
+  console.log(`║ 💰 AUTO PRICE SUMMARY — ${source}`);
+  console.log('║ Calculation uses ONLY: SpaceName, Category, ProductName, ProductSKU, ProductPrice, ProductQuantity, Finishes');
+  console.log('╚════════════════════════════════════════════════════╝');
+
+  if (!safeRows.length) {
+    console.log('💰 No CSV rows available yet.');
+    return;
+  }
+
+  const levelResult = calculateCsvPrice({ rows: safeRows });
+  console.log('💰 Entire level total:', levelResult.total);
+  console.log('💰 Entire level total formatted:', formatINR(levelResult.total));
+  console.log('💰 Entire level row count:', levelResult.matchedRowsCount);
+
+  // ✅ Current/specific room summary is printed near the top by default.
+  // It uses the room name passed from Experience.jsx as currentRoomName.
+  const cleanedRoom = String(currentRoomName || '').trim();
+  if (cleanedRoom) {
+    const roomResult = calculateCsvPrice({ rows: safeRows, roomName: cleanedRoom });
+    console.log('💰 Current/specific room:', cleanedRoom);
+    console.log('💰 Current/specific room total:', roomResult.total);
+    console.log('💰 Current/specific room total formatted:', formatINR(roomResult.total));
+    console.log('💰 Current/specific room row count:', roomResult.matchedRowsCount);
+    console.log('💰 Category totals for current/specific room:');
+    console.table(categoryTotalsToConsoleTable(roomResult));
+  } else {
+    console.log('💰 Current/specific room: NOT_AVAILABLE');
+    console.log('💰 Current/specific room total: 0');
+    console.log('💰 Current/specific room total formatted:', formatINR(0));
+    console.log('💰 Current/specific room row count: 0');
+    console.log('⚠️ currentRoomName was not passed to MayaChat. Total price for every room is still shown below.');
+  }
+
+  console.log('💰 Category totals for entire level:');
+  console.table(categoryTotalsToConsoleTable(levelResult));
+
+  console.log('💰 Total price for every room:');
+  console.table(roomTotalsToConsoleTable(safeRows));
+
+  logEveryRoomCategoryTotals(safeRows);
+
+  console.log('💰 Row-wise price breakdown:');
+  console.table(rowsToConsoleBreakdown(safeRows));
+  console.log('💰 =================================================\n');
+}
+function buildPriceReply(priceIntent, priceResult) {
+  if (priceIntent.scope === 'missing_csv') {
+    return "I need the room CSV first — ask Unreal for the room data, then I can price it properly.";
+  }
+
+  if (!priceResult.matchedRowsCount) {
+    if (priceIntent.scope === 'category') {
+      return `I couldn't find ${priceIntent.category || 'that category'} in ${priceIntent.roomName || 'this room'} — the budget drama will have to wait.`;
+    }
+    if (priceIntent.scope === 'room') {
+      return `I couldn't find rows for ${priceIntent.roomName || 'this room'} yet — send me the room CSV and I'll do the math.`;
+    }
+    return "I couldn't find usable price rows yet — the CSV needs prices before I can total it.";
+  }
+
+  const topBreakdown = priceResult.breakdown
+    .slice(0, 3)
+    .map((b) => `${b.category}: ${formatINR(b.total)}`)
+    .join(', ');
+
+  if (priceIntent.scope === 'level') {
+    return `The entire level is coming to ${formatINR(priceResult.total)}. Top buckets — ${topBreakdown}.`;
+  }
+
+  if (priceIntent.scope === 'level_category') {
+    return `${priceIntent.category} across the level is coming to ${formatINR(priceResult.total)} across ${priceResult.matchedRowsCount} row${priceResult.matchedRowsCount === 1 ? '' : 's'}.`;
+  }
+
+  if (priceIntent.scope === 'room') {
+    return `${priceIntent.roomName || 'This room'} is coming to ${formatINR(priceResult.total)}. Top buckets — ${topBreakdown}.`;
+  }
+
+  if (priceIntent.scope === 'category') {
+    return `${priceIntent.category} in ${priceIntent.roomName || 'this room'} is coming to ${formatINR(priceResult.total)} across ${priceResult.matchedRowsCount} row${priceResult.matchedRowsCount === 1 ? '' : 's'}.`;
+  }
+
+  return `The total is ${formatINR(priceResult.total)}.`;
 }
 
 // ============================================================================
@@ -694,7 +1260,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
             console.log('Sample row:', results.data[0]);
 
             // Store properly parsed objects
-            storeRoomCSV(results.data);
+            storeRoomCSV(results.data, currentRoomName);
             setCSVStatus(getCsvStatus());
           } else {
             console.error('❌ PapaParse returned no data');
@@ -1032,7 +1598,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
           console.log("✅ RESULT RECEIVED FROM API");
           console.log(JSON.stringify(data.data, null, 2));
 
-          onReceivedMsgFromRecEngine(data.data, sendUpdatedCSVRowsToUnreal);
+          onReceivedMsgFromRecEngine(data.data, sendUpdatedCSVRowsToUnreal, currentRoomName);
           setCSVStatus(getCsvStatus());
 
           window.lastMayaSearchResult = data.data;
@@ -1556,6 +2122,43 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
     stopListeningImmediately();
     setListeningMode('thinking');
+
+    // ── Price / budget query handler ─────────────────────────────────────────
+    // Handles:
+    // 1) Total price for entire level
+    // 2) Total price for current/specific room
+    // 3) Price of a specific category in the room
+    // This does NOT call OpenAI or RecEngine. It calculates from csvStorage.
+    const priceIntent = detectPricePrompt(messageText, currentRoomName, roomNames || []);
+    if (priceIntent) {
+      const withUser = [...messagesRef.current, { role: 'user', content: messageText }];
+      setMessages(withUser);
+      messagesRef.current = withUser;
+      setInput('');
+      setRecordedText('');
+
+      const rows = getPriceRowsFromStorage();
+      const priceResult = calculateCsvPrice({
+        rows,
+        roomName: priceIntent.roomName,
+        category: priceIntent.category,
+      });
+
+      console.log('💰 [PRICE INTENT]', priceIntent);
+      console.log('💰 [PRICE RESULT]', priceResult);
+      window.lastMayaPriceIntent = priceIntent;
+      window.lastMayaPriceResult = priceResult;
+
+      const reply = buildPriceReply(priceIntent, priceResult);
+      const withMaya = [...messagesRef.current, { role: 'assistant', content: '' }];
+      setMessages(withMaya);
+      messagesRef.current = withMaya;
+      speakText(reply, reply);
+
+      setLoading(false);
+      isProcessingRef.current = false;
+      return;
+    }
 
     // ── Navigation confirmation handler ──────────────────────────────────────
     if (awaitingNavigationConfirmRef.current) {
