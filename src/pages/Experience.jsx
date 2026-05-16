@@ -231,6 +231,7 @@ export default function Experience() {
   const currentCsvRows = useRef(null); // contains parsed rows from Unreal
   const [currentRoomName, setCurrentRoomName] = useState(""); // contains the current room name
   const [roomNames, setRoomNames] = useState([]);
+  const [sceneLoaded, setSceneLoaded] = useState(false);
 
   /// Can be used for both initial state from Unreal and updated state from MayaChat - populates left/right side as needed into StateObject
   const parseCSVAndUpdateCurrentRows = (csvRows) => {
@@ -686,6 +687,7 @@ export default function Experience() {
 
           // Read currentRoom from the message if available and store in state
           setCurrentRoomName(msg.currentRoom || "");
+          setSceneLoaded(true);
 
           let getRoomCsvJson = {
             msgType: "getRoomCsv",
@@ -1272,7 +1274,7 @@ export default function Experience() {
         }}
       />
 
-      <MayaChat sendUpdatedCSVRowsToUnreal={sendUpdatedCSVRowsToUnreal} roomNames={roomNames} currentRoomName={currentRoomName} />
+      <MayaChat sendUpdatedCSVRowsToUnreal={sendUpdatedCSVRowsToUnreal} roomNames={roomNames} currentRoomName={currentRoomName} sceneLoaded={sceneLoaded} />
     </div>
   );
 }

@@ -1,0 +1,132 @@
+@keyframes shimmer {
+  0%   { background-position: 0 0; }
+  100% { background-position: 60px 60px; }
+}
+
+@keyframes typewriter {
+  from { width: 0; }
+  to   { width: 30ch; }
+}
+
+@keyframes textShimmer {
+  0%   { background-position: 0% center; }
+  100% { background-position: 100% center; }
+}
+
+@keyframes floatBlob1 {
+  0%, 100% { transform: translate(0px, 0px); }
+  50%       { transform: translate(-12px, -18px); }
+}
+
+@keyframes floatBlob2 {
+  0%, 100% { transform: translate(0px, 0px); }
+  50%       { transform: translate(14px, -20px); }
+}
+
+@keyframes floatBlob3 {
+  0%, 100% { transform: translate(0px, 0px); }
+  50%       { transform: translate(-10px, 16px); }
+}
+
+@keyframes mayaPulseListening {
+  0%   { box-shadow: 0 0 0 0px rgba(123,97,255,0.45), 0 8px 32px rgba(123,97,255,0.3); }
+  70%  { box-shadow: 0 0 0 18px rgba(123,97,255,0.0), 0 8px 32px rgba(123,97,255,0.3); }
+  100% { box-shadow: 0 0 0 0px rgba(123,97,255,0.45), 0 8px 32px rgba(123,97,255,0.3); }
+}
+
+.maya-intro-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #ffffff;
+  background-image: radial-gradient(rgba(0, 0, 0, 0.15) 2px, transparent 1px);
+  background-size: 64px 64px;
+  animation: shimmer 4s linear infinite;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 48px;
+  transition: opacity 0.5s ease-in-out;
+  pointer-events: none;
+}
+
+.maya-intro-circle {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #eef0ff 0%, #dde2ff 100%);
+  border: 2px solid rgba(123, 97, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 32px rgba(123, 97, 255, 0.3);
+  animation: mayaPulseListening 1.8s ease-in-out infinite;
+}
+
+/* Wrapper handles the typewriter clip — stays centered in flex */
+.maya-intro-text-wrapper {
+  overflow: hidden;
+  white-space: nowrap;
+  width: 0;
+  animation: typewriter 3s steps(28, end) 0.3s forwards;
+}
+
+.maya-intro-text {
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  font-family: inherit;
+  white-space: nowrap;
+
+  /* shimmer */
+  background: linear-gradient(
+    90deg,
+    #000000 10%,
+    rgba(123, 97, 255, 0.9) 40%,
+    rgba(181, 255, 250, 1) 55%,
+    #000000 90%
+  );
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: textShimmer 8s linear 3.3s infinite;
+}
+
+/* Shared blob base */
+.maya-intro-blob,
+.maya-intro-blob-2,
+.maya-intro-blob-3 {
+  position: absolute;
+  background: linear-gradient(36.51deg, rgba(181, 255, 250, 0.7) 8.07%, rgba(204, 180, 255, 0.7) 99.43%);
+  mix-blend-mode: plus-darker;
+  filter: blur(180.423px);
+  border-radius: 195.458px;
+  width: 45%;
+  height: 55%;
+}
+
+/* Bottom-right */
+.maya-intro-blob {
+  right: -5%;
+  bottom: -10%;
+  animation: floatBlob1 6s ease-in-out infinite;
+}
+
+/* Top-left */
+.maya-intro-blob-2 {
+  left: -5%;
+  top: -10%;
+  animation: floatBlob2 7s ease-in-out infinite;
+}
+
+/* Top-right */
+.maya-intro-blob-3 {
+  right: -5%;
+  top: -10%;
+  animation: floatBlob3 8s ease-in-out infinite;
+}
