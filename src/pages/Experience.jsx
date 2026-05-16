@@ -230,7 +230,17 @@ export default function Experience() {
   const currentCsvHeaders = useRef(null);
   const currentCsvRows = useRef(null); // contains parsed rows from Unreal
   const [currentRoomName, setCurrentRoomName] = useState(""); // contains the current room name
+  const currentRoomNameRef = useRef(""); // keeps latest room available inside async callbacks
   const [roomNames, setRoomNames] = useState([]);
+
+  const updateCurrentRoomName = useCallback((roomName) => {
+    const cleanRoomName = String(roomName || "").trim();
+    if (!cleanRoomName) return;
+
+    currentRoomNameRef.current = cleanRoomName;
+    setCurrentRoomName(cleanRoomName);
+    console.log("✅ Experience.jsx currentRoomName updated:", cleanRoomName);
+  }, []);
 
   /// Can be used for both initial state from Unreal and updated state from MayaChat - populates left/right side as needed into StateObject
   const parseCSVAndUpdateCurrentRows = (csvRows) => {
@@ -580,6 +590,43 @@ export default function Experience() {
         metadata: csvData.metadata,
       };
 
+      // Also push the replacement CSV back into MayaChat immediately.
+      // This lets the next budget prompt use the newly applied ProductPrice.
+      const activeRoomName = String(
+        csvData?.currentRoomName ||
+        csvData?.metadata?.currentRoomName ||
+        currentRoomNameRef.current ||
+        currentRoomName ||
+        ""
+      ).trim();
+
+      window.dispatchEvent(
+        new CustomEvent("csvFromUnreal", {
+          detail: {
+            csvRows: csvData.csvRows,
+            currentRoomName: activeRoomName,
+            source: "replacement_sent_to_unreal",
+          },
+        }),
+      );
+
+      if (window.parent) {
+        window.parent.postMessage(
+          {
+            type: "csvFromUnreal",
+            data: csvData.csvRows,
+            currentRoomName: activeRoomName,
+            source: "replacement_sent_to_unreal",
+          },
+          "*",
+        );
+      }
+
+      console.log("🔁 Replacement CSV hook sent back to MayaChat:", {
+        rows: csvData.csvRows?.length || 0,
+        currentRoomName: activeRoomName || "NOT_FOUND",
+      });
+
       // ========== SEND TO UNREAL ==========
       try {
         if (PixelStreamingUiApp?.stream?.emitUIInteraction) {
@@ -614,7 +661,7 @@ export default function Experience() {
       clearTimeout(timer);
       delete window.sendCSVToExperience;
     };
-  }, [sendMsgToUnreal]);
+  }, [sendMsgToUnreal, currentRoomName]);
 
   const extractBestImageUrl = (raw) => {
     if (typeof raw !== "string") return "";
@@ -684,8 +731,14 @@ export default function Experience() {
         if(msg.type === "sceneLoaded") {
           console.log("Scene loaded in Unreal, requesting roomSkuCsv and roomNames... currentRoomName=", msg.currentRoom);
 
-          // Read currentRoom from the message if available and store in state
-          setCurrentRoomName(msg.currentRoom || "");
+          // Read current room from the message if available and store it in state/ref.
+          updateCurrentRoomName(
+            msg.currentRoom ||
+            msg.currentRoomName ||
+            msg.roomName ||
+            msg.SpaceName ||
+            ""
+          );
 
           let getRoomCsvJson = {
             msgType: "getRoomCsv",
@@ -737,9 +790,22 @@ export default function Experience() {
           // optional: keep it globally accessible for testing
           window.lastRoomSkuCsv = msg.csvRows;
 
-          if (msg.csvRows.length < 2) {
+          if (!Array.isArray(msg.csvRows) || msg.csvRows.length < 2) {
             console.log("ERROR: Received insufficient CSV rows from Unreal.");
             return;
+          }
+
+          const roomNameForCsv = String(
+            msg.currentRoom ||
+            msg.currentRoomName ||
+            msg.roomName ||
+            msg.SpaceName ||
+            currentRoomNameRef.current ||
+            ""
+          ).trim();
+
+          if (roomNameForCsv) {
+            updateCurrentRoomName(roomNameForCsv);
           }
 
           // store headers separately
@@ -752,6 +818,7 @@ export default function Experience() {
           parseCSVAndUpdateCurrentRows(msg.csvRows);
 
           console.log("📥 CSV FROM UNREAL - FORWARDING TO MAYA");
+          console.log("📍 Current room sent with CSV:", roomNameForCsv || "NOT_FOUND");
           const csvArray = msg.csvRows;
 
           // Post message to MayaChat
@@ -760,6 +827,8 @@ export default function Experience() {
               {
                 type: "csvFromUnreal",
                 data: csvArray,
+                currentRoomName: roomNameForCsv,
+                source: "roomSkuCsv",
               },
               "*",
             );
@@ -768,7 +837,11 @@ export default function Experience() {
           // Also dispatch to window for MayaChat to listen
           window.dispatchEvent(
             new CustomEvent("csvFromUnreal", {
-              detail: csvArray,
+              detail: {
+                csvRows: csvArray,
+                currentRoomName: roomNameForCsv,
+                source: "roomSkuCsv",
+              },
             }),
           );
 
@@ -1187,6 +1260,7 @@ export default function Experience() {
     runIKeyClickSequence,
     sendMsgToUnreal,
     currentCsvRows,
+    updateCurrentRoomName,
   ]);
 
   // Expose sendToUnreal on window so MayaChat can send complex payloads to Unreal
@@ -1194,6 +1268,13 @@ export default function Experience() {
     window.sendToUnreal = (payload) => {
       try {
         console.log("MayaChat → Unreal:", payload);
+
+        // If MayaChat navigates to a room, store that as the active room immediately.
+        // The next roomSkuCsv/replacement CSV can carry this room name back to MayaChat.
+        if (payload?.msgType === "gotoRoom" && payload?.targetRoom) {
+          updateCurrentRoomName(payload.targetRoom);
+        }
+
         if (
           typeof PixelStreamingUiApp?.stream?.emitUIInteraction === "function"
         ) {
@@ -1216,7 +1297,7 @@ export default function Experience() {
     return () => {
       delete window.sendToUnreal;
     };
-  }, []);
+  }, [updateCurrentRoomName]);
 
   return (
     <div className="experience-page">
