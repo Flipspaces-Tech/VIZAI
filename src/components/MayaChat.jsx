@@ -411,7 +411,6 @@ const NOISE_THRESHOLD = 50;
 const SPEECH_CONFIDENCE_THRESHOLD = 0.45;
 const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY || '';
 const RECEIVER_API_URL = 'https://maya-receiver-api.onrender.com';  //"http://localhost:8000"; https://maya-receiver-api.onrender.com
-const RECEIVER_API_URL = 'https://maya-receiver-api.onrender.com';  //"http://localhost:8000"; https://maya-receiver-api.onrender.com
 
 // ============================================================================
 // INTENT CLARITY CHECK — LLM reads Maya's reply and decides
