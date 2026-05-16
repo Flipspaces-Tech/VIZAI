@@ -1974,6 +1974,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
       // backend — they must NOT apply furniture recommendations from the response.
       const noSearchIntents = ['navigate', 'show_preview', 'confirm_order', 'budget_analysis', 'go_back_original', 'change_budget'];
       if (!noSearchIntents.includes(jsonData.intent)) {
+        awaitingSatisfactionRef.current = true;
         startPollingForResult(payloadWithId.request_id);
       }
     } catch (err) {
@@ -2664,15 +2665,10 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
             jsonData.intent === 'style_consultation'
           ) {
             hasPendingChangesRef.current = true;
-            window.sendToUnreal({ msgType: 'disablePreview' });
+            //window.sendToUnreal({ msgType: 'disablePreview' });
             window.pendingChange = { intent: jsonData.intent, params: jsonData.params, timestamp: Date.now() };
             console.log('💾 Stored pending change:', window.pendingChange.intent);
             window.sendToUnreal({ msgType: 'getRoomCsv' });
-          }
-
-          // 3. SHOW PREVIEW → previewChanges (give Unreal mouse focus so user can click EndPreview)
-          if (jsonData.intent === 'show_preview') {
-            window.sendToUnreal({ msgType: 'previewChanges' });
           }
 
           // 4. CONFIRM ORDER → acceptAllChanges + getRoomCsv (next change uses accepted state as base)
