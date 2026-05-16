@@ -10,6 +10,10 @@ const SARVAM_API_KEY = process.env.REACT_APP_SARVAM_API_KEY || '';
 // Callbacks will receive null and the caller falls back to text-only mode silently.
 const SARVAM_ENABLED = process.env.REACT_APP_SARVAM_ENABLED !== 'false';
 
+// const RECEIVER_API_URL = "http://localhost:8080"; // 'https://maya-receiver-api.onrender.com';  //
+const RECEIVER_API_URL = "https://maya-receiver-api.onrender.com";
+
+
 let sarvamFailureCount = 0;
 
 // Separate queues for STT and TTS — they never block each other
@@ -65,9 +69,8 @@ export const sarvamSTT = async (audioBlob, callback) => {
 
     console.log(`📤 Sending audio (${fileExtension}, ${audioBlob.size} bytes) to Sarvam STT...`);
 
-    const response = await fetch('https://api.sarvam.ai/speech-to-text-translate', {
+    const response = await fetch(`${RECEIVER_API_URL}/api/speech-to-text-translate`, {
       method: 'POST',
-      headers: { 'api-subscription-key': SARVAM_API_KEY },
       body: formData,
     });
 
@@ -111,10 +114,9 @@ export const sarvamTTS = async (text, callback) => {
       return;
     }
 
-    const ttsResponse = await fetch('https://api.sarvam.ai/text-to-speech', {
+    const ttsResponse = await fetch(`${RECEIVER_API_URL}/api/text-to-speech`, {
       method: 'POST',
       headers: {
-        'api-subscription-key': SARVAM_API_KEY,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -127,6 +129,14 @@ export const sarvamTTS = async (text, callback) => {
         audio_quality: 'high',
       }),
     });
+
+    
+    if (ttsResponse.status !== 200) {
+      console.warn('⚠️ Sarvam ERROR');
+      console.warn(ttsResponse.body.error || 'No error message');
+      callback(null);
+      return;
+    }
 
     if (!ttsResponse.ok) {
       callback(null);
