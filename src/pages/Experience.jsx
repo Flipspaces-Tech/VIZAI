@@ -232,6 +232,7 @@ export default function Experience() {
   const [currentRoomName, setCurrentRoomName] = useState(""); // contains the current room name
   const currentRoomNameRef = useRef(""); // keeps latest room available inside async callbacks
   const [roomNames, setRoomNames] = useState([]);
+  const [sceneLoaded, setSceneLoaded] = useState(false);
 
   const updateCurrentRoomName = useCallback((roomName) => {
     const cleanRoomName = String(roomName || "").trim();
@@ -739,6 +740,7 @@ export default function Experience() {
             msg.SpaceName ||
             ""
           );
+          setSceneLoaded(true);
 
           let getRoomCsvJson = {
             msgType: "getRoomCsv",
@@ -1353,7 +1355,7 @@ export default function Experience() {
         }}
       />
 
-      <MayaChat sendUpdatedCSVRowsToUnreal={sendUpdatedCSVRowsToUnreal} roomNames={roomNames} currentRoomName={currentRoomName} />
+      <MayaChat sendUpdatedCSVRowsToUnreal={sendUpdatedCSVRowsToUnreal} roomNames={roomNames} currentRoomName={currentRoomName} sceneLoaded={sceneLoaded} />
     </div>
   );
 }

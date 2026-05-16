@@ -3,6 +3,7 @@ import { MayaQueryEngine } from '../components/MayaQueryEngine';
 import { MayaQueryFilter } from '../components/MayaQueryFilter';
 import Papa from "papaparse";
 import { sttQueue, ttsQueue, processSTTQueue, processTTSQueue } from './SarvamService';
+import './MayaIntroScreen.css';
 
 // 🎨 IMPORT YOUR CUSTOM ICONS
 import idleIcon from '../assets/maya icons/idle.png';
@@ -318,6 +319,8 @@ function onReceivedMsgFromRecEngine(apiResponse, sendUpdatedCSVRowsToUnreal, cur
   console.log(csvRowsArray.slice(0, 3));
 
   // ========== SEND TO UNREAL VIA EXPERIENCE.JSX ==========
+  const blurEl = document.getElementById('maya-blur-overlay');
+  if (blurEl) { blurEl.style.opacity = '1'; blurEl.style.pointerEvents = 'all'; }
   sendUpdatedCSVRowsToUnreal(csvRowsArray);
 
   // Also feed the just-sent replacement CSV back into MayaChat state.
@@ -403,10 +406,11 @@ On a full room transformation (Scandinavian):
 ;
 
 const WAKE_WORDS = ['hi maya', 'hey maya', 'hi maaya', 'maya', 'mara', 'hi mara'];
-const SILENCE_TIMEOUT = 2000;
+const SILENCE_TIMEOUT = 500;
 const NOISE_THRESHOLD = 50;
 const SPEECH_CONFIDENCE_THRESHOLD = 0.45;
 const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY || '';
+const RECEIVER_API_URL = 'https://maya-receiver-api.onrender.com';  //"http://localhost:8000"; https://maya-receiver-api.onrender.com
 const RECEIVER_API_URL = 'https://maya-receiver-api.onrender.com';  //"http://localhost:8000"; https://maya-receiver-api.onrender.com
 
 // ============================================================================
@@ -474,7 +478,7 @@ const iconMap = {
 };
 
 // 🎨 MAYA STATE ICON COMPONENT
-function MayaStateIcon({ state, isSpeaking, inline = false }) {
+function MayaStateIcon({ state, isSpeaking, inline = false, size = 32 }) {
   const resolved = isSpeaking || state === 'talking'
     ? 'talking'
     : state === 'thinking'
@@ -510,8 +514,8 @@ function MayaStateIcon({ state, isSpeaking, inline = false }) {
       <img
         src={iconMap[resolved]}
         alt={resolved}
-        width="32"
-        height="32"
+        width={size}
+        height={size}
         style={{ objectFit: 'contain' }}
       />
     </span>
@@ -1175,9 +1179,11 @@ function isBudgetRecommendationPrompt(messageText = '') {
 // MAIN COMPONENT
 // ============================================================================
 
-export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, currentRoomName }) {
+export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, currentRoomName, sceneLoaded }) {
   const [visible, setVisible] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
+  const [introPhase, setIntroPhase] = useState(false);
+  const [introFading, setIntroFading] = useState(false);
   const [messages, setMessages] = useState([]);
   const messagesRef = useRef([]);
   const [input, setInput] = useState('');
@@ -1191,6 +1197,15 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
   const [error, setError] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [csvStatus, setCSVStatus] = useState(null);
+
+  useEffect(() => {
+    if (!sceneLoaded) return;
+    setIntroPhase(true);
+    setIntroFading(false);
+    const fadeTimer = setTimeout(() => setIntroFading(true), 2000);
+    const doneTimer = setTimeout(() => setIntroPhase(false), 2600);
+    return () => { clearTimeout(fadeTimer); clearTimeout(doneTimer); };
+  }, [sceneLoaded]);
 
   const currentRoomNameRef = useRef(String(currentRoomName || '').trim());
 
@@ -1228,6 +1243,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
   const pendingRoomConfirmRef = useRef(null);
   const isTypingModeRef = useRef(false);
   const roomNamesHandledRef = useRef(false);
+  const pendingAudioRef = useRef(null);
   const awaitingSatisfactionRef = useRef(false);
   const hasPendingChangesRef = useRef(false);
   const awaitingNavigationConfirmRef = useRef(false);
@@ -1250,6 +1266,22 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
   const resultPollIntervalRef = useRef(null);
   const currentDesignPromptRef = useRef(null);
   const lastRecEngineResponseRef = useRef(null);
+
+  // Play any audio that was blocked by the browser's autoplay policy on first user gesture
+  useEffect(() => {
+    const tryPlayPending = () => {
+      if (!pendingAudioRef.current) return;
+      const { audio, finishTalkingAndListen } = pendingAudioRef.current;
+      pendingAudioRef.current = null;
+      audio.play().catch(() => finishTalkingAndListen());
+    };
+    document.addEventListener('click', tryPlayPending, { once: true });
+    document.addEventListener('keydown', tryPlayPending, { once: true });
+    return () => {
+      document.removeEventListener('click', tryPlayPending);
+      document.removeEventListener('keydown', tryPlayPending);
+    };
+  }, []);
 
   useEffect(() => {
     isTypingModeRef.current = isTypingMode;
@@ -1312,6 +1344,10 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
   useEffect(() => {
     const handleFinishedParsing = () => {
+      setTimeout(() => {
+        const blurEl = document.getElementById('maya-blur-overlay');
+        if (blurEl) { blurEl.style.opacity = '0'; blurEl.style.pointerEvents = 'none'; }
+      }, 2000);
       hasPendingChangesRef.current = true;
       awaitingSatisfactionRef.current = true;
 
@@ -2151,7 +2187,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
       // Non-search intents (navigate, confirm_order, etc.) only need to notify the
       // backend — they must NOT apply furniture recommendations from the response.
-      const noSearchIntents = ['navigate', 'show_preview', 'confirm_order', 'budget_analysis', 'go_back_original', 'change_budget'];
+      const noSearchIntents = ['navigate', 'confirm_order', 'budget_analysis', 'go_back_original', 'change_budget'];
       if (!noSearchIntents.includes(jsonData.intent)) {
         awaitingSatisfactionRef.current = true;
         startPollingForResult(payloadWithId.request_id);
@@ -2258,7 +2294,15 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
                     .then(() => { console.log('🔊 Audio playback started'); })
                     .catch((err) => {
                       console.log('⚠️ Audio autoplay blocked:', err.message);
-                      finishTalkingAndListen();
+                      // Store for playback on first user gesture; fallback after 15s
+                      pendingAudioRef.current = { audio, finishTalkingAndListen };
+                      const fallbackTimer = setTimeout(() => {
+                        if (pendingAudioRef.current?.audio === audio) {
+                          pendingAudioRef.current = null;
+                          finishTalkingAndListen();
+                        }
+                      }, 15000);
+                      audio.addEventListener('play', () => clearTimeout(fallbackTimer), { once: true });
                     });
                 }
               } catch (err) {
@@ -2631,6 +2675,28 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         isProcessingRef.current = false;
       };
 
+      // "current room" — user is already here, skip gotoRoom
+      const currentRoomPhrases = ['current room', 'this room', 'here', 'where i am', 'stay here'];
+      if (currentRoomPhrases.some(p => cleanInput === p || cleanInput.includes(p))) {
+        const currentRoom = rooms.find(r => r.original === currentRoomName)
+                         || { original: currentRoomName, display: currentRoomName };
+        awaitingRoomSelectionRef.current = false;
+        pendingRoomConfirmRef.current = null;
+        speechStartedRef.current = false;
+        audioChunksRef.current = [];
+        stopListeningImmediately();
+        window.sendToUnreal({ msgType: 'getRoomCsv' });
+        const withMaya = [...messagesRef.current, { role: 'assistant', content: '' }];
+        setMessages(withMaya);
+        messagesRef.current = withMaya;
+        speakText(
+          `Great! What would you like to design in the ${currentRoom.display} today?`,
+          `Great! What would you like to design in the ${currentRoom.display} today?`
+        );
+        isProcessingRef.current = false;
+        return;
+      }
+
       if (pendingRoomConfirmRef.current) {
         const lower = messageText.toLowerCase();
         const yesWords = ['yes', 'yeah', 'yep', 'correct', 'right', 'sure', 'ok', 'okay', 'yup'];
@@ -2666,8 +2732,13 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
       if (exactMatch) {
         awaitingRoomSelectionRef.current = false;
-        window.sendToUnreal({ msgType: 'gotoRoom', targetRoom: exactMatch.original });
-        addMayaReply(`Let's go! Heading to the ${exactMatch.display} now.`);
+        if (exactMatch.original === currentRoomName) {
+          window.sendToUnreal({ msgType: 'getRoomCsv' });
+          addMayaReply(`Great! What would you like to design in the ${exactMatch.display} today?`);
+        } else {
+          window.sendToUnreal({ msgType: 'gotoRoom', targetRoom: exactMatch.original });
+          addMayaReply(`Let's go! Heading to the ${exactMatch.display} now.`);
+        }
       } else if (partialMatch) {
         pendingRoomConfirmRef.current = partialMatch;
         addMayaReply(`Do you mean the ${partialMatch.display}?`);
@@ -2943,7 +3014,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         const { jsonData: pendingJson, userQuery: pendingQuery } = pendingRecEnginePayloadRef.current;
         const pendingIntent = pendingJson?.intent;
 
-        const noSearchNeeded = ['navigate', 'show_preview', 'confirm_order', 'budget_analysis', 'go_back_original', 'change_budget'];
+        const noSearchNeeded = ['navigate', 'confirm_order', 'budget_analysis', 'go_back_original', 'change_budget'];
         const searchIntentsThatMayNeedPreference = [
           'change_theme',
           'selected_swap',
@@ -3032,6 +3103,27 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
   const handlePanelKeyDown = (e) => e.stopPropagation();
 
+  // Phase 1 & 2: full-screen centered Maya (white screen with dots before sceneLoaded, fades out after)
+  if (!sceneLoaded || introPhase) {
+    return (
+      <>
+        <div className="maya-intro-overlay" style={{ opacity: introFading ? 0 : 1 }}>
+          <div className="maya-intro-blob" />
+          <div className="maya-intro-blob-2" />
+          <div className="maya-intro-blob-3" />
+          <div className="maya-intro-circle">
+            <MayaStateIcon state="idle" isSpeaking={false} size={64} />
+          </div>
+          <div className="maya-intro-text-wrapper">
+            <span className="maya-intro-text">
+              Hi, I&apos;m Maya. I&apos;m listening.
+            </span>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   if (!visible) return null;
 
   const VISIBLE_MSG_COUNT = 6;
@@ -3060,6 +3152,31 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
           30%            { transform: translateY(-5px); opacity: 1; }
         }
       `}</style>
+      <div
+        id="maya-blur-overlay"
+        style={{
+          position: 'fixed',
+          inset: 0,
+          backdropFilter: 'blur(18px)',
+          WebkitBackdropFilter: 'blur(18px)',
+          zIndex: 9999,
+          pointerEvents: 'none',
+          opacity: 0,
+          transition: 'opacity 0.4s ease',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <span style={{
+          color: '#ffffff',
+          fontSize: 24,
+          fontWeight: 400,
+          letterSpacing: '0.04em',
+        }}>
+          Transforming your scene...
+        </span>
+      </div>
       <div
         style={styles.overlayRoot}
         ref={panelRef}
@@ -3188,7 +3305,7 @@ const styles = {
     position: 'fixed',
     inset: 0,
     pointerEvents: 'none',
-    zIndex: 9999,
+    zIndex: 9998,
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'flex-end',
