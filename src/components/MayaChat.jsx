@@ -1795,6 +1795,28 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         isProcessingRef.current = false;
       };
 
+      // "current room" — user is already here, skip gotoRoom
+      const currentRoomPhrases = ['current room', 'this room', 'here', 'where i am', 'stay here'];
+      if (currentRoomPhrases.some(p => cleanInput === p || cleanInput.includes(p))) {
+        const currentRoom = rooms.find(r => r.original === currentRoomName)
+                         || { original: currentRoomName, display: currentRoomName };
+        awaitingRoomSelectionRef.current = false;
+        pendingRoomConfirmRef.current = null;
+        speechStartedRef.current = false;
+        audioChunksRef.current = [];
+        stopListeningImmediately();
+        window.sendToUnreal({ msgType: 'getRoomCsv' });
+        const withMaya = [...messagesRef.current, { role: 'assistant', content: '' }];
+        setMessages(withMaya);
+        messagesRef.current = withMaya;
+        speakText(
+          `Great! What would you like to design in the ${currentRoom.display} today?`,
+          `Great! What would you like to design in the ${currentRoom.display} today?`
+        );
+        isProcessingRef.current = false;
+        return;
+      }
+
       if (pendingRoomConfirmRef.current) {
         const lower = messageText.toLowerCase();
         const yesWords = ['yes', 'yeah', 'yep', 'correct', 'right', 'sure', 'ok', 'okay', 'yup'];
@@ -1830,8 +1852,13 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
       if (exactMatch) {
         awaitingRoomSelectionRef.current = false;
-        window.sendToUnreal({ msgType: 'gotoRoom', targetRoom: exactMatch.original });
-        addMayaReply(`Let's go! Heading to the ${exactMatch.display} now.`);
+        if (exactMatch.original === currentRoomName) {
+          window.sendToUnreal({ msgType: 'getRoomCsv' });
+          addMayaReply(`Great! What would you like to design in the ${exactMatch.display} today?`);
+        } else {
+          window.sendToUnreal({ msgType: 'gotoRoom', targetRoom: exactMatch.original });
+          addMayaReply(`Let's go! Heading to the ${exactMatch.display} now.`);
+        }
       } else if (partialMatch) {
         pendingRoomConfirmRef.current = partialMatch;
         addMayaReply(`Do you mean the ${partialMatch.display}?`);
