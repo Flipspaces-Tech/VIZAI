@@ -441,7 +441,7 @@ On a full room transformation (Scandinavian):
 ;
 
 const WAKE_WORDS = ['hi maya', 'hey maya', 'hi maaya', 'maya', 'mara', 'hi mara'];
-const SILENCE_TIMEOUT = 500;
+const SILENCE_TIMEOUT = 1000;
 const NOISE_THRESHOLD = 50;
 const SPEECH_CONFIDENCE_THRESHOLD = 0.45;
 const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY || '';
@@ -1414,7 +1414,7 @@ function isBudgetRecommendationPrompt(messageText = '') {
 export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, currentRoomName, sceneLoaded }) {
   const [visible, setVisible] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
-  const [introPhase, setIntroPhase] = useState(false);
+  const [introPhase, setIntroPhase] = useState(true);
   const [introFading, setIntroFading] = useState(false);
   const [messages, setMessages] = useState([]);
   const messagesRef = useRef([]);
@@ -1432,8 +1432,6 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
   useEffect(() => {
     if (!sceneLoaded) return;
-    setIntroPhase(true);
-    setIntroFading(false);
     const fadeTimer = setTimeout(() => setIntroFading(true), 2000);
     const doneTimer = setTimeout(() => setIntroPhase(false), 2600);
     return () => { clearTimeout(fadeTimer); clearTimeout(doneTimer); };
@@ -1482,6 +1480,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
   const pendingNavigationRoomRef = useRef(null);
 
   // ── Followup / clarification state ──────────────────────────────────────
+  const FOLLOWUP_QUESTIONS_ENABLED = false; // set to true to re-enable clarifying questions
   const pendingRecEnginePayloadRef = useRef(null); // stores {jsonData, userQuery} while waiting
   const awaitingFollowupRef = useRef(false);        // true when Maya asked for more info
   const followupCountRef = useRef(0);               // number of clarifications asked for current design prompt
@@ -2881,9 +2880,23 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
     // ── Satisfaction check handler ────────────────────────────────────────────
     if (awaitingSatisfactionRef.current) {
       const lower = messageText.toLowerCase();
-      const isYes = ['yes', 'yeah', 'yep', 'sure', 'ok', 'okay', 'yup', 'happy', 'satisfied', 'love', 'perfect', 'looks good', 'accept', 'apply', 'confirm', 'great'].some(w => lower.includes(w));
 
-      if (isYes) {
+      // A new design change query counts as implicit yes to the previous change
+      const changeQueryKeywords = ['change', 'swap', 'replace', 'transform', 'redesign', 'update', 'switch', 'convert', 'make it', 'put a', 'put the'];
+      const isNewChangeQuery = changeQueryKeywords.some(kw => lower.includes(kw));
+
+      const isYes = ['yes', 'yeah', 'yep', 'sure', 'ok', 'okay', 'yup', 'happy', 'satisfied', 'love', 'perfect', 'looks good', 'accept', 'apply', 'confirm', 'great', 'keep', 'save', "let's keep", 'lets keep', 'keep it', 'save it', 'lock it'].some(w => lower.includes(w));
+
+      if (isNewChangeQuery) {
+        // Implicit yes — silently accept the previous change, then fall through to process the new query
+        awaitingSatisfactionRef.current = false;
+        hasPendingChangesRef.current = false;
+        resetFollowupCounterForNextPrompt();
+        const unrealSend = typeof window.sendToUnreal === 'function' ? window.sendToUnreal : sendMsgToUnreal;
+        unrealSend({ msgType: 'acceptAllChanges' });
+        unrealSend({ msgType: 'getRoomCsv' });
+        // Do NOT return — fall through so the new change query is processed normally
+      } else if (isYes) {
         awaitingSatisfactionRef.current = false;
         hasPendingChangesRef.current = false;
         resetFollowupCounterForNextPrompt();
@@ -2905,8 +2918,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         speakText(reply, reply);
         isProcessingRef.current = false;
         return;
-      }
-
+      } else {
       // User said no — determine intent: navigate away or try a different option
       awaitingSatisfactionRef.current = false;
       resetFollowupCounterForNextPrompt();
@@ -2991,7 +3003,15 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         return;
       }
 
-      // Generic no — just ask what to change
+      // Generic no — revert the preview and ask what to change
+      const rejectKeywords = ['no', 'nope', 'nah', "didn't like", 'didnt like', 'not happy', 'not satisfied', 'discard', 'revert', 'undo', 'go back', 'previous', 'old', "don't like", 'dont like'];
+      const isExplicitReject = rejectKeywords.some(kw => lower.includes(kw));
+      const unrealSend = typeof window.sendToUnreal === 'function' ? window.sendToUnreal : sendMsgToUnreal;
+      if (isExplicitReject) {
+        hasPendingChangesRef.current = false;
+        unrealSend({ msgType: 'disablePreview' });
+        //unrealSend({ msgType: 'getRoomCsv' });  TODO: Confirm this getRoomCsv is not needed
+      }
       const noReply = "Of course — what would you like to change?";
       const withMaya = [...messagesRef.current, { role: 'assistant', content: '' }];
       setMessages(withMaya);
@@ -2999,6 +3019,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
       speakText(noReply, noReply);
       isProcessingRef.current = false;
       return;
+      } // end else (no-handling)
     }
 
     if (awaitingRoomSelectionRef.current) {
@@ -3264,6 +3285,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
           followupCountRef.current < maxFollowupsPerDesignPromptRef.current;
 
         const shouldAskStyleColorPreference =
+          FOLLOWUP_QUESTIONS_ENABLED &&
           searchIntentsThatMayNeedPreference.includes(jsonData.intent) &&
           jsonData.needs_clarification === true &&
           canAskAnotherFollowupBeforeUnreal;
@@ -3381,7 +3403,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
           followupCountRef.current < maxFollowupsPerDesignPromptRef.current;
 
         const shouldAskStyleColorPreference =
-          clarificationRequested && canAskAnotherFollowup;
+          FOLLOWUP_QUESTIONS_ENABLED && clarificationRequested && canAskAnotherFollowup;
 
         const clarificationLimitReached =
           clarificationRequested && !canAskAnotherFollowup;
@@ -3428,6 +3450,14 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         } else {
           awaitingFollowupRef.current = false;
           pendingRecEnginePayloadRef.current = null;
+          if (clarificationRequested) {
+            // Followups disabled — LLM wanted to ask but we skip it.
+            // Remove the placeholder bubble pushed above so it doesn't orphan.
+            displayText = '';
+            const trimmed = messagesRef.current.slice(0, -1);
+            setMessages(trimmed);
+            messagesRef.current = trimmed;
+          }
           sendMsgToRecEngine(pendingJson, pendingQuery);
           console.log('▶️ [RECENGINE FIRED] Intent has enough detail, fired immediately.');
         }
@@ -3455,7 +3485,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
   const handlePanelKeyDown = (e) => e.stopPropagation();
 
   // Phase 1 & 2: full-screen centered Maya (white screen with dots before sceneLoaded, fades out after)
-  if (!sceneLoaded || introPhase) {
+  if (introPhase) {
     return (
       <>
         <div className="maya-intro-overlay" style={{ opacity: introFading ? 0 : 1 }}>
@@ -3502,6 +3532,14 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
           0%, 60%, 100% { transform: translateY(0); opacity: 0.35; }
           30%            { transform: translateY(-5px); opacity: 1; }
         }
+        @keyframes blurDotShimmer {
+          0%   { background-position: 0 0; }
+          100% { background-position: 64px 0; }
+        }
+        @keyframes transformTextShimmerLTR {
+          0%   { background-position: 100% center; }
+          100% { background-position: 0% center; }
+        }
       `}</style>
       <div
         id="maya-blur-overlay"
@@ -3510,6 +3548,9 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
           inset: 0,
           backdropFilter: 'blur(18px)',
           WebkitBackdropFilter: 'blur(18px)',
+          backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.15) 2px, transparent 1px)',
+          backgroundSize: '64px 64px',
+          animation: 'blurDotShimmer 4s linear infinite',
           zIndex: 9999,
           pointerEvents: 'none',
           opacity: 0,
@@ -3520,10 +3561,15 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         }}
       >
         <span style={{
-          color: '#ffffff',
           fontSize: 24,
           fontWeight: 400,
           letterSpacing: '0.04em',
+          background: 'linear-gradient(90deg, #ffffff 10%, rgba(181,255,250,1) 45%, rgba(123,97,255,0.9) 55%, #ffffff 90%)',
+          backgroundSize: '300% auto',
+          WebkitBackgroundClip: 'text',
+          backgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          animation: 'transformTextShimmerLTR 3s linear infinite',
         }}>
           Transforming your scene...
         </span>
