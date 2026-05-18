@@ -1127,6 +1127,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
   const pendingNavigationRoomRef = useRef(null);
 
   // ── Followup / clarification state ──────────────────────────────────────
+  const FOLLOWUP_QUESTIONS_ENABLED = false; // set to true to re-enable clarifying questions
   const pendingRecEnginePayloadRef = useRef(null); // stores {jsonData, userQuery} while waiting
   const awaitingFollowupRef = useRef(false);        // true when Maya asked for more info
   const followupCountRef = useRef(0);               // number of clarifications asked for current design prompt
@@ -2671,6 +2672,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
           followupCountRef.current < maxFollowupsPerDesignPromptRef.current;
 
         const shouldAskStyleColorPreference =
+          FOLLOWUP_QUESTIONS_ENABLED &&
           searchIntentsThatMayNeedPreference.includes(jsonData.intent) &&
           jsonData.needs_clarification === true &&
           canAskAnotherFollowupBeforeUnreal;
@@ -2788,7 +2790,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
           followupCountRef.current < maxFollowupsPerDesignPromptRef.current;
 
         const shouldAskStyleColorPreference =
-          clarificationRequested && canAskAnotherFollowup;
+          FOLLOWUP_QUESTIONS_ENABLED && clarificationRequested && canAskAnotherFollowup;
 
         const clarificationLimitReached =
           clarificationRequested && !canAskAnotherFollowup;
@@ -2835,6 +2837,14 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         } else {
           awaitingFollowupRef.current = false;
           pendingRecEnginePayloadRef.current = null;
+          if (clarificationRequested) {
+            // Followups disabled — LLM wanted to ask but we skip it.
+            // Remove the placeholder bubble pushed above so it doesn't orphan.
+            displayText = '';
+            const trimmed = messagesRef.current.slice(0, -1);
+            setMessages(trimmed);
+            messagesRef.current = trimmed;
+          }
           sendMsgToRecEngine(pendingJson, pendingQuery);
           console.log('▶️ [RECENGINE FIRED] Intent has enough detail, fired immediately.');
         }
