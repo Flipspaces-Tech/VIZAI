@@ -2535,9 +2535,23 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
     // ── Satisfaction check handler ────────────────────────────────────────────
     if (awaitingSatisfactionRef.current) {
       const lower = messageText.toLowerCase();
-      const isYes = ['yes', 'yeah', 'yep', 'sure', 'ok', 'okay', 'yup', 'happy', 'satisfied', 'love', 'perfect', 'looks good', 'accept', 'apply', 'confirm', 'great'].some(w => lower.includes(w));
 
-      if (isYes) {
+      // A new design change query counts as implicit yes to the previous change
+      const changeQueryKeywords = ['change', 'swap', 'replace', 'transform', 'redesign', 'update', 'switch', 'convert', 'make it', 'put a', 'put the'];
+      const isNewChangeQuery = changeQueryKeywords.some(kw => lower.includes(kw));
+
+      const isYes = ['yes', 'yeah', 'yep', 'sure', 'ok', 'okay', 'yup', 'happy', 'satisfied', 'love', 'perfect', 'looks good', 'accept', 'apply', 'confirm', 'great', 'keep', 'save', "let's keep", 'lets keep', 'keep it', 'save it', 'lock it'].some(w => lower.includes(w));
+
+      if (isNewChangeQuery) {
+        // Implicit yes — silently accept the previous change, then fall through to process the new query
+        awaitingSatisfactionRef.current = false;
+        hasPendingChangesRef.current = false;
+        resetFollowupCounterForNextPrompt();
+        const unrealSend = typeof window.sendToUnreal === 'function' ? window.sendToUnreal : sendMsgToUnreal;
+        unrealSend({ msgType: 'acceptAllChanges' });
+        unrealSend({ msgType: 'getRoomCsv' });
+        // Do NOT return — fall through so the new change query is processed normally
+      } else if (isYes) {
         awaitingSatisfactionRef.current = false;
         hasPendingChangesRef.current = false;
         resetFollowupCounterForNextPrompt();
@@ -2559,8 +2573,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         speakText(reply, reply);
         isProcessingRef.current = false;
         return;
-      }
-
+      } else {
       // User said no — determine intent: navigate away or try a different option
       awaitingSatisfactionRef.current = false;
       resetFollowupCounterForNextPrompt();
@@ -2638,7 +2651,15 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         return;
       }
 
-      // Generic no — just ask what to change
+      // Generic no — revert the preview and ask what to change
+      const rejectKeywords = ['no', 'nope', 'nah', "didn't like", 'didnt like', 'not happy', 'not satisfied', 'discard', 'revert', 'undo', 'go back', 'previous', 'old', "don't like", 'dont like'];
+      const isExplicitReject = rejectKeywords.some(kw => lower.includes(kw));
+      const unrealSend = typeof window.sendToUnreal === 'function' ? window.sendToUnreal : sendMsgToUnreal;
+      if (isExplicitReject) {
+        hasPendingChangesRef.current = false;
+        unrealSend({ msgType: 'disablePreview' });
+        //unrealSend({ msgType: 'getRoomCsv' });  TODO: Confirm this getRoomCsv is not needed
+      }
       const noReply = "Of course — what would you like to change?";
       const withMaya = [...messagesRef.current, { role: 'assistant', content: '' }];
       setMessages(withMaya);
@@ -2646,6 +2667,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
       speakText(noReply, noReply);
       isProcessingRef.current = false;
       return;
+      } // end else (no-handling)
     }
 
     if (awaitingRoomSelectionRef.current) {
