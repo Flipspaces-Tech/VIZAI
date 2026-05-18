@@ -390,7 +390,7 @@ On a full room transformation (Scandinavian):
 ;
 
 const WAKE_WORDS = ['hi maya', 'hey maya', 'hi maaya', 'maya', 'mara', 'hi mara'];
-const SILENCE_TIMEOUT = 500;
+const SILENCE_TIMEOUT = 1000;
 const NOISE_THRESHOLD = 50;
 const SPEECH_CONFIDENCE_THRESHOLD = 0.45;
 const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY || '';
@@ -1071,7 +1071,7 @@ function buildPriceReply(priceIntent, priceResult) {
 export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, currentRoomName, sceneLoaded }) {
   const [visible, setVisible] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
-  const [introPhase, setIntroPhase] = useState(false);
+  const [introPhase, setIntroPhase] = useState(true);
   const [introFading, setIntroFading] = useState(false);
   const [messages, setMessages] = useState([]);
   const messagesRef = useRef([]);
@@ -1089,8 +1089,6 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
   useEffect(() => {
     if (!sceneLoaded) return;
-    setIntroPhase(true);
-    setIntroFading(false);
     const fadeTimer = setTimeout(() => setIntroFading(true), 2000);
     const doneTimer = setTimeout(() => setIntroPhase(false), 2600);
     return () => { clearTimeout(fadeTimer); clearTimeout(doneTimer); };
@@ -2864,7 +2862,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
   const handlePanelKeyDown = (e) => e.stopPropagation();
 
   // Phase 1 & 2: full-screen centered Maya (white screen with dots before sceneLoaded, fades out after)
-  if (!sceneLoaded || introPhase) {
+  if (introPhase) {
     return (
       <>
         <div className="maya-intro-overlay" style={{ opacity: introFading ? 0 : 1 }}>
@@ -2911,6 +2909,14 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
           0%, 60%, 100% { transform: translateY(0); opacity: 0.35; }
           30%            { transform: translateY(-5px); opacity: 1; }
         }
+        @keyframes blurDotShimmer {
+          0%   { background-position: 0 0; }
+          100% { background-position: 64px 0; }
+        }
+        @keyframes transformTextShimmerLTR {
+          0%   { background-position: 100% center; }
+          100% { background-position: 0% center; }
+        }
       `}</style>
       <div
         id="maya-blur-overlay"
@@ -2919,6 +2925,9 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
           inset: 0,
           backdropFilter: 'blur(18px)',
           WebkitBackdropFilter: 'blur(18px)',
+          backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.15) 2px, transparent 1px)',
+          backgroundSize: '64px 64px',
+          animation: 'blurDotShimmer 4s linear infinite',
           zIndex: 9999,
           pointerEvents: 'none',
           opacity: 0,
@@ -2929,10 +2938,15 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         }}
       >
         <span style={{
-          color: '#ffffff',
           fontSize: 24,
           fontWeight: 400,
           letterSpacing: '0.04em',
+          background: 'linear-gradient(90deg, #ffffff 10%, rgba(181,255,250,1) 45%, rgba(123,97,255,0.9) 55%, #ffffff 90%)',
+          backgroundSize: '300% auto',
+          WebkitBackgroundClip: 'text',
+          backgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          animation: 'transformTextShimmerLTR 3s linear infinite',
         }}>
           Transforming your scene...
         </span>
