@@ -98,13 +98,17 @@ function onReceivedMsgFromRecEngine(apiResponse, sendUpdatedCSVRowsToUnreal, cur
     return;
   }
 
-  if (!csvStorage.original || csvStorage.original.length === 0) {
-    console.error("❌ No original CSV stored");
+  const sourceRows = (csvStorage.current && csvStorage.current.length > 0)
+    ? csvStorage.current
+    : csvStorage.original;
+
+  if (!sourceRows || sourceRows.length === 0) {
+    console.error("❌ No CSV stored");
     return;
   }
 
-  // ========== ITERATE OVER EACH ROW FROM UNREAL ==========
-  let updatedRows = csvStorage.original.map((row, index) => {
+  // ========== ITERATE OVER EACH ROW FROM CURRENT CSV STATE ==========
+  let updatedRows = sourceRows.map((row, index) => {
     console.log(`\n📍 Processing row ${index}:`);
     console.log(`   Category: ${row.Category}`);
     console.log(`   ProductSKU: ${row.ProductSKU}`);
@@ -318,6 +322,18 @@ function onReceivedMsgFromRecEngine(apiResponse, sendUpdatedCSVRowsToUnreal, cur
   const blurEl = document.getElementById('maya-blur-overlay');
   if (blurEl) { blurEl.style.opacity = '1'; blurEl.style.pointerEvents = 'all'; }
   sendUpdatedCSVRowsToUnreal(csvRowsArray);
+
+  // Also feed the just-sent replacement CSV back into MayaChat state.
+  // The listener will promote UpdatedProductPrice -> ProductPrice for future budget prompts.
+  window.dispatchEvent(
+    new CustomEvent('csvFromUnreal', {
+      detail: {
+        csvRows: csvRowsArray,
+        currentRoomName: currentRoomName || '',
+        source: 'replacement_sent_to_unreal',
+      },
+    }),
+  );
 }
 
 function getCsvStatus() {
@@ -1064,6 +1080,100 @@ function buildPriceReply(priceIntent, priceResult) {
   return `The total is ${formatINR(priceResult.total)}.`;
 }
 
+
+function inferRoomNameFromRows(rows = []) {
+  if (!Array.isArray(rows) || rows.length === 0) return '';
+
+  const roomSet = new Set();
+  rows.forEach((row) => {
+    const roomName = String(getRowField(row, ['SpaceName', 'spaceName', 'RoomName', 'roomName']) || '').trim();
+    if (roomName && roomName.toUpperCase() !== 'NOT_FOUND') {
+      roomSet.add(roomName);
+    }
+  });
+
+  const rooms = Array.from(roomSet);
+  return rooms.length === 1 ? rooms[0] : '';
+}
+
+function isValidCsvValue(value) {
+  const text = String(value ?? '').trim();
+  return !!text && text.toUpperCase() !== 'NOT_FOUND';
+}
+
+function promoteUpdatedColumnsToBaseRows(rows = []) {
+  if (!Array.isArray(rows)) return [];
+
+  return rows.map((row) => {
+    const nextRow = { ...row };
+
+    if (isValidCsvValue(nextRow.UpdatedProductName)) {
+      nextRow.ProductName = nextRow.UpdatedProductName;
+    }
+
+    if (isValidCsvValue(nextRow.UpdatedProductSKU)) {
+      nextRow.ProductSKU = nextRow.UpdatedProductSKU;
+    }
+
+    if (isValidCsvValue(nextRow.UpdatedProductPrice)) {
+      nextRow.ProductPrice = nextRow.UpdatedProductPrice;
+    }
+
+    if (isValidCsvValue(nextRow.UpdatedProductQuantity)) {
+      nextRow.ProductQuantity = nextRow.UpdatedProductQuantity;
+    }
+
+    return nextRow;
+  });
+}
+
+function isBudgetRecommendationPrompt(messageText = '') {
+  const text = String(messageText || '').toLowerCase();
+
+  const hasRecommendationAction = [
+    'show me',
+    'change',
+    'replace',
+    'swap',
+    'recommend',
+    'suggest',
+    'find',
+    'give me',
+  ].some((word) => text.includes(word));
+
+  const hasBudgetLanguage =
+    text.includes('budget') ||
+    text.includes('price point') ||
+    text.includes('around') ||
+    text.includes('near') ||
+    text.includes('higher') ||
+    text.includes('lower') ||
+    text.includes('%') ||
+    text.includes('rupees') ||
+    text.includes('rs') ||
+    text.includes('₹');
+
+  const hasDesignCategory = [
+    'chair',
+    'chairs',
+    'sofa',
+    'sofas',
+    'table',
+    'tables',
+    'conference table',
+    'light',
+    'lights',
+    'wall',
+    'floor',
+    'painting',
+    'paintings',
+    'planter',
+    'planters',
+  ].some((word) => text.includes(word));
+
+  return hasRecommendationAction && hasBudgetLanguage && hasDesignCategory;
+}
+
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
@@ -1093,6 +1203,16 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
     const doneTimer = setTimeout(() => setIntroPhase(false), 2600);
     return () => { clearTimeout(fadeTimer); clearTimeout(doneTimer); };
   }, [sceneLoaded]);
+
+  const currentRoomNameRef = useRef(String(currentRoomName || '').trim());
+
+  useEffect(() => {
+    const cleanRoomName = String(currentRoomName || '').trim();
+    if (cleanRoomName) {
+      currentRoomNameRef.current = cleanRoomName;
+      console.log('✅ MayaChat currentRoomName prop updated:', cleanRoomName);
+    }
+  }, [currentRoomName]);
 
   const messagesEndRef = useRef(null);
   const panelRef = useRef(null);
@@ -1259,6 +1379,12 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         console.error("sendMsgToUnreal: msgType is required in the payload");
         return;
       }
+
+      if (jsonObject?.msgType === 'gotoRoom' && jsonObject?.targetRoom) {
+        currentRoomNameRef.current = String(jsonObject.targetRoom || '').trim();
+        console.log('📍 MayaChat active room updated from gotoRoom:', currentRoomNameRef.current);
+      }
+
       console.log("sendMsgToUnreal: ", jsonObject);
 
       if (typeof PixelStreamingUiApp?.stream?.emitUIInteraction === "function") {
@@ -1274,13 +1400,32 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
   // ✅ FIXED: LISTEN FOR CSV FROM UNREAL VIA CustomEvent + postMessage fallback
   // ============================================================================
   useEffect(() => {
-    const parseCsvArrayAndStore = (csvArray) => {
+    const parseCsvArrayAndStore = (payload) => {
+      const csvArray = Array.isArray(payload)
+        ? payload
+        : payload?.csvRows || payload?.data || [];
+
+      const source = Array.isArray(payload)
+        ? 'unknown'
+        : payload?.source || 'csvFromUnreal';
+
+      const roomNameFromPayload = Array.isArray(payload)
+        ? ''
+        : String(
+            payload?.currentRoomName ||
+            payload?.currentRoom ||
+            payload?.roomName ||
+            ''
+          ).trim();
+
       if (!Array.isArray(csvArray) || csvArray.length === 0) {
         console.error('❌ Invalid CSV array received');
         return;
       }
 
-      console.log('\n📥 CSV RECEIVED - Parsing with PapaParse...');
+      console.log(`\n📥 CSV RECEIVED - Parsing with PapaParse... source=${source}`);
+      console.log('📍 Room name from CSV payload:', roomNameFromPayload || 'NOT_FOUND');
+      console.log('📍 Room name from MayaChat ref:', currentRoomNameRef.current || 'NOT_FOUND');
 
       // Join lines into one CSV string and parse with header:true
       const csvString = csvArray.join("\n");
@@ -1293,8 +1438,38 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
             console.log(`✅ Parsed ${results.data.length} rows from CSV`);
             console.log('Sample row:', results.data[0]);
 
+            const inferredRoomName = inferRoomNameFromRows(results.data);
+            const activeRoomName =
+              roomNameFromPayload ||
+              currentRoomNameRef.current ||
+              String(currentRoomName || '').trim() ||
+              inferredRoomName ||
+              '';
+
+            if (activeRoomName) {
+              currentRoomNameRef.current = activeRoomName;
+            }
+
+            const shouldPromoteUpdatedColumns = [
+              'replacement_sent_to_unreal',
+              'receivedReplacementCsv',
+              'received_replacement_csv',
+            ].includes(source);
+
+            const rowsForStorage = shouldPromoteUpdatedColumns
+              ? promoteUpdatedColumnsToBaseRows(results.data)
+              : results.data;
+
+            console.log('📍 Active room used for price summary:', activeRoomName || 'NOT_FOUND');
+            console.log('✅ MayaChat CSV storage source:', {
+              source,
+              promotedUpdatedColumns: shouldPromoteUpdatedColumns,
+              sampleBefore: results.data[0],
+              sampleAfter: rowsForStorage[0],
+            });
+
             // Store properly parsed objects
-            storeRoomCSV(results.data, currentRoomName);
+            storeRoomCSV(rowsForStorage, activeRoomName);
             setCSVStatus(getCsvStatus());
           } else {
             console.error('❌ PapaParse returned no data');
@@ -1316,10 +1491,14 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
     const handlePostMessage = (event) => {
       const data = event.data;
 
-      // Format 1: { type: 'csvFromUnreal', data: [...] }
+      // Format 1: { type: 'csvFromUnreal', data: [...], currentRoomName: 'ConferenceRoom' }
       if (data?.type === 'csvFromUnreal' && Array.isArray(data.data)) {
         console.log('\n📥 CSV RECEIVED VIA postMessage (type: csvFromUnreal)');
-        parseCsvArrayAndStore(data.data);
+        parseCsvArrayAndStore({
+          csvRows: data.data,
+          currentRoomName: data.currentRoomName || '',
+          source: data.source || 'postMessage',
+        });
         return;
       }
 
@@ -1632,7 +1811,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
           console.log("✅ RESULT RECEIVED FROM API");
           console.log(JSON.stringify(data.data, null, 2));
 
-          onReceivedMsgFromRecEngine(data.data, sendUpdatedCSVRowsToUnreal, currentRoomName);
+          onReceivedMsgFromRecEngine(data.data, sendUpdatedCSVRowsToUnreal, currentRoomNameRef.current || currentRoomName);
           setCSVStatus(getCsvStatus());
 
           window.lastMayaSearchResult = data.data;
@@ -2166,13 +2345,73 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
     stopListeningImmediately();
     setListeningMode('thinking');
 
+    // ── Budget recommendation routing ───────────────────────────────────────
+    // These prompts must go to RecEngine, not the local total-price calculator.
+    // Example: "show me chairs with 10% higher budget"
+    const shouldSendBudgetPromptToRecEngine = isBudgetRecommendationPrompt(messageText);
+    if (shouldSendBudgetPromptToRecEngine) {
+      awaitingSatisfactionRef.current = false;
+      hasPendingChangesRef.current = false;
+      awaitingFollowupRef.current = false;
+      pendingRecEnginePayloadRef.current = null;
+      followupCountRef.current = 0;
+      console.log('🎯 Budget recommendation prompt routed directly to RecEngine:', messageText);
+
+      const rows = getPriceRowsFromStorage();
+      const detectedCategory = findCategoryInPrompt(messageText, rows) || 'Chair';
+      const budgetJson = {
+        reply: 'Budget noted — pulling the closest matches now.',
+        intent: 'selected_swap',
+        needs_clarification: false,
+        params: {
+          category: detectedCategory,
+          style: null,
+          color: null,
+          secondary_colors: [],
+          room: currentRoomNameRef.current || currentRoomName || null,
+          mood: null,
+          price_range: messageText,
+          material: null,
+          quantity: null,
+          seating_capacity: null,
+          budget: null,
+          anchor_item: null,
+          bundle_count: null,
+          additional_params: {
+            budget_filter_prompt: true,
+            target_price_source: 'backend_from_query_and_csv_productprice',
+          },
+        },
+      };
+
+      const withUser = [...messagesRef.current, { role: 'user', content: messageText }];
+      setMessages(withUser);
+      messagesRef.current = withUser;
+      setInput('');
+      setRecordedText('');
+
+      const withMaya = [...messagesRef.current, { role: 'assistant', content: '' }];
+      setMessages(withMaya);
+      messagesRef.current = withMaya;
+      speakText(budgetJson.reply, budgetJson.reply);
+
+      currentDesignPromptRef.current = { jsonData: budgetJson, userQuery: messageText };
+      await sendMsgToRecEngine(budgetJson, messageText);
+
+      setLoading(false);
+      isProcessingRef.current = false;
+      return;
+    }
+
     // ── Price / budget query handler ─────────────────────────────────────────
-    // Handles:
+    // Handles true price-summary questions only:
     // 1) Total price for entire level
     // 2) Total price for current/specific room
     // 3) Price of a specific category in the room
     // This does NOT call OpenAI or RecEngine. It calculates from csvStorage.
-    const priceIntent = detectPricePrompt(messageText, currentRoomName, roomNames || []);
+    const priceIntent = shouldSendBudgetPromptToRecEngine
+      ? null
+      : detectPricePrompt(messageText, currentRoomNameRef.current || currentRoomName, roomNames || []);
     if (priceIntent) {
       const withUser = [...messagesRef.current, { role: 'user', content: messageText }];
       setMessages(withUser);
