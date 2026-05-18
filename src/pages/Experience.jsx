@@ -611,17 +611,9 @@ export default function Experience() {
         }),
       );
 
-      if (window.parent) {
-        window.parent.postMessage(
-          {
-            type: "csvFromUnreal",
-            data: csvData.csvRows,
-            currentRoomName: activeRoomName,
-            source: "replacement_sent_to_unreal",
-          },
-          "*",
-        );
-      }
+      // ✅ Do not also send this through window.parent.postMessage.
+      // MayaChat already receives this replacement CSV through CustomEvent above.
+      // Sending both routes causes duplicate CSV parsing/logging.
 
       console.log("🔁 Replacement CSV hook sent back to MayaChat:", {
         rows: csvData.csvRows?.length || 0,
@@ -650,16 +642,10 @@ export default function Experience() {
 
     console.log("✅ CSV bridge is active");
 
-    const timer = setTimeout(() => {
-      console.log("🚀 AUTO-SENDING getRoomCsv to Unreal");
-      let getRoomCsvJson = {
-          msgType: "getRoomCsv",
-        };
-      sendMsgToUnreal(getRoomCsvJson);
-    }, 2000);
-
+    // ✅ Do not auto-send getRoomCsv here.
+    // sceneLoaded already sends getRoomCsv and getRoomNames.
+    // Keeping this timer causes Unreal to return roomSkuCsv more than once.
     return () => {
-      clearTimeout(timer);
       delete window.sendCSVToExperience;
     };
   }, [sendMsgToUnreal, currentRoomName]);
@@ -823,19 +809,10 @@ export default function Experience() {
           console.log("📍 Current room sent with CSV:", roomNameForCsv || "NOT_FOUND");
           const csvArray = msg.csvRows;
 
-          // Post message to MayaChat
-          if (window.parent) {
-            window.parent.postMessage(
-              {
-                type: "csvFromUnreal",
-                data: csvArray,
-                currentRoomName: roomNameForCsv,
-                source: "roomSkuCsv",
-              },
-              "*",
-            );
-          }
-
+          // ✅ Send to MayaChat through ONE route only.
+          // Do NOT also use window.parent.postMessage here, because MayaChat
+          // listens to both CustomEvent and postMessage. Sending both causes
+          // the same CSV to be parsed/logged twice.
           // Also dispatch to window for MayaChat to listen
           window.dispatchEvent(
             new CustomEvent("csvFromUnreal", {
