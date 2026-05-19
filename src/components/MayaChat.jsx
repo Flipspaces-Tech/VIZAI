@@ -29,6 +29,8 @@ let csvStorage = {
 let queryQueue = [];
 let apiResults = {};
 let lastChangedCategories = [];
+let lastPriceReflectionData = [];
+let lastChangeWasPriceQuery = false;
 
 // ============================================================================
 // GOOGLE SHEETS CONFIGURATION
@@ -146,9 +148,13 @@ function onReceivedMsgFromRecEngine(apiResponse, sendUpdatedCSVRowsToUnreal, cur
     let updatedFinishes = "";
 
     // ========== FIND MATCHING CATEGORY IN API RESPONSE ==========
-    const apiCategory = apiResponse.categories.find(c =>
-      c.category.toUpperCase() === (category || "").toUpperCase()
-    );
+    // Accept exact match OR CSV category that ends with the API category
+    // (e.g. CSV "Conference Table" matches API "Table")
+    const apiCategory = apiResponse.categories.find(c => {
+      const apiCat = c.category.toUpperCase();
+      const csvCat = (category || "").toUpperCase();
+      return apiCat === csvCat || csvCat.endsWith(apiCat);
+    });
 
     console.log(`   API Match: ${apiCategory ? "✅ FOUND" : "❌ NOT FOUND"}`);
 
@@ -316,12 +322,44 @@ function onReceivedMsgFromRecEngine(apiResponse, sendUpdatedCSVRowsToUnreal, cur
 
   // ✅ After SKU/product updates, log ONLY changed room/category price reflection.
   // No full room table. No unchanged category logs. No row-wise breakdown.
-  logChangedRoomPriceReflectionOnly(
+  lastPriceReflectionData = logChangedRoomPriceReflectionOnly(
     previousRowsBeforeUpdate,
     updatedRows,
     currentRoomName,
     'RECOMMENDATIONS_APPLIED'
-  );
+  ) || [];
+
+  // Fallback: if this is a price query but no change was detected by logChangedRoomPriceReflectionOnly
+  // (e.g. same SKU recommended, or API price not in Updated* columns), build price data directly
+  // from the API response items vs the source row prices.
+  if (lastChangeWasPriceQuery && lastPriceReflectionData.length === 0) {
+    const fallbackItems = [];
+    apiResponse.categories.forEach((apiCat) => {
+      const apiItems = Array.isArray(apiCat.items) ? apiCat.items : [];
+      if (apiItems.length === 0) return;
+      const safeIdx = optionIndex % apiItems.length;
+      const topItem = apiItems[safeIdx];
+      const newPrice = topItem?.price ? parseCsvNumber(String(topItem.price)) : 0;
+      if (!newPrice) return;
+
+      const matchedRow = sourceRows.find((row) => {
+        const rowCat = (row.Category || '').toUpperCase();
+        const apiCatUpper = (apiCat.category || '').toUpperCase();
+        return rowCat === apiCatUpper || rowCat.endsWith(apiCatUpper);
+      });
+      if (!matchedRow) return;
+
+      const oldPrice = parseCsvNumber(getRowField(matchedRow, ['ProductPrice', 'productPrice']));
+      fallbackItems.push({ category: apiCat.category, oldUnitPrice: oldPrice, newUnitPrice: newPrice });
+    });
+
+    if (fallbackItems.length > 0) {
+      lastPriceReflectionData = fallbackItems;
+      console.log('💰 [PRICE DATA FALLBACK] direct from API items:', lastPriceReflectionData);
+    }
+  }
+
+  console.log(`💰 [PRICE DATA SET] lastPriceReflectionData length=${lastPriceReflectionData.length}`, lastPriceReflectionData);
 
   // ========== FILTER: ONLY SEND ROWS WHOSE CATEGORY MATCHED THE API ==========
   const matchedCategories = new Set(
@@ -330,7 +368,9 @@ function onReceivedMsgFromRecEngine(apiResponse, sendUpdatedCSVRowsToUnreal, cur
   lastChangedCategories = apiResponse.categories.map(c => c.category);
 
   const rowsToSend = updatedRows.filter((row) => {
-    const matched = matchedCategories.has((row.Category || "").toUpperCase());
+    const rowCat = (row.Category || "").toUpperCase();
+    // Accept exact match OR CSV category that ends with an API category (e.g. "Conference Table" ↔ "Table")
+    const matched = [...matchedCategories].some(apiCat => rowCat === apiCat || rowCat.endsWith(apiCat));
     if (matched) {
       console.log(`   ✅ Sending: [${row.Category}] ${row.ProductSKU}`);
     } else {
@@ -748,7 +788,10 @@ function findCategoryInPrompt(messageText, rows = []) {
   for (const [key, aliases] of Object.entries(aliasMap)) {
     if (aliases.some((alias) => textCompact.includes(compactText(alias)))) {
       const matchedExisting = categories.find((cat) => compactText(cat) === compactText(key));
-      return matchedExisting || key;
+      if (matchedExisting) return matchedExisting;
+      // CSV may have a compound category that ends with this key (e.g. "Conference Table" → "table")
+      const fuzzyMatch = categories.find((cat) => compactText(cat).endsWith(compactText(key)));
+      return fuzzyMatch || key;
     }
   }
 
@@ -1182,7 +1225,7 @@ function logChangedRoomPriceReflectionOnly(
   if (!changedCategoryMap.size) {
     console.log('💰 No room/category price changes detected.');
     console.log('💰 =================================================');
-    return;
+    return [];
   }
 
   // ✅ Only changed category lines.
@@ -1217,6 +1260,12 @@ function logChangedRoomPriceReflectionOnly(
   });
 
   console.log('💰 =================================================');
+
+  return [...changedCategoryMap.values()].map((item) => ({
+    category: item.category,
+    oldUnitPrice: item.oldUnitPrice,
+    newUnitPrice: item.newUnitPrice,
+  }));
 }
 
 function logInitialCategoryLines(priceResult, roomLabel = '') {
@@ -1381,10 +1430,17 @@ function isBudgetRecommendationPrompt(messageText = '') {
     text.includes('near') ||
     text.includes('higher') ||
     text.includes('lower') ||
+    text.includes('under') ||
+    text.includes('below') ||
+    text.includes('within') ||
+    text.includes('cheaper') ||
+    text.includes('expensive') ||
+    text.includes('percent') ||
     text.includes('%') ||
     text.includes('rupees') ||
     text.includes('rs') ||
-    text.includes('₹');
+    text.includes('₹') ||
+    /\d{4,}/.test(text);
 
   const hasDesignCategory = [
     'chair',
@@ -1587,15 +1643,38 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
       const cats = lastChangedCategories;
       const cleanName = (n) => n.replace(/vizwalkai_db_/gi, '').replace(/_product_ai_sku/gi, '').replace(/[_-]/g, ' ').toLowerCase().trim();
+
+      console.log(`💰 [handleFinishedParsing] isPriceQuery=${lastChangeWasPriceQuery} priceDataLen=${lastPriceReflectionData.length}`, lastPriceReflectionData);
+      const isPriceQuery = lastChangeWasPriceQuery;
+      lastChangeWasPriceQuery = false;
+      // Only consume price data when displaying it in the message.
+      // For non-price queries, keep lastPriceReflectionData so the user can ask
+      // "what's the price?" afterward and get old vs new comparison.
+      const priceItems = isPriceQuery ? [...lastPriceReflectionData] : [];
+      if (isPriceQuery) {
+        lastPriceReflectionData = [];
+      }
+
       let question;
-      if (cats.length === 0) {
+      if (isPriceQuery && priceItems.length > 0) {
+        if (priceItems.length === 1) {
+          const item = priceItems[0];
+          const catName = cleanName(item.category);
+          question = `Your ${catName} went from ${formatINR(item.oldUnitPrice)} to ${formatINR(item.newUnitPrice)} — would you like to explore other options?`;
+        } else {
+          const parts = priceItems.map((item) =>
+            `${cleanName(item.category)} from ${formatINR(item.oldUnitPrice)} to ${formatINR(item.newUnitPrice)}`
+          );
+          question = `Updated — ${parts.join(', ')}. Would you like to try something different?`;
+        }
+      } else if (cats.length === 0) {
         question = "The room has been updated. Are you happy with how it looks, or would you like to make any changes?";
       } else if (cats.length === 1) {
         question = `Your ${cleanName(cats[0])} has been updated. Are you happy with this, or would you like to explore other options?`;
       } else if (cats.length <= 3) {
         const last = cleanName(cats[cats.length - 1]);
         const rest = cats.slice(0, -1).map(cleanName).join(', ');
-        question = `The ${rest} and ${last} have been updated. Does this look good to you, or would you like to try something different?`;
+        question = `The ${rest} and ${last} have been updated. Does this look good, or would you like to try something different?`;
       } else {
         question = "The room has been refreshed. Are you satisfied with the result, or would you like to adjust anything?";
       }
@@ -2137,6 +2216,12 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         const data = await res.json();
 
         if (data?.found && data?.data?.categories?.length) {
+          // Guard: if another concurrent poll already processed this result, skip.
+          if (!resultPollIntervalRef.current) return;
+
+          clearInterval(resultPollIntervalRef.current);
+          resultPollIntervalRef.current = null;
+
           console.log("✅ RESULT RECEIVED FROM API");
           console.log(JSON.stringify(data.data, null, 2));
 
@@ -2159,15 +2244,22 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
             currentRecommendationOptionIndexRef.current
           );
           setCSVStatus(getCsvStatus());
-
-          clearInterval(resultPollIntervalRef.current);
-          resultPollIntervalRef.current = null;
         }
 
         if (attempts >= 30) {
-          console.warn("Result polling stopped");
+          console.warn("Result polling stopped — no result after 30s");
           clearInterval(resultPollIntervalRef.current);
           resultPollIntervalRef.current = null;
+          // If we were waiting on a budget/price change, tell the user nothing matched
+          if (lastChangeWasPriceQuery) {
+            lastChangeWasPriceQuery = false;
+            lastPriceReflectionData = [];
+            const fallback = "Couldn't find a match within that budget — try a different range or style?";
+            const withFallback = [...messagesRef.current, { role: 'assistant', content: '' }];
+            setMessages(withFallback);
+            messagesRef.current = withFallback;
+            speakText(fallback, fallback);
+          }
         }
       } catch (err) {
         console.error("Polling error:", err);
@@ -2685,6 +2777,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
     if (!messageText || !messageText.trim() || loading) return;
 
+    lastChangeWasPriceQuery = false;
     isProcessingRef.current = true;
 
     stopListeningImmediately();
@@ -2741,6 +2834,14 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
       speakText(budgetJson.reply, budgetJson.reply);
 
       currentDesignPromptRef.current = { jsonData: budgetJson, userQuery: messageText };
+
+      lastChangeWasPriceQuery = true;
+      hasPendingChangesRef.current = true;
+      window.pendingChange = { intent: budgetJson.intent, params: budgetJson.params, timestamp: Date.now() };
+      if (typeof window.sendToUnreal === 'function') {
+        window.sendToUnreal({ msgType: 'getRoomCsv' });
+      }
+
       await sendMsgToRecEngine(budgetJson, messageText);
 
       setLoading(false);
@@ -2764,19 +2865,37 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
       setInput('');
       setRecordedText('');
 
-      const rows = getPriceRowsFromStorage();
-      const priceResult = calculateCsvPrice({
-        rows,
-        roomName: priceIntent.roomName,
-        category: priceIntent.category,
-      });
-
-      console.log('💰 [PRICE INTENT]', priceIntent);
-      console.log('💰 [PRICE RESULT]', priceResult);
-      window.lastMayaPriceIntent = priceIntent;
-      window.lastMayaPriceResult = priceResult;
-
-      const reply = buildPriceReply(priceIntent, priceResult);
+      let reply;
+      if (lastPriceReflectionData.length > 0) {
+        const cleanCat = (n) => n.replace(/vizwalkai_db_/gi, '').replace(/_product_ai_sku/gi, '').replace(/[_-]/g, ' ').toLowerCase().trim();
+        const priceLines = lastPriceReflectionData.map((item) =>
+          `${cleanCat(item.category)} went from ${formatINR(item.oldUnitPrice)} to ${formatINR(item.newUnitPrice)}`
+        );
+        if (priceLines.length === 1) {
+          const item = lastPriceReflectionData[0];
+          const suffix = item.newUnitPrice > item.oldUnitPrice
+            ? "a step up, and it shows."
+            : item.newUnitPrice < item.oldUnitPrice
+            ? "a little easier on the budget — smart."
+            : "same price, different character.";
+          reply = `${priceLines[0]} — ${suffix}`;
+        } else {
+          reply = `Here's where we landed — ${priceLines.join(', ')}.`;
+        }
+        lastPriceReflectionData = [];
+      } else {
+        const rows = getPriceRowsFromStorage();
+        const priceResult = calculateCsvPrice({
+          rows,
+          roomName: priceIntent.roomName,
+          category: priceIntent.category,
+        });
+        console.log('💰 [PRICE INTENT]', priceIntent);
+        console.log('💰 [PRICE RESULT]', priceResult);
+        window.lastMayaPriceIntent = priceIntent;
+        window.lastMayaPriceResult = priceResult;
+        reply = buildPriceReply(priceIntent, priceResult);
+      }
       const withMaya = [...messagesRef.current, { role: 'assistant', content: '' }];
       setMessages(withMaya);
       messagesRef.current = withMaya;
@@ -2981,11 +3100,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
       }
 
       if (isDifferentOption) {
-        const noReply = "Noted — trying the next one from the same saved set.";
-        const withMayaAlt = [...messagesRef.current, { role: 'assistant', content: '' }];
-        setMessages(withMayaAlt);
-        messagesRef.current = withMayaAlt;
-        speakText(noReply, noReply);
+        lastChangeWasPriceQuery = true;
 
         const applied = applyCachedDifferentOption();
 
@@ -3717,6 +3832,9 @@ const styles = {
     alignItems: 'stretch',
     width: '100%',
     maxWidth: 550,
+    maxHeight: 'calc(100vh - 200px)',
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
     marginLeft: 'auto',
     pointerEvents: 'none',
   },
