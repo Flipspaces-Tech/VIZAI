@@ -3013,7 +3013,6 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         resetFollowupCounterForNextPrompt();
         const unrealSend = typeof window.sendToUnreal === 'function' ? window.sendToUnreal : sendMsgToUnreal;
         unrealSend({ msgType: 'acceptAllChanges' });
-        unrealSend({ msgType: 'getRoomCsv' });
         // Do NOT return — fall through so the new change query is processed normally
       } else if (isYes) {
         awaitingSatisfactionRef.current = false;
@@ -3028,8 +3027,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
         const unrealSend = typeof window.sendToUnreal === 'function' ? window.sendToUnreal : sendMsgToUnreal;
         unrealSend({ msgType: 'acceptAllChanges' });
-        unrealSend({ msgType: 'getRoomCsv' });
-
+        
         const reply = "Applied. And for the record — excellent call.";
         const withMaya = [...messagesRef.current, { role: 'assistant', content: '' }];
         setMessages(withMaya);

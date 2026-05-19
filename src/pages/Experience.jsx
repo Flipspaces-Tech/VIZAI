@@ -771,6 +771,17 @@ export default function Experience() {
           return;
         }
 
+        if (msg.type === "acceptAllFinished") {
+          console.log("✅ Experience.jsx: Received acceptAllFinished from Unreal — sending getRoomCsv to get refreshed room data on the left side");
+          
+          let getRoomCsvJson = {
+            msgType: "getRoomCsv",
+          };
+
+          sendMsgToUnreal(getRoomCsvJson);
+          return;
+        }
+
         if (msg.type === "roomSkuCsv") {
           console.log("Received roomSkuCsv from Unreal:");
           console.log(msg.csvRows);
