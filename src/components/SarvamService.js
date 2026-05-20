@@ -124,7 +124,7 @@ export const sarvamTTS = async (text, callback) => {
         target_language_code: 'en-IN',
         model: 'bulbul:v3',
         speaker: 'simran',
-        pace: 1.0,
+        pace: 0.9,
         temperature: 0.6,
         audio_quality: 'high',
       }),
