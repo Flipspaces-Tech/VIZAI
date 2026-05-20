@@ -191,7 +191,7 @@ async function uploadScreenshotUrlToDrive(imageUrl, buildName, sessionId) {
   if (!GDRIVE_API_URL) return;
 
   try {
-    console.log("Uploading screenshot URL to Drive:", imageUrl);
+    console.log("[Frontend] Uploading screenshot URL to Drive:", imageUrl);
 
     const form = new FormData();
     form.append("action", "saveScreenshotUrl");
@@ -208,13 +208,13 @@ async function uploadScreenshotUrlToDrive(imageUrl, buildName, sessionId) {
     try {
       data = await res.json();
     } catch (e) {
-      console.log("No JSON response (ok for now)", e);
+      console.log("[Frontend] No JSON response (ok for now)", e);
     }
 
-    console.log("Drive upload result:", data);
+    console.log("[Frontend] Drive upload result:", data);
     return data;
   } catch (err) {
-    console.error("uploadScreenshotUrlToDrive error", err);
+    console.error("[Frontend] uploadScreenshotUrlToDrive error", err);
     return null;
   }
 }
@@ -240,7 +240,7 @@ export default function Experience() {
 
     currentRoomNameRef.current = cleanRoomName;
     setCurrentRoomName(cleanRoomName);
-    console.log("✅ Experience.jsx currentRoomName updated:", cleanRoomName);
+    console.log("[Frontend] ✅ Experience.jsx currentRoomName updated:", cleanRoomName);
   }, []);
 
   /// Can be used for both initial state from Unreal and updated state from MayaChat - populates left/right side as needed into StateObject
@@ -308,7 +308,7 @@ export default function Experience() {
           return row;
         });
 
-        console.log("ParsedObjects", allRows);
+        console.log("[Frontend] parseCSVAndUpdateCurrentRows: ", allRows);
         currentCsvRows.current = allRows;
       },
     });
@@ -389,7 +389,7 @@ export default function Experience() {
     u.searchParams.set("url", insecureUrl);
     u.searchParams.set("mode", "redirect");
     const finalUrl = u.toString();
-    console.log("Opening proxy:", finalUrl);
+    console.log("[Frontend] Opening proxy:", finalUrl);
     window.open(finalUrl, "_blank", "noopener,noreferrer");
   };
 
@@ -544,10 +544,10 @@ export default function Experience() {
      
     try {
       if(!jsonObject.msgType) {
-        console.error("sendMsgToUnreal: msgType is required in the payload");
+        console.error("[Frontend] sendMsgToUnreal: msgType is required in the payload");
         return;
       }
-      console.log("sendMsgToUnreal: ", jsonObject);
+      console.log("[Frontend] sendMsgToUnreal: ", jsonObject);
 
       if (
         typeof PixelStreamingUiApp?.stream?.emitUIInteraction === "function"
@@ -556,7 +556,7 @@ export default function Experience() {
         return;
       }
     } catch (err) {
-      console.error("Failed to send receivedReplacementCsv to Unreal:", err);
+      console.error("[Frontend] Failed to send receivedReplacementCsv to Unreal:", err);
     }
   }, []);
 
@@ -571,6 +571,7 @@ export default function Experience() {
 
   // ========== ADD CSV FUNCTIONS (CRITICAL) ==========
   useEffect(() => {
+    console.groupCollapsed("[Frontend] SETTING UP CSV BRIDGE: MayaChat ↔ Unreal");
     console.log("\n╔════════════════════════════════════════════════════╗");
     console.log("║ 📡 SETTING UP CSV BRIDGE: MayaChat ↔ Unreal      ║");
     console.log("╚════════════════════════════════════════════════════╝\n");
@@ -578,12 +579,12 @@ export default function Experience() {
     // ✅ Function: Receive CSV from MayaChat and forward to Unreal
     window.sendCSVToExperience = (csvData) => {
       if (!csvData) {
-        console.error("❌ No csvData provided");
+        console.error("[Frontend] ❌ No csvData provided");
         return;
       }
 
-      console.log("📤 Forwarding filled CSV to Unreal:");
-      console.log("   Rows:", csvData.csvRows?.length || 0);
+      console.log("[Frontend] 📤 Forwarding filled CSV to Unreal:");
+      console.log("[Frontend]    Rows:", csvData.csvRows?.length || 0);
 
       const payload = {
         msgType: "receivedReplacementCsv",
@@ -615,7 +616,7 @@ export default function Experience() {
       // MayaChat already receives this replacement CSV through CustomEvent above.
       // Sending both routes causes duplicate CSV parsing/logging.
 
-      console.log("🔁 Replacement CSV hook sent back to MayaChat:", {
+      console.log("[Frontend] 🔄 Replacement CSV hook sent back to MayaChat:", {
         rows: csvData.csvRows?.length || 0,
         currentRoomName: activeRoomName || "NOT_FOUND",
       });
@@ -623,24 +624,26 @@ export default function Experience() {
       // ========== SEND TO UNREAL ==========
       try {
         if (PixelStreamingUiApp?.stream?.emitUIInteraction) {
-          console.log("✅ Sent via PixelStreamingUiApp");
+          console.log("[Frontend] ✅ Sent via PixelStreamingUiApp");
           PixelStreamingUiApp.stream.emitUIInteraction(payload);
           return;
         }
 
         if (PixelStreamingApp?.emitUIInteraction) {
-          console.log("✅ Sent via PixelStreamingApp");
+          console.log("[Frontend] ✅ Sent via PixelStreamingApp");
           PixelStreamingApp.emitUIInteraction(payload);
           return;
         }
 
-        console.error("❌ No emitUIInteraction found");
+        console.error("[Frontend] ❌ No emitUIInteraction found");
       } catch (err) {
-        console.error("❌ Error sending to Unreal:", err);
+        console.error("[Frontend] ❌ Error sending to Unreal:", err);
       }
     };
+    console.groupEnd();
 
-    console.log("✅ CSV bridge is active");
+    console.log("[Frontend] ✅ CSV bridge is active");
+
 
     // ✅ Do not auto-send getRoomCsv here.
     // sceneLoaded already sends getRoomCsv and getRoomNames.
@@ -671,14 +674,13 @@ export default function Experience() {
   const onReceivedMsgFromUnreal = useCallback(
     async (response) => {
       try {
-        console.log("Received unreal message:", response);
-
-        
+       
+        //console.log("[Frontend] Received message from Unreal:", response); // show full json message
 
         const forwardImageUrl = async (url) => {
           const extracted = extractBestImageUrl(url).trim();
-          console.log("forwardImageUrl raw:", url);
-          console.log("forwardImageUrl extracted:", extracted);
+          console.log("[Frontend] forwardImageUrl raw:", url);
+          console.log("[Frontend] forwardImageUrl extracted:", extracted);
           if (!extracted) return;
 
           await uploadScreenshotUrlToDrive(extracted, buildKey, sessionId);
@@ -692,12 +694,9 @@ export default function Experience() {
 
           try {
             response = JSON.parse(response);
-          } catch {
-            const rawStr = response.trim();
-            if (rawStr === "gotoRoomCompleted" || rawStr === "gotoRoomFinished") {
-              console.log("✅ Experience.jsx: Received", rawStr, "(plain string) from Unreal");
-              window.dispatchEvent(new CustomEvent('gotoRoomFinished'));
-            }
+            console.log("[Unreal] Received json from Unreal: type=", response.type || response);
+          } catch(err) {
+            console.error("[Unreal] ✅ Experience.jsx: Received ", response, "(plain string) from Unreal (expected valid json) \n Error: ", err);
             return;
           }
         }
@@ -710,13 +709,13 @@ export default function Experience() {
           {
             let currentSpaceName = msg.log.replace("[ERROR] MappedSpaceSearchResult does NOT contain SpaceName ","");
             // means the player wasn't in a room that has NavActor
-            console.log(`ERROR: Player is in a room ${currentSpaceName} without BP_NavActor`);
+            console.error(`[Unreal] ERROR: Player is in a room ${currentSpaceName} without BP_NavActor`);
           }
         }
 
         // Once scene is loaded, ask Unreal for the roomSkuCsv and roomNames
         if(msg.type === "sceneLoaded") {
-          console.log("Scene loaded in Unreal, requesting roomSkuCsv and roomNames... currentRoomName=", msg.currentRoom);
+          console.log("[Unreal] Scene loaded in Unreal, requesting roomSkuCsv and roomNames... currentRoomName=", msg.currentRoom);
 
           // Read current room from the message if available and store it in state/ref.
           updateCurrentRoomName(
@@ -741,7 +740,7 @@ export default function Experience() {
 
         // Handle roomNames response from Unreal
         if (msg.type === "roomNames") {
-          console.log("Received roomNames from Unreal:", msg.roomNames);
+          console.log("[Unreal] Received roomNames from Unreal:", msg.roomNames);
           const names = msg.roomNames || [];
           window.lastRoomNames = names;
           setRoomNames(names);
@@ -749,7 +748,7 @@ export default function Experience() {
         }
 
         if (msg.type === "gotoRoomFinished") {
-          console.log("✅ Experience.jsx: Received gotoRoomFinished from Unreal — dispatching CustomEvent");
+          console.log("[Unreal]✅ Experience.jsx: Received gotoRoomFinished from Unreal — dispatching CustomEvent");
           window.dispatchEvent(new CustomEvent('gotoRoomFinished'));
           return;
         }
@@ -764,7 +763,7 @@ export default function Experience() {
               msgType: "previewChanges",
             };
             sendMsgToUnreal(previewChangesJson);
-            console.log("✅ Experience.jsx: finishedParsingReplacementCsv — dispatching CustomEvent");
+            console.log("[Unreal] ✅ Experience.jsx: finishedParsingReplacementCsv — dispatching CustomEvent");
             window.dispatchEvent(new CustomEvent('finishedParsingReplacementCsv'));
             finishedParsingTimerRef.current = null;
           }, 300);
@@ -772,7 +771,7 @@ export default function Experience() {
         }
 
         if (msg.type === "acceptAllFinished") {
-          console.log("✅ Experience.jsx: Received acceptAllFinished from Unreal — sending getRoomCsv to get refreshed room data on the left side");
+          console.log("[Unreal] ✅ Experience.jsx: Received acceptAllFinished from Unreal — sending getRoomCsv to get refreshed room data on the left side");
           
           let getRoomCsvJson = {
             msgType: "getRoomCsv",
@@ -783,14 +782,15 @@ export default function Experience() {
         }
 
         if (msg.type === "roomSkuCsv") {
-          console.log("Received roomSkuCsv from Unreal:");
+          console.groupCollapsed("[Unreal] Received roomSkuCsv from Unreal:");
           console.log(msg.csvRows);
+          console.groupEnd();
 
           // optional: keep it globally accessible for testing
           window.lastRoomSkuCsv = msg.csvRows;
 
           if (!Array.isArray(msg.csvRows) || msg.csvRows.length < 2) {
-            console.log("ERROR: Received insufficient CSV rows from Unreal.");
+            console.error("[Unreal] ERROR: Received insufficient CSV rows from Unreal.");
             return;
           }
 
@@ -816,8 +816,8 @@ export default function Experience() {
           /// Store in StateObject
           parseCSVAndUpdateCurrentRows(msg.csvRows);
 
-          console.log("📥 CSV FROM UNREAL - FORWARDING TO MAYA");
-          console.log("📍 Current room sent with CSV:", roomNameForCsv || "NOT_FOUND");
+          console.log("[Unreal] 📥 CSV FROM UNREAL - FORWARDING TO MAYA");
+          console.log("[Frontend] 📍 Current room sent with CSV:", roomNameForCsv || "NOT_FOUND");
           const csvArray = msg.csvRows;
 
           // ✅ Send to MayaChat through ONE route only.
@@ -1070,7 +1070,7 @@ export default function Experience() {
     };
 
     ps.addResponseEventListener("handle_responses", onReceivedMsgFromUnreal);
-    console.log("added event listener to handle_responses");
+    console.log("[Frontend] added event listener to handle_responses");
 
     if (pendingHoverEnabled !== null) {
       try {
@@ -1257,7 +1257,7 @@ export default function Experience() {
   useEffect(() => {
     window.sendToUnreal = (payload) => {
       try {
-        console.log("MayaChat → Unreal:", payload);
+        console.log("[Frontend] MayaChat → Unreal:", payload);
 
         // If MayaChat navigates to a room, store that as the active room immediately.
         // The next roomSkuCsv/replacement CSV can carry this room name back to MayaChat.
@@ -1279,9 +1279,9 @@ export default function Experience() {
           window.pixelStreaming.emitUIInteraction(payload);
           return;
         }
-        console.warn("sendToUnreal: emitUIInteraction not found.");
+        console.warn("[Frontend] sendToUnreal: emitUIInteraction not found.");
       } catch (err) {
-        console.error("sendToUnreal failed:", err);
+        console.error("[Frontend] sendToUnreal failed:", err);
       }
     };
     return () => {

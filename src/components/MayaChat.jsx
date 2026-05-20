@@ -43,12 +43,14 @@ const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbw_elUc3irWx6y
 // ============================================================================
 
 function storeRoomCSV(parsedRows, currentRoomName, source = 'CSV_RECEIVED_FROM_UNREAL') {
+  console.group("[Frontend] storeRoomCSV");
   console.log('\n╔════════════════════════════════════════╗');
   console.log('║ 📥 CSV RECEIVED FROM UNREAL            ║');
   console.log('╚════════════════════════════════════════╝\n');
+  console.groupEnd();
 
   if (!Array.isArray(parsedRows) || parsedRows.length === 0) {
-    console.error('❌ Invalid parsed rows');
+    console.error('[Frontend] ❌ Invalid parsed rows');
     return false;
   }
 
@@ -59,7 +61,8 @@ function storeRoomCSV(parsedRows, currentRoomName, source = 'CSV_RECEIVED_FROM_U
 
   window.csvStorage = csvStorage;
 
-  console.log(`✅ CSV Stored Successfully: ${csvStorage.original.length} data rows\n`);
+  console.log(`[Frontend] ✅ CSV Stored Successfully: ${csvStorage.original.length} data rows\n`);
+  console.groupEnd();
 
   // ✅ First Unreal CSV run: show full compact room summary.
   // ✅ Replacement CSV refresh: skip full summary because the changed-room price reflection
@@ -77,7 +80,7 @@ function storeRoomCSV(parsedRows, currentRoomName, source = 'CSV_RECEIVED_FROM_U
       source || 'CSV_RECEIVED_FROM_UNREAL'
     );
   } else {
-    console.log(`💰 PRICE SUMMARY SKIPPED — ${source} | Already logged changed room/category reflection.`);
+    console.log(`[RecEngine]💰 PRICE SUMMARY SKIPPED — ${source} | Already logged changed room/category reflection.`);
   }
 
   const exported = {
@@ -95,7 +98,7 @@ function storeRoomCSV(parsedRows, currentRoomName, source = 'CSV_RECEIVED_FROM_U
   if (GOOGLE_SHEET_URL) {
     saveToGoogleSheet(exported);
   } else {
-    console.warn('⚠️ Google Sheet URL not configured');
+    console.warn('[Frontend] ⚠️ Google Sheet URL not configured');
   }
 
   return true;
@@ -106,13 +109,15 @@ function storeRoomCSV(parsedRows, currentRoomName, source = 'CSV_RECEIVED_FROM_U
 // ============================================================================
 
 function onReceivedMsgFromRecEngine(apiResponse, sendUpdatedCSVRowsToUnreal, currentRoomName, optionIndex = 0) {
+  console.groupCollapsed("[RecEngine] 🎯 POPULATING RECOMMENDATIONS FROM API");
+
   console.log("\n╔════════════════════════════════════════════════════╗");
   console.log("║ 🎯 POPULATING RECOMMENDATIONS FROM API             ║");
   console.log("╚════════════════════════════════════════════════════╝\n");
 
   // ========== VALIDATION ==========
   if (!apiResponse || !apiResponse.categories) {
-    console.error("❌ No categories in API response");
+    console.error("[RecEngine] ❌ No categories in API response");
     return;
   }
 
@@ -121,7 +126,7 @@ function onReceivedMsgFromRecEngine(apiResponse, sendUpdatedCSVRowsToUnreal, cur
     : csvStorage.original;
 
   if (!sourceRows || sourceRows.length === 0) {
-    console.error("❌ No CSV stored");
+    console.error("[RecEngine] ❌ No CSV stored");
     return;
   }
 
@@ -311,6 +316,8 @@ function onReceivedMsgFromRecEngine(apiResponse, sendUpdatedCSVRowsToUnreal, cur
     return updatedRow;
   });
 
+  console.groupEnd();
+  
   // Store previous state before applying updated recommendation rows.
   // Used only for compact price-reflection logging after SKU/product changes.
   const previousRowsBeforeUpdate = sourceRows;
@@ -355,11 +362,11 @@ function onReceivedMsgFromRecEngine(apiResponse, sendUpdatedCSVRowsToUnreal, cur
 
     if (fallbackItems.length > 0) {
       lastPriceReflectionData = fallbackItems;
-      console.log('💰 [PRICE DATA FALLBACK] direct from API items:', lastPriceReflectionData);
+      console.log('[RecEngine] 💰 [PRICE DATA FALLBACK] direct from API items:', lastPriceReflectionData);
     }
   }
 
-  console.log(`💰 [PRICE DATA SET] lastPriceReflectionData length=${lastPriceReflectionData.length}`, lastPriceReflectionData);
+  console.log(`[RecEngine] 💰 [PRICE DATA SET] lastPriceReflectionData length=${lastPriceReflectionData.length}`, lastPriceReflectionData);
 
   // ========== FILTER: ONLY SEND ROWS WHOSE CATEGORY MATCHED THE API ==========
   const matchedCategories = new Set(
@@ -367,6 +374,7 @@ function onReceivedMsgFromRecEngine(apiResponse, sendUpdatedCSVRowsToUnreal, cur
   );
   lastChangedCategories = apiResponse.categories.map(c => c.category);
 
+  console.groupCollapsed("[RecEngine] 📤 FILTERING ROWS TO SEND TO UNREAL (ONLY MATCHED CATEGORIES)");
   const rowsToSend = updatedRows.filter((row) => {
     const rowCat = (row.Category || "").toUpperCase();
     // Accept exact match OR CSV category that ends with an API category (e.g. "Conference Table" ↔ "Table")
@@ -378,20 +386,23 @@ function onReceivedMsgFromRecEngine(apiResponse, sendUpdatedCSVRowsToUnreal, cur
     }
     return matched;
   });
+  console.groupEnd(); 
 
-  console.log(`\n✅ Sending ${rowsToSend.length} of ${updatedRows.length} rows to Unreal...\n`);
+  console.log(`[Frontend] \n✅ Sending ${rowsToSend.length} of ${updatedRows.length} rows to Unreal...\n`);
 
   if (rowsToSend.length === 0) {
-    console.warn("⚠️ No matching rows to send.");
+    console.warn("[Frontend] ⚠️ No matching rows to send.");
     return;
   }
+
+  
 
   // ========== CONVERT BACK TO CSV (matched rows only) ==========
   const csvString = Papa.unparse(rowsToSend, { header: true });
   const csvRowsArray = csvString.split("\n");
 
-  console.log(`📤 Sending ${csvRowsArray.length} rows (header + ${rowsToSend.length} data rows) to Unreal`);
-  console.log(csvRowsArray.slice(0, 3));
+  console.log(`[Frontend] 📤 Sending ${csvRowsArray.length} rows (header + ${rowsToSend.length} data rows) to Unreal`);
+  console.log("[Frontend] ", csvRowsArray.slice(0, 3));
 
   // ========== SEND TO UNREAL VIA EXPERIENCE.JSX ==========
   const blurEl = document.getElementById('maya-blur-overlay');
@@ -423,13 +434,15 @@ function getCsvStatus() {
 }
 
 async function saveToGoogleSheet(csvData) {
+  console.groupCollapsed("[Frontend] saveToGoogleSheet");
+
   if (!GOOGLE_SHEET_URL) {
-    console.warn('⚠️ Google Sheet URL not configured');
+    console.warn('[Frontend] ⚠️ Google Sheet URL not configured');
     return;
   }
 
   try {
-    console.log('📤 Saving to Google Sheet...');
+    console.log('[Frontend] 📤 Saving to Google Sheet...');
 
     const response = await fetch(GOOGLE_SHEET_URL, {
       method: 'POST',
@@ -439,13 +452,15 @@ async function saveToGoogleSheet(csvData) {
     const result = await response.json();
 
     if (result.status === 'ok') {
-      console.log('✅ Saved to Google Sheet successfully!');
+      console.log('[Frontend] ✅ Saved to Google Sheet successfully!');
     } else {
-      console.error('❌ Failed to save:', result.message);
+      console.error('[Frontend] ❌ Failed to save:', result.message);
     }
   } catch (err) {
-    console.error('❌ Error saving to Google Sheet:', err);
+    console.error('[Frontend] ❌ Error saving to Google Sheet:', err);
   }
+
+  console.groupEnd();
 }
 
 // ============================================================================
@@ -1163,7 +1178,8 @@ function logChangedRoomPriceReflectionOnly(
 ) {
   const safeOldRows = Array.isArray(oldRows) ? oldRows : [];
   const safeNewRows = Array.isArray(newRows) ? newRows : [];
-
+  
+  console.groupCollapsed(`[RecEngine] 💰 PRICE REFLECTION — ${source}`);
   console.log(`💰 PRICE REFLECTION — ${source}`);
 
   if (!safeOldRows.length || !safeNewRows.length) {
@@ -1260,6 +1276,7 @@ function logChangedRoomPriceReflectionOnly(
   });
 
   console.log('💰 =================================================');
+  console.groupEnd();
 
   return [...changedCategoryMap.values()].map((item) => ({
     category: item.category,
@@ -1281,6 +1298,7 @@ function logInitialCategoryLines(priceResult, roomLabel = '') {
 function logPriceSummaryToConsole(rows = [], currentRoomName, source = 'AUTO') {
   const safeRows = Array.isArray(rows) ? rows : [];
 
+  console.groupCollapsed(`[RecEngine] 💰 AUTO PRICE SUMMARY — ${source}`);
   console.log(`💰 AUTO PRICE SUMMARY — ${source}`);
 
   if (!safeRows.length) {
@@ -1311,6 +1329,8 @@ function logPriceSummaryToConsole(rows = [], currentRoomName, source = 'AUTO') {
     );
 
     logInitialCategoryLines(levelResult, 'Level | ');
+
+    
   }
 
   const roomTotals = roomTotalsToConsoleTable(safeRows);
@@ -1322,6 +1342,8 @@ function logPriceSummaryToConsole(rows = [], currentRoomName, source = 'AUTO') {
   });
 
   console.log('💰 =================================================');
+  
+  console.groupEnd();
 }
 function buildPriceReply(priceIntent, priceResult) {
   if (priceIntent.scope === 'missing_csv') {
@@ -1595,7 +1617,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
   useEffect(() => {
     if (!roomNames || roomNames.length === 0) return;
 
-    console.log("roomNames updated:", roomNames);
+    console.log("[Frontend] roomNames updated:", roomNames);
 
     const splitCamelCase = (s) => s.replace(/([a-z])([A-Z])/g, '$1 $2');
     const rooms = roomNames.map(name => ({ original: name, display: splitCamelCase(name) }));
@@ -1738,9 +1760,9 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         return;
       }
 
-      console.log(`\n📥 CSV RECEIVED - Parsing with PapaParse... source=${source}`);
-      console.log('📍 Room name from CSV payload:', roomNameFromPayload || 'NOT_FOUND');
-      console.log('📍 Room name from MayaChat ref:', currentRoomNameRef.current || 'NOT_FOUND');
+      console.log(`[Frontend] \n📥 CSV RECEIVED - Parsing with PapaParse... source=${source}`);
+      console.log('[Frontend] 📍 Room name from CSV payload:', roomNameFromPayload || 'NOT_FOUND');
+      console.log('[Frontend] 📍 Room name from MayaChat ref:', currentRoomNameRef.current || 'NOT_FOUND');
 
       // Join lines into one CSV string and parse with header:true
       const csvString = csvArray.join("\n");
@@ -1798,8 +1820,9 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
     // ✅ PRIMARY: Listen for CustomEvent dispatched by Experience.jsx
     const handleCsvCustomEvent = (event) => {
-      console.log('\n📥 CSV RECEIVED VIA CustomEvent "csvFromUnreal"');
+      console.groupCollapsed('[Frontend] \n📥 CSV RECEIVED VIA CustomEvent "csvFromUnreal"');
       parseCsvArrayAndStore(event.detail);
+      console.groupEnd();
     };
 
     // ✅ FALLBACK: Listen for postMessage from parent
@@ -1834,7 +1857,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
     window.addEventListener('csvFromUnreal', handleCsvCustomEvent);
     window.addEventListener('message', handlePostMessage);
 
-    console.log('✅ CSV listeners registered (CustomEvent + postMessage)');
+    console.log('[Frontend]✅ CSV listeners registered (CustomEvent + postMessage)');
 
     return () => {
       window.removeEventListener('csvFromUnreal', handleCsvCustomEvent);
@@ -1868,11 +1891,11 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
       }
       if (e.key === 'h' || e.key === 'H') {
         console.log(`
-🎯 KEYBOARD SHORTCUTS:
-  C → Check CSV Status
-  Q → Show Query Queue
-  R → Reset Storage
-  H → Show this help
+          🎯 KEYBOARD SHORTCUTS:
+            C → Check CSV Status
+            Q → Show Query Queue
+            R → Reset Storage
+            H → Show this help
         `);
       }
     };
@@ -2118,7 +2141,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
     currentRecommendationOptionIndexRef.current = 0;
     currentDesignPromptKeyRef.current = getDesignPromptKey(jsonData, userQuery);
 
-    console.log("🧠 [OPTION CACHE RESET] New design prompt:", {
+    console.log("[Chatbot] 🧠 [OPTION CACHE RESET] New design prompt:", {
       key: currentDesignPromptKeyRef.current,
       optionIndex: currentRecommendationOptionIndexRef.current,
     });
@@ -2128,14 +2151,14 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
     const cachedResponse = lastRecEngineResponseRef.current;
 
     if (!cachedResponse || !Array.isArray(cachedResponse.categories) || cachedResponse.categories.length === 0) {
-      console.warn("⚠️ No cached RecEngine response available for different option.");
+      console.warn("[Chatbot] ⚠️ No cached RecEngine response available for different option.");
       return false;
     }
 
     currentRecommendationOptionIndexRef.current += 1;
     const optionIndex = currentRecommendationOptionIndexRef.current;
 
-    console.log("🔁 [CACHED DIFFERENT OPTION] Reusing existing RecEngine response:", {
+    console.log("[Chatbot] 🔁 [CACHED DIFFERENT OPTION] Reusing existing RecEngine response:", {
       optionIndex,
       categories: cachedResponse.categories.map((c) => ({
         category: c.category,
@@ -2222,7 +2245,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
           clearInterval(resultPollIntervalRef.current);
           resultPollIntervalRef.current = null;
 
-          console.log("✅ RESULT RECEIVED FROM API");
+          console.groupCollapsed("[RecEngine] ✅ RESULT RECEIVED FROM API");
           console.log(JSON.stringify(data.data, null, 2));
 
           lastRecEngineResponseRef.current = data.data;
@@ -2236,7 +2259,8 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
               itemCount: Array.isArray(c.items) ? c.items.length : Array.isArray(c.skus) ? c.skus.length : 0,
             })),
           });
-
+          console.groupEnd();
+          
           onReceivedMsgFromRecEngine(
             data.data,
             sendUpdatedCSVRowsToUnreal,
@@ -2244,6 +2268,8 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
             currentRecommendationOptionIndexRef.current
           );
           setCSVStatus(getCsvStatus());
+
+        
         }
 
         if (attempts >= 30) {
@@ -2609,7 +2635,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         }
       };
 
-      console.log("📤 Sending payload with CSV data to receiver:", payloadWithId);
+      console.log("[RecEngine] 📤 Sending payload with CSV data to receiver:", payloadWithId);
 
       const res = await fetch(`${RECEIVER_API_URL}/ingest`, {
         method: "POST",
@@ -2618,7 +2644,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
       });
 
       const result = await res.json().catch(() => null);
-      console.log("✅ Receiver status:", res.status, result);
+      console.log("[RecEngine] ✅ Receiver status:", res.status, result);
 
       // Non-search intents (navigate, confirm_order, etc.) only need to notify the
       // backend — they must NOT apply furniture recommendations from the response.
@@ -2628,7 +2654,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         startPollingForResult(payloadWithId.request_id);
       }
     } catch (err) {
-      console.error("Failed to post:", err);
+      console.error("[RecEngine] Failed to post:", err);
     }
   };
 
@@ -2698,7 +2724,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
                 if (audioUrl) URL.revokeObjectURL(audioUrl);
 
-                console.log('🎧 Starting listening immediately after talking...');
+                console.log('[Chatbot] 🎧 Starting listening immediately after talking...');
 
                 if (!listeningRef.current) {
                   startListening();
@@ -2726,9 +2752,9 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
                 if (playPromise !== undefined) {
                   playPromise
-                    .then(() => { console.log('🔊 Audio playback started'); })
+                    .then(() => { console.log('[Chatbot] 🔊 Audio playback started'); })
                     .catch((err) => {
-                      console.log('⚠️ Audio autoplay blocked:', err.message);
+                      console.log('[Chatbot] ⚠️ Audio autoplay blocked:', err.message);
                       // Store for playback on first user gesture; fallback after 15s
                       pendingAudioRef.current = { audio, finishTalkingAndListen };
                       const fallbackTimer = setTimeout(() => {
@@ -3358,7 +3384,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
           setTimeout(() => startListening(), 1000);
           return;
         }
-
+        console.groupCollapsed("[Frontend] 📦 MAYA JSON OUTPUT - OPENAI RESPONSE");
         console.log('\n╔════════════════════════════════════════════════════════════╗');
         console.log('║           📦 MAYA JSON OUTPUT - OPENAI RESPONSE           ║');
         console.log('╚════════════════════════════════════════════════════════════╝');
@@ -3379,7 +3405,8 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
         console.log('\n╔════════════════════════════════════════════════════════════╗');
         console.log('║ 💾 Accessible via: window.lastMayaJSON                   ║');
         console.log('╚════════════════════════════════════════════════════════════╝\n');
-
+        console.groupEnd();
+        
         currentDesignPromptRef.current = { jsonData, userQuery: messageText };
         // Store payload — don't fire RecEngine yet
         pendingRecEnginePayloadRef.current = {
@@ -3463,7 +3490,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
             hasPendingChangesRef.current = true;
             //window.sendToUnreal({ msgType: 'disablePreview' });
             window.pendingChange = { intent: jsonData.intent, params: jsonData.params, timestamp: Date.now() };
-            console.log('💾 Stored pending change:', window.pendingChange.intent);
+            console.log('[Chatbot] 💾 Stored pending change:', window.pendingChange.intent);
             window.sendToUnreal({ msgType: 'getRoomCsv' });
           }
 
@@ -3525,7 +3552,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
           awaitingFollowupRef.current = false;
           pendingRecEnginePayloadRef.current = null;
           sendMsgToRecEngine(pendingJson, pendingQuery);
-          console.log('▶️ [RECENGINE FIRED] Non-search intent, fired immediately.');
+          console.log('[Chatbot] ▶️ [RECENGINE FIRED] Non-search intent, fired immediately.');
         } else if (shouldAskStyleColorPreference) {
           followupCountRef.current += 1;
           awaitingFollowupRef.current = true;
@@ -3535,7 +3562,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
           displayText = pendingJson.reply || displayText;
 
           console.log(
-            '⏸️ [RECENGINE HELD] Dynamic followup ' +
+            '[Chatbot] ⏸️ [RECENGINE HELD] Dynamic followup ' +
               followupCountRef.current +
               '/' +
               maxFollowupsPerDesignPromptRef.current +
@@ -3554,7 +3581,7 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
 
           sendMsgToRecEngine(forcedJson, pendingQuery);
           console.log(
-            '▶️ [RECENGINE FIRED] Clarification limit reached (' +
+            '[Chatbot] ▶️ [RECENGINE FIRED] Clarification limit reached (' +
               followupCountRef.current +
               '/' +
               maxFollowupsPerDesignPromptRef.current +
@@ -3572,14 +3599,14 @@ export default function MayaChat({ sendUpdatedCSVRowsToUnreal, roomNames, curren
             messagesRef.current = trimmed;
           }
           sendMsgToRecEngine(pendingJson, pendingQuery);
-          console.log('▶️ [RECENGINE FIRED] Intent has enough detail, fired immediately.');
+          console.log('[Chatbot] ▶️ [RECENGINE FIRED] Intent has enough detail, fired immediately.');
         }
       }
 
       speakText(displayText, displayText);
 
     } catch (err) {
-      console.error('❌ Error:', err.message);
+      console.error('[Chatbot] ❌ Error:', err.message);
       const errorMessages = [...messagesRef.current, { role: 'assistant', content: 'Oops! Something went wrong. Please try again.' }];
       setMessages(errorMessages);
       messagesRef.current = errorMessages;
